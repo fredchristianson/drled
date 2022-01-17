@@ -1,0 +1,8 @@
+{
+    "configuration": "xtal=80,vt=flash,exception=enabled,stacksmash=enabled,ssl=all,mmu=3232,non32xfer=fast,eesz=4M2M,led=2,ip=lm2f,dbg=Serial,lvl=OOM,wipe=none,baud=115200",
+    "board": "esp8266:esp8266:nodemcuv2",
+    "port": "COM7",
+    "output": "build",
+    "intelliSenseGen": "enable",
+    "sketch": "app\\drled_arduino.ino"
+}
