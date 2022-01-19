@@ -6,11 +6,6 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 
-namespace DevRelief {
-    typedef ESP8266WebServer Request;
-    typedef ESP8266WebServer Response;
-};
-
 #include <functional>
 #include <memory>
 #include <functional>
@@ -21,6 +16,10 @@ namespace DevRelief {
 
 
 namespace DevRelief {
+    typedef ESP8266WebServer Request;
+    typedef ESP8266WebServer Response;
+
+    extern Logger HttpServerLogger;
 
 using HttpHandler = std::function<void(Request*, Response*)> ;
 

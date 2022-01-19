@@ -67,9 +67,11 @@ namespace DevRelief {
 
 
             void setScript(Script * script,JsonObject* params=NULL) {
+                m_logger->debug("setScript %x %x",m_ledStrip,m_script);
                 endScript();
                 m_script = script;
                 if (script != NULL) {
+                    m_logger->debug("setScript %s, %x",script->getName(),m_ledStrip);
                     script->begin(m_ledStrip,params);
                 }
             }
@@ -87,13 +89,18 @@ namespace DevRelief {
             }
 
             void step() {
+                m_logger->debug("step %x %x",m_ledStrip,m_script);
                 if (m_ledStrip == NULL || m_script == NULL) {
+                    m_logger->debug("\tnothing to run");
                     return;
                 }
+                m_logger->debug("\tm_script->setp()");
                 m_script->step();
+                m_logger->debug("\tfinished m_script->setp()");
 
             }
         private:
+
 
             void setupLeds(Config& config) {
                 m_logger->debug("setup HSL Strip");

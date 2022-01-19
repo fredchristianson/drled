@@ -6,7 +6,7 @@
 
 namespace DevRelief
 {
-    
+extern Logger DataObjectLogger;
 
 class DataObject {
     public:

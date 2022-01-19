@@ -4,5 +4,5 @@
     "port": "COM7",
     "output": "build",
     "intelliSenseGen": "enable",
-    "sketch": "app\\drled_arduino.ino"
+    "sketch": "drled_arduino\\drled_arduino.ino"
 }

@@ -109,11 +109,11 @@ class ConfigDataLoader : public DataLoader {
 
             JsonArray* pins = object->getArray("pins");
             if (pins) {
-                m_logger->debug("pins: %s",pins->toJsonString().get());
+                m_logger->debug("pins: %s",pins->toString().get());
                 pins->each([&](IJsonElement*&item) {
                     m_logger->debug("got pin");
                     JsonObject* pin = item->asObject();
-                    m_logger->debug("\tpin: %s",pin->toJsonString().get());
+                    m_logger->debug("\tpin: %s",pin->toString().get());
                     if (pin){
                         m_logger->debug("add pin %d",pin->getInt("number",-1));
                         LedPin* configPin = config.addPin(pin->getInt("number",-1),pin->getInt("ledCount",0),pin->getBool("reverse",false)); 

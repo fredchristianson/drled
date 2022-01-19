@@ -26,13 +26,11 @@ namespace DevRelief {
         DRLedApplication() {
             m_logger = new Logger("APP",APP_LOGGER_LEVEL);
             m_logger->showMemory();
-            m_script = NULL;
             initialize();
             resume();
         }
 
         ~DRLedApplication() {
-            m_script->destroy();
         }
 
         // resume the api/script that was running when power was turned off
@@ -75,6 +73,7 @@ namespace DevRelief {
     protected:       
         void loop() {
             if (!m_initialized) {
+                m_logger->debug("app not initialized");
                 return;
             }
             if (m_appState.isStarting() && m_scriptStartTime+10*1000 < millis()) {
@@ -155,7 +154,7 @@ namespace DevRelief {
 
             m_httpServer->routeBracesGet( "/api/script/{}",[this](Request* req, Response* resp){
                 ScriptDataLoader loader;
-                Script* script = loader.load( req->pathArg(0).c_str());
+                Script* script = loader.parse( req->pathArg(0).c_str());
                 if (script){
                     SharedPtr<JsonRoot> json = loader.toJson(*script);
                     ApiResult result(json->getTopObject());
@@ -197,7 +196,8 @@ namespace DevRelief {
                 m_logger->debug("\tsend result");
                 result.send(req);
                 m_logger->debug("\tdelete params");
-                delete params;
+                params->destroy();
+                m_logger->debug("\tdeleted params");
             });
 
 
@@ -285,10 +285,10 @@ namespace DevRelief {
             ScriptDataLoader loader;
             m_logger->debug("load script %s",name);
             m_executor.turnOff();
-            m_script = loader.load(name);
-            if (m_script){
+            Script* script  = loader.load(name);
+            if (script){
                 m_logger->debug("\tm_executor.setScript");
-                m_executor.setScript(m_script,params);
+                m_executor.setScript(script,params);
                 m_scriptStartTime = millis();
                 m_logger->debug("\tset appState");
                 m_appState.setScript(name,params);
@@ -299,7 +299,7 @@ namespace DevRelief {
                 return true;
             } else {
                 result.setCode(404);
-                DRFormattedString msg("script not found: %s",name);
+                result.setMessage("script not found: %s",name);
                 return false;
             }
             m_logger->debug("\trunScript failed");
@@ -326,7 +326,7 @@ namespace DevRelief {
         Config m_config;
         AppState m_appState;
         ScriptExecutor m_executor;
-        Script*  m_script;
+        
         long m_scriptStartTime;
         bool m_initialized;
     };

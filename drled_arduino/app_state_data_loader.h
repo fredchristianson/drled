@@ -47,7 +47,7 @@ class AppStateDataLoader : public DataLoader {
                     state.setIsStarting(obj->getBool("is-starting",false));
                     state.setParameters(obj->getChild("parameters"));
                     auto paramJson = state.getParameters();
-                    DRString json = paramJson? paramJson->toJsonString() : DRString();
+                    DRString json = paramJson? paramJson->toString() : DRString();
                     m_logger->debug("Load AppState: %s %s %d %s %s",
                                 state.isStarting()?"starting":"",
                                 state.isRunning()?"running":"",
@@ -78,8 +78,8 @@ class AppStateDataLoader : public DataLoader {
             JsonObject* params = obj->createObject("parameters");
             m_logger->debug("\tcopy params");
             state.copyParameters(params);
-            m_logger->debug("\tobj: %s",obj->toJsonString().text());
-            m_logger->debug("\treturn root: %s",jsonRoot->toJsonString().text());
+            m_logger->debug("\tobj: %s",obj->toString().text());
+            m_logger->debug("\treturn root: %s",jsonRoot->toString().text());
             return jsonRoot;            
         }
 

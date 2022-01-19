@@ -28,13 +28,17 @@ class DataLoader {
             return m_fileSystem.write(path,buffer.text());
         }
 
+        bool writeFile(const char * path, const char * text) {
+            return m_fileSystem.write(path,text);
+        }
+
         bool loadJsonFile(const char * path,auto reader) {
             DRFileBuffer buffer;
             if (m_fileSystem.read(path,buffer)){
                 JsonParser parser;
                 JsonRoot* root = parser.read(buffer.text());
                 if (root) {
-                    buffer.clear();
+                    buffer.clear(); // free file read memory before parsing json
                     return reader(root->asObject());
                 }
             }
