@@ -21,7 +21,11 @@ class JsonBase : public IJsonElement {
         virtual ~JsonBase() {
         }
 
-        void destroy() override { delete this;}
+        void destroy() override { 
+            jsonLogger->never("destroy JsonBase");
+            delete this;
+            jsonLogger->never("\tdestroyed");
+        }
 
         bool isArray() override { return false;}
         bool isObject() override { return false;}
@@ -46,7 +50,7 @@ class JsonBase : public IJsonElement {
         int getJsonId() { return m_jsonId;}
         void setJsonId(int id) { m_jsonId = id;}
 
-        DRString toJsonString();
+        DRString toString();
 
     protected:
         int m_jsonId;
@@ -64,7 +68,9 @@ class JsonRoot : public JsonBase {
             element->setJsonId(m_nextJsonId++);
         }
 
-        virtual ~JsonRoot();
+        virtual ~JsonRoot() {
+
+        }
 
 
         char * allocString(const char * val, size_t len) {
@@ -100,19 +106,9 @@ class JsonRoot : public JsonBase {
             return m_value;
         }
 
-        JsonObject* getTopObject() {
-            if (m_value) { 
-                return m_value->asObject();
-            }
-            return NULL;
-        }
+        JsonObject* getTopObject();
 
-        JsonArray* getTopArray() {
-            if (m_value) { 
-                return m_value->asArray();
-            }
-            return NULL;
-        }
+        JsonArray* getTopArray();
         
         void setTopElement(IJsonElement*top){
             if (m_value != NULL) { m_value->destroy();}
@@ -144,6 +140,7 @@ class JsonRoot : public JsonBase {
 
 class JsonElement : public JsonBase {
     public:
+        static DRString toJsonString(IJsonElement* element);
         JsonElement(JsonRoot& root,JsonType t) :m_root(root) {
             m_type = t;
             root.setJsonId(this);
@@ -170,7 +167,10 @@ class JsonValueElement : public JsonElement, public IJsonValueElement {
         IJsonValueElement* asValue() override { return this;}
         
         bool getBool(bool defaultValue) override { return defaultValue;}
-        int getInt(int defaultValue) override { return defaultValue;}
+        int getInt(int defaultValue) override { 
+            jsonLogger->debug("JsonValueElement.getInt [default method for type %d] %d",getType(),defaultValue);
+            return defaultValue;
+        }
         const char * getString(const char *defaultValue=NULL) override { return defaultValue;}
         double getFloat(double defaultValue) override { return defaultValue;}
 
@@ -192,7 +192,10 @@ class JsonInt : public JsonValueElement {
 
         bool isInt() override { return true;}
         bool isNumber() override { return true;}
-        int getInt(int defaultValue) override { return m_value;}
+        int getInt(int defaultValue) override { 
+            jsonLogger->debug("JsonInt.getInt() m_value=%d",m_value);
+            return m_value;
+        }
         double getFloat(double defaultValue) override { return m_value;}
 
     protected:
@@ -318,15 +321,15 @@ class JsonProperty : public JsonElement {
 
         }
         virtual ~JsonProperty() { 
-            delete m_next;
+            if (m_next) { m_next->destroy();}
             m_root.freeString(m_name); 
             if (m_value && m_value->getRoot() == getRoot()){
-                delete m_value;
+                if (m_value) { m_value->destroy();}
             }
         }
 
 
-        IJsonValueElement* asValue() { return (IJsonValueElement*)m_value;}
+        IJsonValueElement* asValue() { return m_value->asValue();}
         JsonProperty* getNext() { return m_next;}
         IJsonElement * getValue() { return m_value;}
         const char * getName() { return m_name;}
@@ -368,6 +371,17 @@ class JsonProperty : public JsonElement {
         bool getBool(bool defaultValue) { 
             return hasValue() ? asValue()->getBool(defaultValue) : defaultValue;}
         int getInt(int defaultValue) { 
+            jsonLogger->debug("JsonProperty.getInt %x",m_value);
+            jsonLogger->debug("\t%d",hasValue());
+            jsonLogger->debug("\t%x",asValue());
+            if (hasValue()) {
+                IJsonValueElement* ve = asValue();
+                jsonLogger->debug("\thave value %x",ve);
+                int val = ve->getInt(defaultValue);
+                jsonLogger->debug("\tval=%d",val);
+                return val;
+            }
+
             return hasValue() ? asValue()->getInt(defaultValue) : defaultValue;}
         const char * getString(const char *defaultValue=NULL) { 
             return hasValue() ? asValue()->getString(defaultValue) : defaultValue;}
@@ -389,7 +403,7 @@ class JsonObject : public JsonElement {
             setInt("jsonId",getJsonId());
         }
         virtual ~JsonObject() {
-            delete m_firstProperty;
+            if (m_firstProperty) { m_firstProperty->destroy();}
        }
         
         bool isObject() override  { return true;}
@@ -476,8 +490,9 @@ class JsonObject : public JsonElement {
             return prop ? prop->getBool(defaultValue) : defaultValue;
         }
         int getInt(const char *name,int defaultValue){
+            jsonLogger->debug("getInt(%s)",name?name:"<unnamed>");
             JsonProperty* prop = getProperty(name);
-            return prop ? prop->getBool(defaultValue) : defaultValue;
+            return prop ? prop->getInt(defaultValue) : defaultValue;
         }
         const char * getString(const char *name,const char *defaultValue){
             JsonProperty* prop = getProperty(name);
@@ -485,7 +500,7 @@ class JsonObject : public JsonElement {
         }
         double getFloat(const char *name,double defaultValue){
             JsonProperty* prop = getProperty(name);
-            return prop ? prop->getBool(defaultValue) : defaultValue;
+            return prop ? prop->getInt(defaultValue) : defaultValue;
         }
 
         JsonArray* getArray(const char * name){
@@ -498,15 +513,15 @@ class JsonObject : public JsonElement {
         }
 
         JsonProperty * getProperty(const char * name) {
-            jsonLogger->never("get property %s",name);
+            jsonLogger->debug("get property %s",name);
             for(JsonProperty*prop=m_firstProperty;prop!=NULL;prop=prop->getNext()){
-                jsonLogger->never("\tcheck %s",prop->getName());
+                jsonLogger->debug("\tcheck %s",prop->getName());
                 if (strcmp(prop->getName(),name)==0) {
-                    jsonLogger->never("\tmatch");
+                    jsonLogger->debug("\tmatch: %s",JsonElement::toJsonString(prop).get());
                     return prop;
                 }
             }
-            jsonLogger->never("\tno match");
+            jsonLogger->debug("\tno match");
             return NULL;
         }
         JsonProperty* getFirstProperty() { return m_firstProperty;}
@@ -525,8 +540,13 @@ class JsonObject : public JsonElement {
         }
 
         void clear(){
-            delete m_firstProperty;
+            jsonLogger->never("JsonObj.clear");
+            if (m_firstProperty) { 
+                jsonLogger->never("\tdestory first property");
+                m_firstProperty->destroy();
+            }
             m_firstProperty=NULL;
+            jsonLogger->never("\tdone");
         }
     protected:
         JsonProperty* m_firstProperty;
@@ -569,6 +589,11 @@ class JsonArrayItem : public JsonElement {
             }
         }
 
+
+        IJsonElement* getAt(int index) {
+            if (index == 0) { return m_value;}
+            return m_next->getAt(index-1);
+        }
         
     protected:
         IJsonElement* m_value;
@@ -598,6 +623,12 @@ class JsonArray : public JsonElement {
                 m_firstItem->add(item);
             }
             return item;
+        }
+
+        JsonObject* addNewObject() {
+            JsonObject* obj = new JsonObject(*getRoot());
+            addItem(obj);
+            return obj;
         }
 
         JsonArrayItem* addString(const char * val){
@@ -630,13 +661,39 @@ class JsonArray : public JsonElement {
             }
         }
 
+        IJsonElement* getAt(int index) {
+            return m_firstItem ? m_firstItem->getAt(index):NULL;
+        }
 
     protected: 
         JsonArrayItem * m_firstItem;
-};
+    };
 
+        JsonObject* JsonRoot::createObject(){
+            return new JsonObject(*this);
+        }
+        JsonArray* JsonRoot::createArray() {
+            return new JsonArray(*this);
+        }
+        JsonObject* JsonRoot::getTopObject() {
+            if (m_value == NULL) {
+                m_value = createObject();
+            }
+            return m_value->asObject();
+        }
+
+        JsonArray* JsonRoot::getTopArray() {
+            if (m_value == NULL) {
+                m_value = createArray();
+            }
+            return m_value->asArray();
+        }
+        
+        JsonArray* JsonObject::createArray(const char * propertyName){
+            JsonArray* array = new JsonArray(*getRoot());
+            set(propertyName,array);
+            return array;
+        }
 
 }
-
-
 #endif

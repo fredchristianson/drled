@@ -26,6 +26,7 @@ class SharedPtr {
             freeData();
         }
 
+        operator T*() { return data;}
         void freeData(){
             sharedPtrLogger->debug("freeData");
 

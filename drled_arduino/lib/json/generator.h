@@ -246,11 +246,18 @@ protected:
 };
 
 
-DRString JsonBase::toJsonString(){
+DRString JsonBase::toString(){
     DRString dr;
     JsonGenerator gen(dr);
     gen.generate(this);
     return dr;
+}
+
+DRString JsonElement::toJsonString(IJsonElement* element){
+    if (element == NULL) {
+        return NULL;
+    }
+    return ((JsonBase*)element)->toString();
 }
 
 }

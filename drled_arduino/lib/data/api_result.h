@@ -1,7 +1,8 @@
-#ifndef DR_DATA_H
-#define DR_DATA_H
+#ifndef DR_API_RESULT_DATA_H
+#define DR_API_RESULT_DATA_H
 #include "../log/logger.h"
 #include "../json/parser.h"
+#include "../json/json.h"
 #include "../json/generator.h"
 #include "../net/http_server.h"
 #include "../util/buffer.h"
@@ -54,6 +55,9 @@ class ApiResult : public DataObject {
         }
         void setCode(int code) {
             addProperty("code",code);
+            if (code >= 300) {
+                addProperty("success",false);
+            }
         }
 
         void setMessage(const char *msg,...) {
@@ -94,7 +98,7 @@ class ApiResult : public DataObject {
                 mem->setInt("heapChange",(int)heap-m_lastHeapSize);
             }
             m_lastHeapSize = heap;
-            DRString result = m_jsonRoot.toJsonString();
+            DRString result = m_jsonRoot.toString();
             req->send(getCode(200),mimeType.text(),result.text());
         }
     private:

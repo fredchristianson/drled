@@ -15,7 +15,7 @@
 
 
 
-#include "./logger.h"
+#include "../lib/log/logger.h"
 #include "./color.h"
 
 namespace DevRelief {
@@ -171,7 +171,7 @@ class CompoundLedStrip : public DRLedStrip {
             strips[2] = NULL;
             strips[3] = NULL;
             count = 0;
-            m_logger = new Logger("CompoundStrip",COMPOUND_STRIP_LOGGER_LEVEL);
+            m_logger = &LEDLogger;
             m_logger->info("create CompoundLedStrip");
         }
 
@@ -358,7 +358,7 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
         }
 
         void setHue(int index, int16_t hue, HSLOperation op=REPLACE) {
-            m_logger->never("HSL Hue %d %d",index,hue);
+            m_logger->always("HSL Hue %d %d",index,hue);
             if (index<0 || index>=m_count) {
                 m_logger->periodicNever(ERROR_LEVEL,5000,"HSL Hue index out of range %d (0-%d)",index,m_count);
                 return;

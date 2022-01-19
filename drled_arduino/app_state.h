@@ -50,38 +50,46 @@ namespace DevRelief {
             }
              
             void setScript(const char * name, JsonObject*params) {
+                m_logger->debug("set script %x",name);
                 setExecuteValue(name);
+                m_logger->debug("\tset isRunning %s",name);
                 setIsRunning(true);
                 // set as starting until it has run long
                 // enough to see it works (10 seconds?).
                 // otherwise can get in a reboot-loop
                 setIsStarting(true);
                 setExecuteType(EXECUTE_SCRIPT);
+                m_logger->debug("\tcopy parameters");
                 copyParameters(m_root.getTopObject(),params);
+                m_logger->debug("\tcopied parameters");
             }
 
             void copyParameters(JsonObject*  toObj,JsonObject*params=NULL) {
-                m_logger->never("copyParameters");
+                m_logger->debug("copyParameters");
+                if (toObj == NULL) {
+                    m_logger->info("\tno toObj");
+                     return;
+                }
                 toObj->clear();
-                m_logger->never("\tcleared");
+                m_logger->debug("\tcleared");
                 if (params == NULL){
-                    m_logger->never("\tget current");
+                    m_logger->debug("\tget current");
                     params = m_root.getTopObject();
                 }
                 if (params == NULL) {
-                    m_logger->never("\tno params");
+                    m_logger->debug("\tno params");
 
                     return;
                 }
 
-                m_logger->never("\teachProperty");
+                m_logger->debug("\teachProperty");
 
                 params->eachProperty([&](const char * name, IJsonElement*val){
-                    m_logger->never("\tcopy %s",name);
+                    m_logger->debug("\tcopy %s",name);
                     IJsonValueElement* ve = val->asValue();
                     toObj->setString(name,ve->getString(NULL));
                 });
-                m_logger->never("done");
+                m_logger->debug("done");
             }
 
             JsonObject* getParameters() { return m_root.getTopObject();}

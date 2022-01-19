@@ -1,4 +1,5 @@
 #include "./env.h"
+#include "./lib/application.h"
 #include "./lib/log/logger.h"
 #include "./loggers.h"
 #include "./drled_app.h"

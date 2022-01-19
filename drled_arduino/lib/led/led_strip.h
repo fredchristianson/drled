@@ -20,7 +20,7 @@
 
 namespace DevRelief {
 
-Logger* ledLogger = ledLogger;
+extern Logger LEDLogger;
 
 typedef enum HSLOperation {  
     REPLACE=0,
@@ -29,6 +29,7 @@ typedef enum HSLOperation {
     AVERAGE=3,
     MIN=4,
     MAX=5,
+    INHERIT=998,
     UNSET=999
 };
 static const char * HSLOPTEXT[]={"replace","add","subtract","average","min","max"};
@@ -37,7 +38,7 @@ const char * HSLOpToText(HSLOperation op) {
     if (op>=REPLACE && op <= MAX) {
         return HSLOPTEXT[op];
     }
-    ledLogger->error("Unknown HSL OP %d",op);
+    LEDLogger.error("Unknown HSL OP %d",op);
     return HSLOPTEXT[0];
 };
 
@@ -49,7 +50,7 @@ HSLOperation TextToHSLOP(const char * text) {
     if (pos <= MAX){
         return (HSLOperation)pos;
     }
-    ledLogger->error("Unknown HSL OP text %s",text);
+    LEDLogger.error("Unknown HSL OP text %s",text);
     return REPLACE;
 }
 
@@ -70,7 +71,7 @@ class IHSLStrip {
 class DRLedStrip {
     public:
         DRLedStrip() {
-            m_logger = ledLogger;
+            m_logger = &LEDLogger;
             validCheck=0x123fe;
         }
 
@@ -415,7 +416,7 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
         }
 
         void show() {
-            m_logger->debug("show() %d",m_count);
+            m_logger->never("show() %d",m_count);
             for(int idx=0;idx<m_count;idx++) {
                 int hue = m_hue[idx];
                 int sat = m_saturation[idx];

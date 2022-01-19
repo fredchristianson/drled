@@ -3,6 +3,7 @@
 
 #include "../log/logger.h"
 #include "./drstring.h"
+#include "./list.h"
 
 namespace DevRelief {
 
@@ -22,6 +23,11 @@ class Util {
             if ((s1 == NULL && s2 != NULL) || (s1 != NULL && s2 == NULL)) { return false;}
             return strcmp(s1,s2) == 0;
         }
+
+        static bool equalAny(const char * s1, const char * match1, const char * match2=NULL, const char * match3=NULL, const char * match4=NULL)  {
+            return Util::equal(s1,match1) || Util::equal(s1,match2);
+        }
+
 
         static bool isEmpty(const char * s) {
             return s == NULL || s[0] == 0;
@@ -71,6 +77,21 @@ class Util {
                 return defaultValue;
             }
 
+        }
+
+        static int split(const char * text, char sep,LinkedList<DRString>& vals) {
+            const char * next = text;
+            while (next != NULL && next[0] != 0) {
+                const char* end = strchr(next,sep);
+                if (end == NULL) {
+                    vals.add(next);
+                    next = NULL;
+                } else {
+                    vals.add(DRString(next,end-next));
+                    next = end+1;
+                }
+            }
+            return vals.size();
         }
 };
 

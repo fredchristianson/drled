@@ -308,18 +308,18 @@ class PtrList : public LinkedList<T> {
 
 template<typename T>
 PtrList<T>::~PtrList(){
-    PtrListLogger.never("~PtrList() start");
+    PtrListLogger.debug("~PtrList() start");
     ListNode<T>*node=LinkedList<T>::getNode(0);
     while(node != NULL) {
-        LinkedList<T>::m_logger->never("\tdelete node");
+        LinkedList<T>::m_logger->debug("\tdelete node %x %x",node,node->next);
         ListNode<T>*next = node->next;
         deleteNode(node);
-        LinkedList<T>::m_logger->never("\tdeleted node");
+        LinkedList<T>::m_logger->debug("\tdeleted node");
         node = next;
-        LinkedList<T>::m_logger->never("\tnext 0x%0X",node);
+        LinkedList<T>::m_logger->debug("\tnext 0x%0X",node);
     }
     LinkedList<T>::m_root = NULL;
-    PtrListLogger.never("~PtrList() done");
+    PtrListLogger.debug("~PtrList() done");
 
 }
 
@@ -335,14 +335,14 @@ ListNode<T> PtrList<T>::getNodePtr(int idx) {
 */
 template<typename T>
 void PtrList<T>::deleteNode(ListNode<T>*node) {
-    LinkedList<T>::m_logger->never("delete PtrList node 0x%04X",node);
+    LinkedList<T>::m_logger->debug("delete PtrList node 0x%04X",node);
     if (node == 0) {
         LinkedList<T>::m_logger->error("PtrList has NULL node");
     } else {
-        LinkedList<T>::m_logger->never("\tdelete PtrList node data 0x%04X",node->data);
+        LinkedList<T>::m_logger->debug("\tdelete PtrList node data 0x%04X",node->data);
         //delete node->data;
         node->data->destroy();
-        LinkedList<T>::m_logger->never("\tdelete PtrList node 0x%04X",node);
+        LinkedList<T>::m_logger->debug("\tdelete PtrList node 0x%04X",node);
         delete node;
     }
 }
