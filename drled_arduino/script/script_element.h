@@ -1,9 +1,12 @@
 #ifndef SCRIPT_ELEMENT_H
 #define SCRIPT_ELEMENT_H
 
+#include "../lib/util/util.h"
 #include "./script_interface.h"
 #include "./script_value.h"
 #include "./json_names.h"
+#include "./element_position.h"
+
 
 namespace DevRelief {
     extern Logger ScriptElementLogger;
@@ -52,6 +55,7 @@ namespace DevRelief {
 
             };
 
+            bool isPositionable() { return false; }
 
         protected:
             virtual void positionToJson(JsonObject* json){
@@ -114,24 +118,46 @@ namespace DevRelief {
             ScriptValueList m_values;
     };
 
-    class ScriptLEDElement : public ScriptElement {
+    class ScriptLEDElement : public ScriptElement, public IPositionable {
         public:
             ScriptLEDElement(const char* type) : ScriptElement(type) {
+                m_position = NULL;
+            }
 
+            virtual ~ScriptLEDElement() {
+                if (m_position) { m_position->destroy();}
             }
 
             virtual void draw(IScriptContext*context) {
                 IScriptHSLStrip* strip = context->getStrip();
-                int count = strip->getLength();
+                int stripLength = strip->getLength();
                 m_logger->never("ScriptLEDElement draw %d",strip->getLength());
+                int start = m_position ? m_position->getStart() : 0;
+                int count = m_position ? m_position->getCount() : stripLength-start;
                 for(int i=0;i<count;i++) {
-                    strip->setPosition(i);
+                    strip->setPosition(i+start);
                     drawLED(context,strip,i);
                 }
             }
 
+
+            void valuesToJson(JsonObject* json) override {
+                if (m_position) {
+                    m_position->toJson(json);
+                }
+            }
+
+            void valuesFromJson(JsonObject* json) override {
+                if (m_position) { m_position->destroy();}
+                m_position = new ElementPosition(json);                
+            }
+
+            IElementPosition* getPosition() const override { return m_position;}
         protected:
+            
             virtual void drawLED(IScriptContext*context,IScriptHSLStrip* strip,int index)=0;
+            ElementPosition* m_position;
+            
     };
 
     class HSLElement : public ScriptLEDElement {
@@ -182,6 +208,7 @@ namespace DevRelief {
             virtual int adjustLightness(IScriptContext*context,IScriptHSLStrip* strip,int lightness) { return lightness;}
 
             virtual void valuesToJson(JsonObject* json){
+                ScriptLEDElement::valuesToJson(json);
                 m_logger->debug("valuesToJson");
                 if (m_hue) { 
                     m_logger->debug("\set hue");
@@ -197,6 +224,7 @@ namespace DevRelief {
                 }
             }
             virtual void valuesFromJson(JsonObject* json){
+                ScriptLEDElement::valuesFromJson(json);
                 m_logger->debug("valuesFromJson");
                 setHue(getJsonValue(json,"hue"));
                 setLightness(getJsonValue(json,"lightness"));

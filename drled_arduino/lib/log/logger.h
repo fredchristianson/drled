@@ -1,12 +1,13 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <cstdarg>
-#include <stdio.h>
-#include <time.h>
+#include <cstdio>
+#include <string.h>
+#include <stdarg.h>
 #include "../../env.h"
+#include "../system/board.h"
 
-extern EspClass ESP;
+extern EspBoardClass EspBoard;
 
 namespace DevRelief {
 enum LogLevel {
@@ -22,6 +23,7 @@ enum LogLevel {
 #if LOGGING_ON==1
 bool serialInitilized = false;
 void initializeWriter() {
+#ifndef FAKE_ARDUINO
     if (!Serial) {
         serialInitilized = true;
         Serial.begin(115200);
@@ -31,14 +33,14 @@ void initializeWriter() {
             // wait for Serial port to be ready
         }
     }
+#endif
 
 }
 
 
-
 #define MAX_MESSAGE_SIZE 1024
 char messageBuffer[MAX_MESSAGE_SIZE+1];
-String padding("                                   ");
+const char * padding ="                                   ";
 const char * TABS = "\t\t\t\t\t\t";
 int MAX_TAB_COUNT = 5;
 char lastErrorMessage[100];
@@ -59,11 +61,16 @@ public:
     static void setTesting(bool on) { logTestingMessage = on;}
 
     virtual ~Logger() {
-        //this->always("destroy Logger %s",m_name.c_str());
+        free((void*)m_name);
     }
 
     void setModuleName(const char * name) {
-        m_name = name;
+        if (name == NULL) {
+            m_name= (char*)"???";
+        } else {
+            m_name = (char *) malloc(strlen(name)+1);
+            strcpy((char*)m_name,name);
+        }
 
     }
 
@@ -82,29 +89,30 @@ public:
             loggerIndent--;
         }
     }
-    void restart() {
-        this->info("restarting serial");
-        Serial.begin(115200);
-        while(!Serial){
-            ;//
-        }
-        this->info("serial restarted");
-    }
+
+
     void write(int level, const char * message, va_list args ){
         if (level > m_level || level == NEVER) {
             return;
         }
 
         vsnprintf(messageBuffer,MAX_MESSAGE_SIZE,message,args);
-        unsigned long now = millis()/1000;
+        unsigned long now = EspBoard.currentMsecs()/1000;
         int hours = now/3600;
         now = now % 3600;
         int minutes = now/60;
         int seconds = now % 60;
         const char * tabs = loggerIndent<=0 ? "" : (TABS + MAX_TAB_COUNT-loggerIndent);
+        #ifndef FAKE_ARDUINO
         Serial.printf("%6s/%3d - %02d:%02d:%02d - %20s: %s ",
-            getLevelName(level),m_level,hours,minutes,seconds,m_name.c_str(),tabs);
+            getLevelName(level),m_level,hours,minutes,seconds,m_name,tabs);
         Serial.println(messageBuffer);
+        #else
+        printf("%6s/%3d - %02d:%02d:%02d - %20s: %s ",
+            getLevelName(level),m_level,hours,minutes,seconds,m_name,tabs);
+        printf(messageBuffer);
+        printf("\n");
+        #endif
     }
 
     void write(int level, const char * message,...) {
@@ -192,11 +200,11 @@ public:
         if (strncmp(message,lastErrorMessage,100)==0){
             return; //don't repeat the error message
         }
-        if (millis()>lastErrorTime+500) {
+        if (EspBoard.currentMsecs()>lastErrorTime+500) {
             return; //don't show any errors too fast - even different message;
         }
         strncpy(lastErrorMessage,message,100);
-        lastErrorTime = millis();
+        lastErrorTime = EspBoard.currentMsecs();
         va_list args;
         va_start(args,message);
         write(20,message,args);
@@ -207,9 +215,9 @@ public:
     void periodic(int level,long frequencyMS, const char * message,...){
        long* lastTimer = &m_periodicTimer;
         
-        if (millis() > (*lastTimer + frequencyMS))
+        if (EspBoard.currentMsecs() > (*lastTimer + frequencyMS))
         {
-            *lastTimer = millis();
+            *lastTimer = EspBoard.currentMsecs();
             va_list args;
             va_start(args, message);
             write(level, message, args);
@@ -221,9 +229,9 @@ public:
         if (lastTimer == NULL) {
             lastTimer = &m_periodicTimer;
         }
-        if (millis() > (*lastTimer + frequencyMS))
+        if (EspBoard.currentMsecs() > (*lastTimer + frequencyMS))
         {
-            *lastTimer = millis();
+            *lastTimer = EspBoard.currentMsecs();
             va_list args;
             va_start(args, message);
             write(level, message, args);
@@ -256,12 +264,12 @@ public:
     }
 
     void showMemory(const char * label="Memory") {
-        write(INFO_LEVEL,"%s: stack=%d,  heap=%d",label,ESP.getFreeContStack(),ESP.getFreeHeap());
+        write(INFO_LEVEL,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
 
     }
 
-private:
-    String m_name;
+private: 
+    char * m_name;
     int m_level;
     long m_periodicTimer;
 

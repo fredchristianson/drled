@@ -6,6 +6,7 @@
 #include "./json_suite.h"
 #include "./string_suite.h"
 #include "./script_loader_suite.h"
+#include "../lib/system/board.h"
 namespace DevRelief {
 
 #if RUN_TESTS!=1
@@ -35,9 +36,9 @@ namespace DevRelief {
 
         bool run() {
             m_logger = &TestLogger;
-            delay(1000); // wait for serial logger to settle
+            EspBoard.delayMsecs(1000); // wait for serial logger to settle
             m_logger->always("force logging to allocate static buffers in order to detect real memory leaks: %f %d %s %d",.123,4567,"abc",true);
-            int startHeap = ESP.getFreeHeap();
+            int startHeap = EspBoard.getFreeHeap();
             m_logger->showMemory();
             bool success = true;
             
