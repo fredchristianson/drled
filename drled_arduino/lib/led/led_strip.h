@@ -171,7 +171,6 @@ class CompoundLedStrip : public DRLedStrip {
             strips[2] = NULL;
             strips[3] = NULL;
             count = 0;
-            m_logger = &CompoundLogger;
             m_logger->info("create CompoundLedStrip");
         }
 
