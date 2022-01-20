@@ -526,6 +526,8 @@ namespace DevRelief
         bool isString(IScriptContext* ctx) override { return true;}
         IJsonElement* toJson(JsonRoot*root) override { return new JsonString(*root,m_value);}
 
+        const char * getValue() { return m_value.text();}
+
         DRString toString() override { return m_value; }
 
     protected:

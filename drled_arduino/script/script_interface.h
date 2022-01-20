@@ -10,12 +10,15 @@ namespace DevRelief{
         POS_PIXEL = 1,
         POS_INHERIT = 2
     };
+
     typedef enum PositionType
     {
-        POS_RELATIVE = 0,
-        POS_ABSOLUTE = 1,
-        POS_AFTER = 3,
-        POS_STRIP = 4
+        POS_RELATIVE = 0b00000000, // last bit is relative/absolute
+        POS_ABSOLUTE = 0b00000001, 
+        POS_FLOW     = 0b00000010,
+        POS_CENTER   = 0b00000100,
+        POS_COVER    = 0b00000110,        
+        POS_STRIP    = 0b10000000  // highest bit is if a strip number is provided
     };
 
     typedef enum ScriptStatus {
@@ -28,6 +31,53 @@ namespace DevRelief{
 
     class IScriptContext;
     class IScriptValue;
+
+
+
+    class IElementPosition {
+        public:
+            virtual void destroy()=0;
+
+            // offset is an IScriptValue from the script
+            virtual void setOffset(IScriptValue* value)=0;
+            virtual IScriptValue* getOffset() const =0;
+            virtual int evalOffset(IScriptContext* context)=0;
+
+            // length is an IScriptValue from the script;
+            virtual void setLength(IScriptValue* value)=0;
+            virtual IScriptValue* getLength() const =0;
+            virtual int evalLength(IScriptContext* context)=0;
+            
+            // unit (pixel or percent) and type come from the script. 
+            virtual void setUnit(PositionUnit unit)=0;
+            virtual PositionUnit getUnit() const =0;
+
+            virtual void setStripNumber(IScriptValue* strip)=0;
+            virtual IScriptValue* getStripNumber() const = 0;
+
+            virtual void setType(int /*PositionType flags*/ type)=0;
+            virtual int /* PositionType flags */ getType() const =0;
+
+            // the layout sets start and count based on parent container and above values
+            virtual void setPosition(int start, int count,IScriptContext* context)=0;
+ 
+            virtual int getCount()=0;
+            virtual int getStart()=0;
+
+            virtual bool isCenter() const=0;
+            virtual bool isFlow() const=0;
+            virtual bool isCover() const=0;
+            virtual bool isPositionAbsolute() const=0;
+            virtual bool isPositionRelative() const=0;
+        protected:
+
+    };
+
+    class IPositionable {
+        public:
+            virtual IElementPosition* getPosition() const =0;
+
+    };
 
     class IScriptStep {
         public:
@@ -139,6 +189,8 @@ namespace DevRelief{
 
             virtual void updateLayout(IScriptContext* context)=0;
             virtual void draw(IScriptContext* context)=0;
+
+            virtual bool isPositionable()=0;
     };
 
     class IScriptContainer {

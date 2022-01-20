@@ -59,7 +59,24 @@ namespace DevRelief
         }
 
         void updateLayout(IScriptContext* context) override {
+            auto strip = context->getStrip();
+            int stripPos = 0;
+            int stripLength = strip->getLength();
             m_children.each([&](IScriptElement* child) {
+                if (child->isPositionable()) {
+                    IPositionable* positionable = (IPositionable*)child;
+                    IElementPosition* pos = positionable->getPosition();
+                    int offset = 0;
+                    if (pos->getOffset()) {
+                        offset = pos->evalOffset(context);
+                    }
+                    int length = stripLength - stripPos - offset;
+                    if (pos->getLength()){
+                        length = pos->evalLength(context);
+                    }
+                    pos->setPosition(stripPos+offset,length,context);
+                    stripPos += offset+length;
+                }
                 child->updateLayout(context);
             });
         };
