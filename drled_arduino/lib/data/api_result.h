@@ -93,6 +93,8 @@ class ApiResult : public DataObject {
             int heap = ESP.getFreeHeap();
             mem->setInt("stack",(int)ESP.getFreeContStack());
             mem->setInt("heap",heap);
+            mem->setInt("max free block",ESP.getMaxFreeBlockSize());
+            mem->setInt("fragmentation",ESP.getHeapFragmentation());
             if (m_lastHeapSize != 0) {
                 mem->setInt("lastHeap",(int)m_lastHeapSize);
                 mem->setInt("heapChange",(int)heap-m_lastHeapSize);

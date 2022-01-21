@@ -5,8 +5,8 @@
 #include "../lib/log/logger.h"
 #include "./json_suite.h"
 #include "./string_suite.h"
+#include "./api_suite.h"
 #include "./script_loader_suite.h"
-#include "../lib/system/board.h"
 namespace DevRelief {
 
 #if RUN_TESTS!=1
@@ -55,6 +55,9 @@ namespace DevRelief {
             #endif
             #if SCRIPT_LOADER_TESTS==1
             success = ScriptLoaderTestSuite::Run(m_logger) && success;
+            #endif
+            #if RUN_API_TESTS==1
+            success = ApiTestSuite::Run(m_logger) && success;
             #endif
             //success = runTest("testSharedPtr",&Tests::testSharedPtr) && success;
             //success = runTest("testStringBuffer",&Tests::testStringBuffer) && success;

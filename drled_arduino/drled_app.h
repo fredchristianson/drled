@@ -62,7 +62,8 @@ namespace DevRelief {
                         JsonObject* params = m_appState.getParameters();
                         const char * name = m_appState.getExecuteValue();
                         ApiResult result;
-                        runScript(name,params,result);                        
+                        runScript(name,params,result);   
+                        params->destroy();                     
                     }
                 } 
             }
@@ -172,6 +173,7 @@ namespace DevRelief {
                 const char * name = req->pathArg(0).c_str();
                 runScript(name,params->getTopObject(),result);
                 result.send(req);
+                params->destroy();
             });
 
 
@@ -210,8 +212,12 @@ namespace DevRelief {
 
 
             m_httpServer->routeBracesGet("/api/{}",[this](Request* req, Response* resp){
+                m_logger->debug("API start");
+                m_logger->showMemory();
 
                 this->apiRequest(req->pathArg(0).c_str(),req,resp);
+                m_logger->debug("API done");
+                m_logger->showMemory();
             });
 
         }
@@ -220,7 +226,7 @@ namespace DevRelief {
 
 
         void apiRequest(const char * api,Request * req,Response * resp) {
-            m_logger->debug("handle API %s",api);
+            m_logger->never("handle API %s",api);
             int code=200;
             if (strcmp(api,"reboot") == 0) {
                 code = 200;
@@ -229,22 +235,41 @@ namespace DevRelief {
                 ESP.restart();
                 return;
             }
+
+
             m_logger->never("get parameters");
-            SharedPtr<JsonRoot> paramJson = getParameters(req);
+            m_logger->showMemory();
+            JsonRoot* paramJson = getParameters(req);
+            m_logger->never("got params");
+            m_logger->showMemory();
+
+
 
             JsonObject *params = paramJson->getTopObject();
+            m_logger->never("\t%x",params);
+            m_logger->showMemory();
+            
+
+
+
             ApiResult result;
+            m_logger->never("\tcreated ApiResult");
+            m_logger->showMemory();
+
+
             if (runApi(api,params,result))
             {
+                m_logger->never("\tsave state");
+                m_logger->showMemory();
                 m_appState.setApi(api,params);
                 AppStateDataLoader loader;
                 loader.save(m_appState);
+                m_logger->never("\tsaved");
+                m_logger->showMemory();
             }
-            result.send(resp);
-            //DRString apiText;
 
-            //result.toText(apiText);
-            //resp->send(200,"text/json",apiText.text());
+            result.send(resp);
+            paramJson->destroy();
 
 
         }
@@ -283,33 +308,33 @@ namespace DevRelief {
 
         bool runScript(const char * name, JsonObject* params, ApiResult& result) {
             ScriptDataLoader loader;
-            m_logger->debug("load script %s",name);
+            m_logger->never("load script %s",name);
             m_executor.turnOff();
             Script* script  = loader.load(name);
             if (script){
-                m_logger->debug("\tm_executor.setScript");
+                m_logger->never("\tm_executor.setScript");
                 m_executor.setScript(script,params);
                 m_scriptStartTime = millis();
-                m_logger->debug("\tset appState");
+                m_logger->never("\tset appState");
                 m_appState.setScript(name,params);
                 AppStateDataLoader loader;
-                m_logger->debug("\tsave appState");
+                m_logger->never("\tsave appState");
                 loader.save(m_appState);
-                m_logger->debug("\tsaved");
+                m_logger->never("\tsaved");
                 return true;
             } else {
                 result.setCode(404);
                 result.setMessage("script not found: %s",name);
                 return false;
             }
-            m_logger->debug("\trunScript failed");
+            m_logger->never("\trunScript failed");
             return false;
         };
 
       
         JsonRoot* getParameters(Request*req){
             JsonRoot * root = new JsonRoot();
-            JsonObject* obj = root->createObject();
+            JsonObject* obj = root->getTopObject();
             m_logger->never("\tloop parameters");
             for(int i=0;i<req->args();i++) {
                 if (!Util::equal(req->argName(i).c_str(),"plain")){

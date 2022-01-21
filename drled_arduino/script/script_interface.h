@@ -31,6 +31,7 @@ namespace DevRelief{
 
     class IScriptContext;
     class IScriptValue;
+    class IScriptHSLStrip;
 
 
 
@@ -51,10 +52,22 @@ namespace DevRelief{
             
             // unit (pixel or percent) and type come from the script. 
             virtual void setUnit(PositionUnit unit)=0;
-            virtual PositionUnit getUnit() const =0;
+            virtual IScriptValue* getUnit()const=0;
+            virtual PositionUnit evalUnit(IScriptContext* context) const =0;
+
+            // 
+            virtual void setWrap(IScriptValue* Wrap)=0;
+            virtual IScriptValue* getWrap()const=0;
+            virtual bool evalWrap(IScriptContext* context) const =0;
+
+            //
+            virtual void setClip(IScriptValue* clip)=0;
+            virtual IScriptValue* getClip()const=0;
+            virtual bool evalClip(IScriptContext* context) const =0;
 
             virtual void setStripNumber(IScriptValue* strip)=0;
             virtual IScriptValue* getStripNumber() const = 0;
+            virtual int evalStripNumber(IScriptContext* context) const = 0;
 
             virtual void setType(int /*PositionType flags*/ type)=0;
             virtual int /* PositionType flags */ getType() const =0;
@@ -71,9 +84,9 @@ namespace DevRelief{
             virtual bool isPositionAbsolute() const=0;
             virtual bool isPositionRelative() const=0;
 
-            /* it doesn't make sense to clip & wrap but allow both.  wrap takes precendence if both true */
-            virtual bool isClip() const = 0;
-            virtual bool isWrap() const = 0;
+  
+            virtual IElementPosition* getParent()const=0;
+            virtual void setParent(IElementPosition*parent)=0;
         protected:
 
     };
