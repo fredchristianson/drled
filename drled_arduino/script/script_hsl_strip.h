@@ -81,6 +81,13 @@ namespace DevRelief{
             virtual void setParent(IScriptHSLStrip*parent) {
                 m_parent = parent;
             }
+
+            IScriptHSLStrip* getRoot()  override {
+                if (m_parent) {
+                    return m_parent->getRoot();
+                }
+                return NULL;
+            }
         protected:
 
             int m_position;
@@ -99,6 +106,7 @@ namespace DevRelief{
 
             }
 
+            IScriptHSLStrip* getRoot()  override { return this;}
             void setHue(int16_t hue) override {
                 if (hue<0) { return;}
                 m_base->setHue(getPosition(),hue,getOp());

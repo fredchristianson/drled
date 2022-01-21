@@ -42,13 +42,13 @@ namespace DevRelief
     class ScriptContext: public IScriptContext
     {
         public:
-            ScriptContext(const char * type,IScriptHSLStrip* strip) { 
+            ScriptContext(const char * type) { 
                 m_type = type;
                 m_logger = &ScriptLogger;
-                m_strip = strip;
                 m_logger->debug("Create ScriptContext type: %s",m_type);
                 m_currentStep = NULL;
                 m_lastStep = NULL;
+                m_strip = NULL;
             }
 
             virtual ~ScriptContext() {
@@ -59,10 +59,8 @@ namespace DevRelief
 
             void destroy() override { delete this;}
 
-            IScriptHSLStrip* getStrip() override {
-                return m_strip;
-            };
-
+            void setStrip(IScriptHSLStrip*strip) { m_strip = strip;}
+            IScriptHSLStrip* getStrip() const override { return m_strip;}
             IScriptStep* getStep() override {
                 return m_currentStep;
             };
@@ -90,28 +88,31 @@ namespace DevRelief
 
             
             IAnimationDomain* getAnimationPositionDomain() {
-
+                m_logger->error("getAnimationPositionDomain not implemented");
+                return NULL;
             };
 
 
             IScriptValue* getValue(const char * name) {
-
+                m_logger->error("getValue not implemented");
+                return NULL;
             };
 
 
         protected:
             virtual void initializeStep()=0;
             virtual void finalizeStep()=0;
+
+            IScriptHSLStrip* m_strip;
             const char * m_type;
             Logger* m_logger;    
-            IScriptHSLStrip * m_strip;
             ScriptStep * m_currentStep;
             ScriptStep * m_lastStep;
     };
 
     class RootContext : public ScriptContext {
         public:
-        RootContext(HSLStrip* strip, JsonObject* params) : ScriptContext("RootContext",new RootHSLStrip(strip))
+        RootContext(HSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
         {
             m_strip = strip;
             m_params = params;

@@ -6,6 +6,7 @@
 #include "./script_value.h"
 #include "./json_names.h"
 #include "./element_position.h"
+#include "./script_hsl_strip.h"
 
 
 namespace DevRelief {
@@ -59,7 +60,7 @@ namespace DevRelief {
             bool isPositionable() const override { return false; }
             IElementPosition* getPosition() const { return NULL;}
 
-            IScriptHSLStrip* getStrip() { return m_strip;}
+            IScriptHSLStrip* getStrip() const { return m_strip;}
         protected:
             virtual void positionToJson(JsonObject* json){
 
@@ -134,7 +135,7 @@ namespace DevRelief {
             }
 
             virtual void draw(IScriptContext*context) {
-                IScriptHSLStrip* strip = context->getStrip();
+                IScriptHSLStrip* strip = &m_strip;
                 int stripLength = strip->getLength();
                 m_logger->never("ScriptLEDElement draw %d",strip->getLength());
                 int start = m_position ? m_position->getStart() : 0;
