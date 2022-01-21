@@ -935,6 +935,9 @@ namespace DevRelief
    }
 
    ScriptValue* ScriptValue::create(IJsonElement*json){
+       if (json == NULL) { 
+           return NULL;
+       }
        if (json->asValue()) {
            IJsonValueElement* jsonVal = json->asValue();
             if (json->isNumber()) {

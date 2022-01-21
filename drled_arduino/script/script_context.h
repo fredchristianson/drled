@@ -48,11 +48,13 @@ namespace DevRelief
                 m_strip = strip;
                 m_logger->debug("Create ScriptContext type: %s",m_type);
                 m_currentStep = NULL;
+                m_lastStep = NULL;
             }
 
             virtual ~ScriptContext() {
                 m_logger->debug("delete ScriptContext type: %s",m_type);
                 if (m_currentStep) { m_currentStep->destroy();}
+                if (m_lastStep) { m_lastStep->destroy();}
             }
 
             void destroy() override { delete this;}
@@ -63,6 +65,10 @@ namespace DevRelief
 
             IScriptStep* getStep() override {
                 return m_currentStep;
+            };
+
+            IScriptStep* getLastStep() override {
+                return m_lastStep;
             };
 
             IScriptStep* beginStep() override {
@@ -77,6 +83,9 @@ namespace DevRelief
 
             void endStep() override {
                 finalizeStep();
+                if (m_lastStep) { m_lastStep->destroy();}
+                m_lastStep = m_currentStep;
+                m_currentStep = NULL;
             }
 
             
@@ -97,6 +106,7 @@ namespace DevRelief
             Logger* m_logger;    
             IScriptHSLStrip * m_strip;
             ScriptStep * m_currentStep;
+            ScriptStep * m_lastStep;
     };
 
     class RootContext : public ScriptContext {
@@ -121,9 +131,7 @@ namespace DevRelief
             m_strip->show();
         }
 
-    protected:
-        PtrList<IScriptElement*> m_children;
-        Logger* m_logger;
+        protected:
         JsonObject* m_params;
         HSLStrip* m_strip;
     };

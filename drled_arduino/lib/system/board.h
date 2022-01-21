@@ -1,4 +1,6 @@
-#define FAKE_ARDUINO
+#ifndef ESPBOARD_H
+#define ESPBOARD_H
+
 #ifdef FAKE_ARDUINO
     #include <chrono>
     #include <map>
@@ -67,7 +69,7 @@
 #else 
     #include <esp.h>
     class EspBoardClass: public EspClass {
-
+        public:
             long currentMsecs() {
                 return millis();
             }        
@@ -78,4 +80,6 @@
 
     };
     EspBoardClass EspBoard;
+#endif
+
 #endif

@@ -52,6 +52,7 @@ class Logger {
 public:
     Logger(const char * name, int level = 100) {
         initializeWriter();
+        m_name = NULL;
         setModuleName(name);
         m_periodicTimer = 0;
         m_level = level;
@@ -61,16 +62,17 @@ public:
     static void setTesting(bool on) { logTestingMessage = on;}
 
     virtual ~Logger() {
-        free((void*)m_name);
+        if (m_name) {
+            free((void*)m_name);
+        }
     }
 
     void setModuleName(const char * name) {
         if (name == NULL) {
-            m_name= (char*)"???";
-        } else {
-            m_name = (char *) malloc(strlen(name)+1);
-            strcpy((char*)m_name,name);
+            name = "???";
         }
+        m_name = (char *) malloc(strlen(name)+1);
+        strcpy((char*)m_name,name);
 
     }
 

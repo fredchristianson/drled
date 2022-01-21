@@ -8,11 +8,77 @@
 #include "./json_names.h"
 
 namespace DevRelief {
-    extern Logger ScriptLogger;
+    extern Logger ScriptElementLogger;
 
-    class ElementPosition : public IElementPosition {
+    class RootElementPosition : public IElementPosition {
+        public: 
+            RootElementPosition() {
+                m_clip = false;
+                m_wrap = true;
+                m_unit = POS_PERCENT;
+                m_ledCount = 0;
+            }
+
+            virtual ~RootElementPosition() {
+
+            }
+
+
+            void destroy() override { delete this;}
+
+            int getCount() const {
+                return m_ledCount;
+            }
+
+            int getStart() const {
+                return 0;
+            }
+
+            bool isCenter() const { return false;}
+            bool isFlow() const { return false;}
+            bool isCover() const { return true;}
+            bool isPositionAbsolute() const  { return true;}
+            bool isPositionRelative() const { return false;}
+            bool isClip() const { return m_clip;}
+            bool isWrap() const { return m_wrap;}
+
+            /* the interface requires these, but the are not used for the root position */
+            // offset is an IScriptValue from the script
+            void setOffset(IScriptValue* value){}
+            IScriptValue* getOffset() const { return NULL;}
+            int evalOffset(IScriptContext* context){ return 0;}
+
+            // length is an IScriptValue from the script;
+            void setLength(IScriptValue* value){}
+            IScriptValue* getLength() const {return NULL;}
+            int evalLength(IScriptContext* context){return m_ledCount;}
+            
+            // unit (pixel or percent) and type come from the script. 
+            void setUnit(PositionUnit unit){ m_unit = unit;}
+            PositionUnit getUnit() const { return m_unit;}
+
+            void setStripNumber(IScriptValue* strip){}
+            IScriptValue* getStripNumber() const { return NULL;}
+
+            void setType(int /*PositionType flags*/ type){}
+            int /* PositionType flags */ getType() const { return POS_COVER;}
+
+            // the layout sets start and count based on parent container and above values
+            void setPosition(int start, int count,IScriptContext* context){}
+
+
+        private:
+
+            bool m_clip;
+            bool m_wrap;
+            PositionUnit m_unit;
+            int m_ledCount;
+
+    };
+
+    class ScriptElementPosition : public IElementPosition {
         public:
-            ElementPosition() {
+            ScriptElementPosition() {
                 m_logger = &ScriptLogger;
                 m_offset = NULL;
                 m_length = NULL;
@@ -23,17 +89,25 @@ namespace DevRelief {
                 m_start = 0;
             }
 
-            ElementPosition(JsonObject* json) {
+            ScriptElementPosition(JsonObject* json) {
+                m_logger = &ScriptLogger;
+                m_logger->debug("get offset property");
                 setOffset(ScriptValue::create(json->getPropertyValue("offset")));
+                m_logger->debug("get length property");
                 setLength(ScriptValue::create(json->getPropertyValue("length")));
+                m_logger->debug("get unit property");
                 setUnit(getUnit(json->getString("unit","percent")));
+                m_logger->debug("get position type property");
                 setType(getPositionType(json));
+                m_logger->debug("get strip property");
                 setStripNumber(getStripNumber(json));
+                m_count = 0;
+                m_start = 0;
             }
 
  
 
-            ~ElementPosition() {
+            virtual ~ScriptElementPosition() {
                 if (m_offset) { m_offset->destroy();}
                 if (m_length) { m_length->destroy();}
                 if (m_stripNumber) { m_stripNumber->destroy();}
@@ -102,14 +176,19 @@ namespace DevRelief {
             IScriptValue* getStripNumber() const {return m_stripNumber;}
 
 
-            int getCount() { return m_count;}
-            int getStart() { return m_start;}
+            int getCount() const { return m_count;}
+            int getStart() const { return m_start;}
+
+            bool isClip() const { return false;}
+            bool isWrap() const { return false;}
 
         protected:
 
             IScriptValue* m_offset;
             IScriptValue* m_length;
             IScriptValue* m_stripNumber; // only if m_type has POS_STRIP bit set
+            IScriptValue* m_wrap;
+            IScriptValue* m_clip;
             PositionUnit    m_unit;
             int /*PositionType flags */    m_type;
 
@@ -139,6 +218,9 @@ namespace DevRelief {
                 return unit;
             }
             int /* PositionTypeFlags */ getPositionType(JsonObject* json){
+                if (json == NULL) {
+                    return POS_FLOW + POS_RELATIVE;
+                }
                 bool absolute = json->getBool("absolute",false);
                 bool relative = json->getBool("relative",!absolute);
                 bool cover = json->getBool("cover",false);

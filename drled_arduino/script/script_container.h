@@ -18,10 +18,11 @@ namespace DevRelief
     class ScriptContainer: public ScriptElement, public IScriptContainer
     {
     public:
-        ScriptContainer(const char * type) : ScriptElement(type)
+        ScriptContainer(const char * type, IScriptHSLStrip* strip, IElementPosition* position) : ScriptElement(type, strip)
         {
             m_logger = &ScriptContainerLogger;
             m_logger->debug("Create ScriptContainer type: %s",m_type);
+            m_position = position;
         }
 
         virtual ~ScriptContainer() {
@@ -59,26 +60,36 @@ namespace DevRelief
         }
 
         void updateLayout(IScriptContext* context) override {
+            m_logger->debug("updateLayout for container type %s",getType());
             auto strip = context->getStrip();
             int stripPos = 0;
             int stripLength = strip->getLength();
             m_children.each([&](IScriptElement* child) {
                 if (child->isPositionable()) {
-                    IPositionable* positionable = (IPositionable*)child;
-                    IElementPosition* pos = positionable->getPosition();
+                    m_logger->debug("\tupdate positionable child");
+                    IElementPosition* pos = child->getPosition();
+                    m_logger->debug("\tgot IElementPosition %x",pos);
                     int offset = 0;
                     if (pos->getOffset()) {
                         offset = pos->evalOffset(context);
+                        m_logger->debug("\tgot offset %d",offset);
                     }
                     int length = stripLength - stripPos - offset;
                     if (pos->getLength()){
                         length = pos->evalLength(context);
+                        m_logger->debug("\tgot length %d",length);
                     }
+                    m_logger->debug("Set element position %d %d",stripPos+offset,length);
                     pos->setPosition(stripPos+offset,length,context);
-                    stripPos += offset+length;
+                    if (pos->isFlow() && pos->getLength()) {
+                        stripPos += offset+length;
+                    }
+                } else {
+                    m_logger->debug("\tchild is not positionable");
                 }
                 child->updateLayout(context);
             });
+            m_logger->debug("\position update done");
         };
 
         void draw(IScriptContext* context) override {
@@ -87,6 +98,15 @@ namespace DevRelief
             });
         };
 
+        bool isPositionable()  const override { return true;}
+        IElementPosition* getPosition() const override { 
+            m_logger->debug("return m_position  %x",m_position);
+            return m_position;
+        }
+    
+    protected:
+        IElementPosition* m_position;
+
     protected:
         PtrList<IScriptElement*> m_children;
         Logger* m_logger;
@@ -94,16 +114,28 @@ namespace DevRelief
 
     class ScriptRootContainer : public ScriptContainer {
         public:
-            ScriptRootContainer() : ScriptContainer(S_ROOT_CONTAINER) {
-
+            ScriptRootContainer() : ScriptContainer(S_ROOT_CONTAINER,&m_rootStrip, new RootElementPosition()) {
+                m_position->setUnit(POS_PERCENT);
+                m_position->setPosition(0,100,NULL);
             }
 
             virtual ~ScriptRootContainer() {
                 
             }
 
+            void setStrip(IHSLStrip* strip) {
+                m_rootStrip.setHSLStrip(strip);
+            }
+            void updateLayout(IScriptContext* context) override {
+                IScriptHSLStrip* strip = context->getStrip();
+                int length = strip->getLength();
+                m_position->setPosition(0,length,NULL);
+                ScriptContainer::updateLayout(context);
+            }
         private:
+            RootHSLStrip m_rootStrip;
     };
+
 
    
 }

@@ -38,6 +38,7 @@ namespace DevRelief{
         public:
             virtual void destroy()=0;
 
+
             // offset is an IScriptValue from the script
             virtual void setOffset(IScriptValue* value)=0;
             virtual IScriptValue* getOffset() const =0;
@@ -60,24 +61,23 @@ namespace DevRelief{
 
             // the layout sets start and count based on parent container and above values
             virtual void setPosition(int start, int count,IScriptContext* context)=0;
- 
-            virtual int getCount()=0;
-            virtual int getStart()=0;
+
+            virtual int getCount()const=0;
+            virtual int getStart()const=0;
 
             virtual bool isCenter() const=0;
             virtual bool isFlow() const=0;
             virtual bool isCover() const=0;
             virtual bool isPositionAbsolute() const=0;
             virtual bool isPositionRelative() const=0;
+
+            /* it doesn't make sense to clip & wrap but allow both.  wrap takes precendence if both true */
+            virtual bool isClip() const = 0;
+            virtual bool isWrap() const = 0;
         protected:
 
     };
 
-    class IPositionable {
-        public:
-            virtual IElementPosition* getPosition() const =0;
-
-    };
 
     class IScriptStep {
         public:
@@ -116,6 +116,15 @@ namespace DevRelief{
             virtual void setSaturation(int16_t saturation)=0;
             virtual void setLightness(int16_t lightness)=0;
             virtual void setRGB(const CRGB& rgb)=0;
+        
+            /* most clients should use the above metheds.  the methods below 
+             * allow hierarchies of strips to position elements */
+            virtual void setHue(int16_t hue, int position, HSLOperation op)=0;
+            virtual void setSaturation(int16_t saturation, int position, HSLOperation op)=0;
+            virtual void setLightness(int16_t lightness, int position, HSLOperation op)=0;
+            virtual void setRGB(const CRGB& rgb, int position, HSLOperation op)=0;
+
+            virtual void setParent(IScriptHSLStrip*parent);
     };
 
     class IScriptContext {
@@ -125,6 +134,8 @@ namespace DevRelief{
             virtual IScriptHSLStrip* getStrip()=0;
             
             virtual IScriptStep* getStep()=0;
+            virtual IScriptStep* getLastStep()=0;
+
             virtual IScriptStep* beginStep();
             virtual void endStep();
 
@@ -190,7 +201,9 @@ namespace DevRelief{
             virtual void updateLayout(IScriptContext* context)=0;
             virtual void draw(IScriptContext* context)=0;
 
-            virtual bool isPositionable()=0;
+            virtual bool isPositionable()const=0;
+            virtual IElementPosition* getPosition() const =0;
+
     };
 
     class IScriptContainer {
