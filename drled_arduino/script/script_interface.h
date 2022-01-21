@@ -124,15 +124,15 @@ namespace DevRelief{
             virtual void setLightness(int16_t lightness, int position, HSLOperation op)=0;
             virtual void setRGB(const CRGB& rgb, int position, HSLOperation op)=0;
 
-            virtual void setParent(IScriptHSLStrip*parent);
+            virtual void setParent(IScriptHSLStrip*parent)=0;
+
+            virtual IScriptHSLStrip* getRoot()=0;
     };
 
     class IScriptContext {
         public: 
             virtual void destroy()=0;
 
-            virtual IScriptHSLStrip* getStrip()=0;
-            
             virtual IScriptStep* getStep()=0;
             virtual IScriptStep* getLastStep()=0;
 
@@ -142,6 +142,9 @@ namespace DevRelief{
             virtual IAnimationDomain* getAnimationPositionDomain()=0;
 
             virtual IScriptValue* getValue(const char * name)=0;
+
+            virtual void setStrip(IScriptHSLStrip*strip)=0;
+            virtual IScriptHSLStrip* getStrip() const = 0;
     };
 
     class IScriptValue
@@ -204,6 +207,7 @@ namespace DevRelief{
             virtual bool isPositionable()const=0;
             virtual IElementPosition* getPosition() const =0;
 
+            virtual IScriptHSLStrip* getStrip() const = 0;
     };
 
     class IScriptContainer {

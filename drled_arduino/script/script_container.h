@@ -61,13 +61,19 @@ namespace DevRelief
 
         void updateLayout(IScriptContext* context) override {
             m_logger->debug("updateLayout for container type %s",getType());
-            auto strip = context->getStrip();
+            auto strip = getStrip();
             int stripPos = 0;
             int stripLength = strip->getLength();
             m_children.each([&](IScriptElement* child) {
                 if (child->isPositionable()) {
                     m_logger->debug("\tupdate positionable child");
                     IElementPosition* pos = child->getPosition();
+                    IScriptHSLStrip* parent = pos->isPositionAbsolute() ? strip->getRoot() : strip;
+                    child->getStrip()->setParent(parent);
+                    if (pos->isCover()){
+                        pos->setPosition(0,parent->getLength(),context);
+                        return;   
+                    }
                     m_logger->debug("\tgot IElementPosition %x",pos);
                     int offset = 0;
                     if (pos->getOffset()) {
@@ -80,9 +86,15 @@ namespace DevRelief
                         m_logger->debug("\tgot length %d",length);
                     }
                     m_logger->debug("Set element position %d %d",stripPos+offset,length);
-                    pos->setPosition(stripPos+offset,length,context);
-                    if (pos->isFlow() && pos->getLength()) {
-                        stripPos += offset+length;
+
+                    if (pos->isCenter()) {
+                        int center = (parent->getLength()-length)/2;
+                        pos->setPosition(center+offset,length,context);
+                    } else {
+                        pos->setPosition(stripPos+offset,length,context);
+                        if (pos->isFlow() && pos->getLength()) {
+                            stripPos += offset+length;
+                        }
                     }
                 } else {
                     m_logger->debug("\tchild is not positionable");
@@ -127,8 +139,8 @@ namespace DevRelief
                 m_rootStrip.setHSLStrip(strip);
             }
             void updateLayout(IScriptContext* context) override {
-                IScriptHSLStrip* strip = context->getStrip();
-                int length = strip->getLength();
+                context->setStrip(&m_rootStrip);
+                int length = m_rootStrip.getLength();
                 m_position->setPosition(0,length,NULL);
                 ScriptContainer::updateLayout(context);
             }

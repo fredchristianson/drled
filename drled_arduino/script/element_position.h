@@ -135,11 +135,11 @@ namespace DevRelief {
             }
 
 
-            bool isCenter() const { return m_type & POS_CENTER;}
-            bool isFlow() const { return m_type & POS_FLOW;}
-            bool isCover() const { return m_type & POS_COVER;}
-            bool isPositionAbsolute() const { return m_type & POS_ABSOLUTE;}
-            bool isPositionRelative() const { return !(m_type & POS_ABSOLUTE);}
+            bool isCenter() const { return (m_type & POS_CENTER) == POS_CENTER;}
+            bool isFlow() const { return (m_type & POS_FLOW) == POS_FLOW;}
+            bool isCover() const { return (m_type & POS_COVER) == POS_COVER;}
+            bool isPositionAbsolute() const { return (m_type & POS_ABSOLUTE) == POS_ABSOLUTE;}
+            bool isPositionRelative() const { return (m_type & POS_ABSOLUTE)!=POS_ABSOLUTE;}
 
             void setOffset(IScriptValue* value) override  { m_offset = value;}
             IScriptValue* getOffset() const override  { return m_offset;}
