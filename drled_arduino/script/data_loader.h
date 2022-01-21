@@ -88,6 +88,11 @@ namespace DevRelief {
                 return script;
             }
 
+            JsonRoot* toJson(const char * text) {
+                JsonParser parser;
+                JsonRoot* root = parser.read(text);
+                return root;
+            }
 
             JsonRoot* toJson(Script& script) {
                 m_logger->debug("toJson");

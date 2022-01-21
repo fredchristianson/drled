@@ -69,7 +69,9 @@ class JsonRoot : public JsonBase {
         }
 
         virtual ~JsonRoot() {
-
+            if (m_value){
+                m_value->destroy();
+            }
         }
 
 
@@ -304,6 +306,7 @@ class JsonNull : public JsonValueElement {
 class JsonProperty : public JsonElement {
     public:
         JsonProperty(JsonRoot& root, const char * name,size_t nameLength,IJsonElement* value) : JsonElement(root,JSON_PROPERTY) {
+            m_logger = &JsonLogger;
             m_name = root.allocString(name,nameLength);
             m_value = value;
             m_next = NULL;
@@ -325,6 +328,8 @@ class JsonProperty : public JsonElement {
             m_root.freeString(m_name); 
             if (m_value && m_value->getRoot() == getRoot()){
                 if (m_value) { m_value->destroy();}
+            } else {
+                m_logger->error("property value does not share root with JsonProperty");
             }
         }
 
@@ -342,7 +347,7 @@ class JsonProperty : public JsonElement {
         void setNext(JsonProperty*  next) {
             jsonLogger->info("setNext property [%d]-->[%d]",getJsonId(),(next == NULL ? -1 : next->getJsonId()));
             if (m_next != NULL) {
-                delete m_next;
+                m_next->destroy();
             }
             m_next = next;
         }
@@ -358,7 +363,7 @@ class JsonProperty : public JsonElement {
         }
 
         void setValue(IJsonElement*val) {
-            delete m_value;
+            if (m_value) { m_value->destroy();}
             m_value = val;
         }
 
@@ -393,6 +398,7 @@ class JsonProperty : public JsonElement {
         char* m_name;
         IJsonElement* m_value;
         JsonProperty* m_next;
+        Logger* m_logger;
 };
 
 class JsonObject : public JsonElement {
@@ -566,9 +572,11 @@ class JsonArrayItem : public JsonElement {
 
         virtual ~JsonArrayItem() {
             if (m_value && m_value->getRoot() == getRoot()){
-                delete m_value;
+                m_value->destroy();
             }
-            delete m_next;
+            if (m_next){
+                m_next->destroy();
+            }
         }
 
 
@@ -608,7 +616,7 @@ class JsonArray : public JsonElement {
         
         }
         virtual ~JsonArray() {
-            delete m_firstItem;
+            if (m_firstItem) { m_firstItem->destroy();}
         
         }
 

@@ -13,9 +13,10 @@ namespace DevRelief {
 
     class ScriptElement : public IScriptElement {
         public:
-            ScriptElement(const char * type){
+            ScriptElement(const char * type, IScriptHSLStrip* strip){
                 m_logger = &ScriptElementLogger;
                 m_type = type;
+                m_strip = strip;
                 m_logger->debug("Create ScriptElement type=%s",m_type);
             }
 
@@ -55,8 +56,10 @@ namespace DevRelief {
 
             };
 
-            bool isPositionable() { return false; }
+            bool isPositionable() const override { return false; }
+            IElementPosition* getPosition() const { return NULL;}
 
+            IScriptHSLStrip* getStrip() { return m_strip;}
         protected:
             virtual void positionToJson(JsonObject* json){
 
@@ -89,11 +92,13 @@ namespace DevRelief {
 
             const char * m_type;
             Logger* m_logger;
+
+            IScriptHSLStrip* m_strip;
     };
 
     class ValuesElement : public ScriptElement {
         public:
-            ValuesElement() :ScriptElement(S_VALUES) {
+            ValuesElement() :ScriptElement(S_VALUES,NULL) {
 
             }
 
@@ -118,9 +123,9 @@ namespace DevRelief {
             ScriptValueList m_values;
     };
 
-    class ScriptLEDElement : public ScriptElement, public IPositionable {
+    class ScriptLEDElement : public ScriptElement{
         public:
-            ScriptLEDElement(const char* type) : ScriptElement(type) {
+            ScriptLEDElement(const char* type) : ScriptElement(type, &m_strip) {
                 m_position = NULL;
             }
 
@@ -149,14 +154,21 @@ namespace DevRelief {
 
             void valuesFromJson(JsonObject* json) override {
                 if (m_position) { m_position->destroy();}
-                m_position = new ElementPosition(json);                
+                m_logger->debug("create ElementPosition from json %x",json);
+                m_position = new ScriptElementPosition(json);                
+                m_logger->debug("\tElementPosition created");
             }
 
-            IElementPosition* getPosition() const override { return m_position;}
+            bool isPositionable()  const override { return true;}
+            IElementPosition* getPosition() const override { 
+                m_logger->debug("return m_position  %x",m_position);
+                return m_position;
+            }
         protected:
             
             virtual void drawLED(IScriptContext*context,IScriptHSLStrip* strip,int index)=0;
-            ElementPosition* m_position;
+            ScriptElementPosition* m_position;
+            ElementHSLStrip m_strip;
             
     };
 

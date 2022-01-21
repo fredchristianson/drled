@@ -45,11 +45,18 @@ namespace DevRelief
 
         void begin(HSLStrip* strip, JsonObject* params) {
             m_logger->debug("Begin script %x %s",strip,m_name.text());
+            m_rootContainer->setStrip(strip);
             m_rootContext = new RootContext(strip,params);
 
         }
 
         void step() {
+            auto lastStep = m_rootContext->getLastStep();
+            if (lastStep && m_frequencyMsecs>0 && lastStep->getStartMsecs() + m_frequencyMsecs > millis()) {
+                m_logger->never("too soon %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
+                return; // to soon to start next step
+            }
+            m_logger->never("step %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
             m_logger->debug("Begin step %s",m_name.text());
             m_rootContext->beginStep();
             m_logger->debug("\tupdate layout");
@@ -69,7 +76,10 @@ namespace DevRelief
 
         void setDuration(int durationMsecs) { m_durationMsecs = durationMsecs;}
         int getDuration() { return m_durationMsecs;}
-        void setFrequency(int frequencyMsecs) { m_frequencyMsecs = frequencyMsecs;}
+        void setFrequency(int frequencyMsecs) {
+            m_logger->info("script frequency %d",frequencyMsecs);
+            m_frequencyMsecs = frequencyMsecs;
+        }
         int getFrequency() { return m_frequencyMsecs;}
 
         ScriptRootContainer* getRootContainer() { return m_rootContainer;}

@@ -10,59 +10,23 @@ namespace DevRelief
 {
     const char *SIMPLE_SCRIPT = R"script(
             {
-                "name": "simple",
-                "commands": [
+                "name": "simple"
+            }        
+        )script";    
+        
+        const char *ARRAY_SCRIPT = R"script(
+            {
+                "name": "with elements array",
+                "elements": [
                 {
-                    "type": "rgb",
-                    "red": 250
+                    "type": "hsl",
+                    "hue": 250
                 }
                 ]
             }        
         )script";
 
-    const char *VALUES_SCRIPT = R"script(
-        {
-            "commands": [
-            {
-                "type": "values",
-                "x": 100,
-                "yy": 200,
-                "z": 300
-            },
-            {
-                "type": "values",
-                "x": "101"
-                "y": "var(yy)",
-                "timeAnimate": { "start": 10, "end": 200, "speed": 500},
-                "posAnimate": { "start": 10, "end": 200},
-                "posUnfold": { "start": 10, "end": 200, "unfold":true}
-            }
-            ]
-        }       
-        )script";
-
-    const char *POSITION_SCRIPT = R"script(
-        {
-            "commands": [
-            {
-                "type": "position",
-                "unit": "pixel",
-                "start": 5,
-                "count": 10,
-                "wrap": true,
-                "reverse": true,
-                "skip": 3,
-                "animate": {"speed":20}
-            },
-            {
-                "type": "rgb",
-                "red": 255
-            }
-            ]
-        }       
-        )script";
-
-
+  
     class JsonTestSuite : public TestSuite
     {
     public:
@@ -84,7 +48,12 @@ namespace DevRelief
 
             runTest("testJsonMemoryFree", [&](TestResult &r)
                     { testJsonMemory(r); });
-
+            runTest("testParseSimple", [&](TestResult &r)
+                    { testParseSimple(r); });
+            runTest("testParseArray", [&](TestResult &r)
+                    { testParseArray(r); });
+            runTest("testGenerateSimple", [&](TestResult &r)
+                    { testGenerateSimple(r); });
  
                                   
         }
@@ -95,17 +64,71 @@ namespace DevRelief
 
     protected:
         void testJsonMemory(TestResult &result);
+        void testParseSimple(TestResult &result);
+        void testParseArray(TestResult &result);
+        void testGenerateSimple(TestResult &result);
         //void testJsonValue(TestResult &result);
-        //void testParseSimple(TestResult &result);
         //void testPosition(TestResult &result);
     };
 
     void JsonTestSuite::testJsonMemory(TestResult &result)
     {
+        JsonRoot root;
+        JsonObject* obj = root.getTopObject();
+        obj->setString("test","foo");
+        obj->setInt("testi",1);
 
     }
 
+    void JsonTestSuite::testParseSimple(TestResult &result)
+    {
+        JsonParser parser;
+        m_logger->debug("Parse SIMPLE_SCRIPT");
+        m_logger->showMemory();
+        JsonRoot* root = parser.read(SIMPLE_SCRIPT);
+        m_logger->debug("\tgot SIMPLE_SCRIPT");
+        m_logger->showMemory();
+        root->destroy();
+        m_logger->debug("\tdestroyed SIMPLE_SCRIPT");
+        m_logger->showMemory();
+    }
+    void JsonTestSuite::testParseArray(TestResult &result)
+    {
+        JsonParser parser;
+        m_logger->debug("Parse ARRAY_SCRIPT");
+        m_logger->showMemory();
+        JsonRoot* root = parser.read(ARRAY_SCRIPT);
+        m_logger->debug("\tgot ARRAY_SCRIPT");
+        m_logger->showMemory();
+        root->destroy();
+        m_logger->debug("\tdestroyed ARRAY_SCRIPT");
+        m_logger->showMemory();
+    }
 
+    void JsonTestSuite::testGenerateSimple(TestResult &result)
+    {
+        m_logger->debug("create JsonRoot");
+        m_logger->showMemory();
+        JsonRoot*  root=new JsonRoot();
+        JsonObject* obj = root->getTopObject();
+        obj->setString("test","foo");
+        obj->setInt("testi",1);
+        DRString* buffer = new DRString();
+        m_logger->debug("create generator");
+        m_logger->showMemory();
+        JsonGenerator gen(*buffer);
+        m_logger->debug("generate text");
+        m_logger->showMemory();
+        gen.generate(root);
+        m_logger->debug("generated text. length=%d",buffer->getLength());
+        m_logger->showMemory();
+        delete buffer;
+        m_logger->debug("deleted buffer");
+        m_logger->showMemory();
+        root->destroy();
+        m_logger->debug("deleted root");
+        m_logger->showMemory();
+    }
 
 }
 #endif

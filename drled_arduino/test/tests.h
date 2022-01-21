@@ -76,7 +76,6 @@ namespace DevRelief {
 
             m_logger->info("tests complete: %s",(success ? "success": "fail"));
 
-            delete m_logger;
             Logger::setTesting(false);
             return success;
         }
