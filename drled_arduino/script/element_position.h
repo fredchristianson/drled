@@ -52,22 +52,35 @@ namespace DevRelief {
             void setLength(IScriptValue* value){}
             IScriptValue* getLength() const {return NULL;}
             int evalLength(IScriptContext* context){return m_ledCount;}
+
+            void setClip(IScriptValue* value){}
+            IScriptValue* getClip() const {return NULL;}
+            bool evalClip(IScriptContext* context){return m_clip;}
+
+            void setWrap(IScriptValue* value){}
+            IScriptValue* getWrap() const {return NULL;}
+            int evalWrap(IScriptContext* context){return m_wrap;}            
             
             // unit (pixel or percent) and type come from the script. 
-            void setUnit(PositionUnit unit){ m_unit = unit;}
-            PositionUnit getUnit() const { return m_unit;}
+            void setUnit(PositionUnit unit) override { m_unit = unit;}
+            IScriptValue* getUnit() const override { return NULL;}
+            PositionUnit evalUnit(IScriptContext* context) const override  {
+                 return m_unit;
+            }
 
             void setStripNumber(IScriptValue* strip){}
             IScriptValue* getStripNumber() const { return NULL;}
+            int evalStripNumber(IScriptContext* context) const { return -1;}
 
             void setType(int /*PositionType flags*/ type){}
             int /* PositionType flags */ getType() const { return POS_COVER;}
 
             // the layout sets start and count based on parent container and above values
-            void setPosition(int start, int count,IScriptContext* context){}
+            void setPosition(int start, int count,IScriptContext* context) override {}
 
-
-        private:
+            IElementPosition* getParent()const override {return NULL;};
+            void setParent(IElementPosition*parent) {}
+        protected:
 
             bool m_clip;
             bool m_wrap;
@@ -80,26 +93,34 @@ namespace DevRelief {
         public:
             ScriptElementPosition() {
                 m_logger = &ScriptLogger;
-                m_offset = NULL;
-                m_length = NULL;
+                m_offsetValue = NULL;
+                m_lengthValue = NULL;
+                m_clipValue = NULL;
+                m_wrapValue = NULL;
                 m_stripNumber = NULL;
                 m_unit = POS_INHERIT;
                 m_type = POS_RELATIVE | POS_FLOW;
                 m_count = 0;
                 m_start = 0;
+                m_clip = false;
+                m_wrap = false;
+                m_parent = NULL;
+
             }
 
             ScriptElementPosition(JsonObject* json) {
                 m_logger = &ScriptLogger;
-                m_logger->debug("get offset property");
+                m_logger->never("get offset property");
                 setOffset(ScriptValue::create(json->getPropertyValue("offset")));
-                m_logger->debug("get length property");
+                m_logger->never("get length property");
                 setLength(ScriptValue::create(json->getPropertyValue("length")));
-                m_logger->debug("get unit property");
+                m_logger->never("get unit property");
                 setUnit(getUnit(json->getString("unit","percent")));
-                m_logger->debug("get position type property");
+                setClip(ScriptValue::create(json->getPropertyValue("clip")));
+                setWrap(ScriptValue::create(json->getPropertyValue("wrap")));
+                m_logger->never("get position type property");
                 setType(getPositionType(json));
-                m_logger->debug("get strip property");
+                m_logger->never("get strip property");
                 setStripNumber(getStripNumber(json));
                 m_count = 0;
                 m_start = 0;
@@ -108,19 +129,21 @@ namespace DevRelief {
  
 
             virtual ~ScriptElementPosition() {
-                if (m_offset) { m_offset->destroy();}
-                if (m_length) { m_length->destroy();}
+                if (m_offsetValue) { m_offsetValue->destroy();}
+                if (m_lengthValue) { m_lengthValue->destroy();}
+                if (m_stripNumber) { m_stripNumber->destroy();}
+                if (m_stripNumber) { m_stripNumber->destroy();}
                 if (m_stripNumber) { m_stripNumber->destroy();}
             }
 
             void destroy() override { delete this;}
 
             void toJson(JsonObject* json) {
-                if (m_length) { 
-                    json->set("length",m_length->toJson(json->getRoot()));
+                if (m_lengthValue) { 
+                    json->set("length",m_lengthValue->toJson(json->getRoot()));
                 }
-                if (m_offset) { 
-                    json->set("offset",m_offset->toJson(json->getRoot()));
+                if (m_offsetValue) { 
+                    json->set("offset",m_offsetValue->toJson(json->getRoot()));
                 }
                 if (m_stripNumber) { 
                     json->set("strip",m_stripNumber->toJson(json->getRoot()));
@@ -141,27 +164,36 @@ namespace DevRelief {
             bool isPositionAbsolute() const { return (m_type & POS_ABSOLUTE) == POS_ABSOLUTE;}
             bool isPositionRelative() const { return (m_type & POS_ABSOLUTE)!=POS_ABSOLUTE;}
 
-            void setOffset(IScriptValue* value) override  { m_offset = value;}
-            IScriptValue* getOffset() const override  { return m_offset;}
+            void setOffset(IScriptValue* value) override  { m_offsetValue = value;}
+            IScriptValue* getOffset() const override  { return m_offsetValue;}
             int evalOffset(IScriptContext* context) override{
-                return m_offset ? m_offset->getIntValue(context,0) : 0;
+                return m_offsetValue ? m_offsetValue->getIntValue(context,0) : 0;
 
             }
 
-            void setLength(IScriptValue* value) { m_length = value;}
-            IScriptValue* getLength() const override { return m_length;}
+            void setLength(IScriptValue* value) { m_lengthValue = value;}
+            IScriptValue* getLength() const override { return m_lengthValue;}
             int evalLength(IScriptContext* context) override{
-                return m_length ? m_length->getIntValue(context,100) : 0;
+                return m_lengthValue ? m_lengthValue->getIntValue(context,100) : 0;
 
             }
 
             void setPosition(int start, int count,IScriptContext* context) override {
-                m_start = start;
-                m_count = count;
+                if (getType() == POS_PERCENT && m_parent) {
+                    int plength = m_parent->getCount();
+                    m_start = start*0.01*plength;
+                    m_count = count*0.01*plength;
+                } else {
+                    m_start = start;
+                    m_count = count;
+                }
             }
 
             void setUnit(PositionUnit unit) override { m_unit = unit;}
             PositionUnit getUnit() const override {
+                if (m_unit == POS_INHERIT) {
+                    return m_parent ? m_parent->getUnit() : POS_PIXEL;
+                }
                 return m_unit;
             }
 
@@ -179,17 +211,20 @@ namespace DevRelief {
             int getCount() const { return m_count;}
             int getStart() const { return m_start;}
 
-            bool isClip() const { return false;}
-            bool isWrap() const { return false;}
 
+            IElementPosition* getParent()const override {return m_parent;}
+            void setParent(IElementPosition*parent) { m_parent = parent;}
         protected:
-
-            IScriptValue* m_offset;
-            IScriptValue* m_length;
+            IElementPosition* m_parent;
+            IScriptValue* m_offsetValue;
+            IScriptValue* m_lengthValue;
+            IScriptValue* m_clipValue;
+            IScriptValue* m_wrapValue;
             IScriptValue* m_stripNumber; // only if m_type has POS_STRIP bit set
-            IScriptValue* m_wrap;
-            IScriptValue* m_clip;
+            IScriptValue* m_wrapValue;
+            IScriptValue* m_clipValue;
             PositionUnit    m_unit;
+
             int /*PositionType flags */    m_type;
 
             int m_count;

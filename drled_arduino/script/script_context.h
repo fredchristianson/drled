@@ -115,13 +115,19 @@ namespace DevRelief
         RootContext(HSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
         {
             m_strip = strip;
-            m_params = params;
+            m_params = m_paramRoot.getTopObject();
+            if (params) {
+                params->eachProperty([&](const char * name, IJsonElement* value){
+                    auto v = value->asValue();
+                    m_params->setString(name,v? v->getString("unset"):"unset");
+                });
+            }
+            m_logger->debug("created RootContext %x",this);
         }
 
         virtual ~RootContext() {
-            if (m_params) {
-                m_params->destroy();
-            }
+            m_logger->debug("~RootContext %x",this);
+
         }
 
         void initializeStep() {
@@ -133,6 +139,7 @@ namespace DevRelief
         }
 
         protected:
+        JsonRoot  m_paramRoot;
         JsonObject* m_params;
         HSLStrip* m_strip;
     };

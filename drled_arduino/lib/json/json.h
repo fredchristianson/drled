@@ -19,6 +19,8 @@ class JsonBase : public IJsonElement {
             m_jsonId = -1;
         }
         virtual ~JsonBase() {
+            jsonLogger->never("~JsonBase");
+
         }
 
         void destroy() override { 
@@ -64,16 +66,20 @@ class JsonRoot : public JsonBase {
             setJsonId(this);
         }
 
+
+
+        virtual ~JsonRoot() {
+            jsonLogger->never("~JsonRoot");
+            if (m_value){
+                jsonLogger->never("\tdestroy value");
+                m_value->destroy();
+            }
+            jsonLogger->never("\t~JsonRoot done");
+        }
+
         void setJsonId(JsonBase* element) {
             element->setJsonId(m_nextJsonId++);
         }
-
-        virtual ~JsonRoot() {
-            if (m_value){
-                m_value->destroy();
-            }
-        }
-
 
         char * allocString(const char * val, size_t len) {
             if (len == 0) {
@@ -324,6 +330,8 @@ class JsonProperty : public JsonElement {
 
         }
         virtual ~JsonProperty() { 
+            jsonLogger->never("~JsonProperty");
+
             if (m_next) { m_next->destroy();}
             m_root.freeString(m_name); 
             if (m_value && m_value->getRoot() == getRoot()){
@@ -409,6 +417,7 @@ class JsonObject : public JsonElement {
             setInt("jsonId",getJsonId());
         }
         virtual ~JsonObject() {
+            jsonLogger->never("~JsonObject");
             if (m_firstProperty) { m_firstProperty->destroy();}
        }
         

@@ -30,15 +30,20 @@ namespace DevRelief
         }
 
         virtual ~Script() {
+            m_logger->never("~Script %x",this);
             if (m_rootContext) {
+                m_logger->never("destroy rootcontext %x",m_rootContext);
                 m_rootContext->destroy();
             }
             if (m_rootContainer) {
+                m_logger->never("destroy rootcontainer %x",m_rootContainer);
                 m_rootContainer->destroy();
             }
+            m_logger->never("~Script done");
         }
 
         virtual void destroy() {
+            m_logger->never("destroy Script");
             delete this;
         }
 
@@ -57,17 +62,17 @@ namespace DevRelief
                 return; // to soon to start next step
             }
             m_logger->never("step %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
-            m_logger->debug("Begin step %s",m_name.text());
+            m_logger->never("Begin step %s",m_name.text());
             m_rootContext->beginStep();
-            m_logger->debug("\tupdate layout");
+            m_logger->never("\tupdate layout");
 
             m_rootContainer->updateLayout(m_rootContext);
-            m_logger->debug("\tdraw");
+            m_logger->never("\tdraw");
             m_rootContainer->draw(m_rootContext);
-            m_logger->debug("\tend step");
+            m_logger->never("\tend step");
 
             m_rootContext->endStep();
-            m_logger->debug("\tstep done");
+            m_logger->never("\tstep done");
 
         }
 

@@ -16,6 +16,10 @@ class DataObject {
 
         }
 
+        virtual ~DataObject() {
+            
+        }
+
         void addProperty(const char* name, int val){
             m_json->setInt(name,val);
         }
