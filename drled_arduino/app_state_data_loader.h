@@ -11,12 +11,12 @@
 namespace DevRelief {
 
 const char * STATE_PATH_BASE="/state/";
-extern Logger AppStateLogger;
+extern Logger AppStateLoaderLogger;
 
 class AppStateDataLoader : public DataLoader {
     public:
         AppStateDataLoader() {
-            m_logger = &AppStateLogger;
+            m_logger = &AppStateLoaderLogger;
         }
 
         DRString getPath(const char * name) {
@@ -28,18 +28,18 @@ class AppStateDataLoader : public DataLoader {
         }
 
 
-        bool save(AppState& state){
+        bool save(AppState& state, const char * name = "state"){
             m_logger->debug("save AppState");
 
             SharedPtr<JsonRoot> jsonRoot = toJson(state);
             
-            bool success = writeJsonFile(getPath("state"),jsonRoot->getTopElement());
+            bool success = writeJsonFile(getPath(name),jsonRoot->getTopElement());
             m_logger->debug("\twrite %s",success?"success":"failed");
             return success;
         }
 
-        bool load(AppState& state) {
-            return loadJsonFile(getPath("state"),[&](JsonObject * obj) {
+        bool load(AppState& state,const char * name ="state") {
+            return loadJsonFile(getPath(name),[&](JsonObject * obj) {
                 if (obj != NULL) {
                     state.setExecuteType((ExecuteType)obj->getInt("type",EXECUTE_NONE));
                     state.setExecuteValue(obj->getString("value",(const char *)NULL));
@@ -52,7 +52,7 @@ class AppStateDataLoader : public DataLoader {
                                 state.isStarting()?"starting":"",
                                 state.isRunning()?"running":"",
                                 (int)state.getType(),
-                                state.getExecuteValue().text(),
+                                state.getExecuteValue(),
                                 json.text());
 
                     return true;
@@ -61,9 +61,9 @@ class AppStateDataLoader : public DataLoader {
             });
         }
 
-        SharedPtr<JsonRoot> toJson(AppState& state) {
+        JsonRoot* toJson(AppState& state) {
             m_logger->debug("toJson");
-            SharedPtr<JsonRoot> jsonRoot = new JsonRoot();
+            JsonRoot* jsonRoot = new JsonRoot();
             m_logger->debug("\tcreateObj");
             JsonObject* obj = jsonRoot->getTopObject();
             m_logger->debug("\tset type");
@@ -73,7 +73,7 @@ class AppStateDataLoader : public DataLoader {
             m_logger->debug("\tset starting");
             obj->setBool("is-starting",state.isStarting());
             m_logger->debug("\tset value");
-            obj->setString("value",state.getExecuteValue().text());
+            obj->setString("value",state.getExecuteValue());
             m_logger->debug("\tcreate params");
             JsonObject* params = obj->createObject("parameters");
             m_logger->debug("\tcopy params");

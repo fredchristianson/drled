@@ -11,14 +11,10 @@ namespace DevRelief{
         POS_INHERIT = 2
     };
 
-    typedef enum PositionType
-    {
-        POS_RELATIVE = 0b00000000, // last bit is relative/absolute
-        POS_ABSOLUTE = 0b00000001, 
-        POS_FLOW     = 0b00000010,
-        POS_CENTER   = 0b00000100,
-        POS_COVER    = 0b00000110,        
-        POS_STRIP    = 0b10000000  // highest bit is if a strip number is provided
+    typedef enum PositionOverflow {
+        OVERFLOW_ALLOW=0,
+        OVERFLOW_CLIP=1,
+        OVERFLOW_WRAP=2
     };
 
     typedef enum ScriptStatus {
@@ -32,61 +28,44 @@ namespace DevRelief{
     class IScriptContext;
     class IScriptValue;
     class IScriptHSLStrip;
+    class IScriptElement;
 
 
 
     class IElementPosition {
         public:
             virtual void destroy()=0;
+            virtual void updateValues(IScriptContext*context)=0;
 
+            virtual bool hasOffset() const=0;
+            virtual int getOffset() const=0;
+            virtual bool hasLength() const=0;
+            virtual int getLength() const=0;
 
-            // offset is an IScriptValue from the script
-            virtual void setOffset(IScriptValue* value)=0;
-            virtual IScriptValue* getOffset() const =0;
-            virtual int evalOffset(IScriptContext* context)=0;
+            virtual bool hasStrip()const =0;
+            virtual int getStrip()const=0;
 
-            // length is an IScriptValue from the script;
-            virtual void setLength(IScriptValue* value)=0;
-            virtual IScriptValue* getLength() const =0;
-            virtual int evalLength(IScriptContext* context)=0;
-            
-            // unit (pixel or percent) and type come from the script. 
-            virtual void setUnit(PositionUnit unit)=0;
-            virtual IScriptValue* getUnit()const=0;
-            virtual PositionUnit evalUnit(IScriptContext* context) const =0;
+            virtual PositionUnit getUnit() const=0;
 
-            // 
-            virtual void setWrap(IScriptValue* Wrap)=0;
-            virtual IScriptValue* getWrap()const=0;
-            virtual bool evalWrap(IScriptContext* context) const =0;
-
-            //
-            virtual void setClip(IScriptValue* clip)=0;
-            virtual IScriptValue* getClip()const=0;
-            virtual bool evalClip(IScriptContext* context) const =0;
-
-            virtual void setStripNumber(IScriptValue* strip)=0;
-            virtual IScriptValue* getStripNumber() const = 0;
-            virtual int evalStripNumber(IScriptContext* context) const = 0;
-
-            virtual void setType(int /*PositionType flags*/ type)=0;
-            virtual int /* PositionType flags */ getType() const =0;
-
-            // the layout sets start and count based on parent container and above values
-            virtual void setPosition(int start, int count,IScriptContext* context)=0;
-
-            virtual int getCount()const=0;
-            virtual int getStart()const=0;
 
             virtual bool isCenter() const=0;
             virtual bool isFlow() const=0;
             virtual bool isCover() const=0;
             virtual bool isPositionAbsolute() const=0;
             virtual bool isPositionRelative() const=0;
-
-  
+            virtual bool isClip() const=0;
+            virtual bool isWrap() const=0;
+            virtual PositionOverflow getOverflow() const=0;
             virtual IElementPosition* getParent()const=0;
             virtual void setParent(IElementPosition*parent)=0;
+            
+            // the layout sets start and count based on parent container and above values
+            virtual void setPosition(int start, int count,IScriptContext* context)=0;
+            virtual int getStart()const =0;
+            virtual int getCount()const =0;
+
+            // convert val to pixel count if needed (for percent or inherited unit)
+            virtual int toPixels(int val)const=0;
         protected:
 
     };
@@ -138,7 +117,7 @@ namespace DevRelief{
             virtual void setRGB(const CRGB& rgb, int position, HSLOperation op)=0;
 
             virtual void setParent(IScriptHSLStrip*parent)=0;
-
+            virtual PositionOverflow setOverflow(PositionOverflow overflow)=0;
             virtual IScriptHSLStrip* getRoot()=0;
     };
 
@@ -158,6 +137,9 @@ namespace DevRelief{
 
             virtual void setStrip(IScriptHSLStrip*strip)=0;
             virtual IScriptHSLStrip* getStrip() const = 0;
+            virtual IScriptElement* getCurrentElement() const = 0;
+            // set the current element and return previous one
+            virtual IScriptElement* setCurrentElement(IScriptElement*element) = 0;
     };
 
     class IScriptValue

@@ -7,6 +7,8 @@
 #include "./string_suite.h"
 #include "./api_suite.h"
 #include "./script_loader_suite.h"
+#include "./script_suite.h"
+#include "./app_state_suite.h"
 namespace DevRelief {
 
 #if RUN_TESTS!=1
@@ -58,6 +60,12 @@ namespace DevRelief {
             #endif
             #if RUN_API_TESTS==1
             success = ApiTestSuite::Run(m_logger) && success;
+            #endif
+            #if RUN_SCRIPT_TESTS==1
+            success = ScriptTestSuite::Run(m_logger) && success;
+            #endif
+            #if RUN_APP_STATE_TESTS==1
+            success = AppStateTestSuite::Run(m_logger) && success;
             #endif
             //success = runTest("testSharedPtr",&Tests::testSharedPtr) && success;
             //success = runTest("testStringBuffer",&Tests::testStringBuffer) && success;

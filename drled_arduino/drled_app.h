@@ -53,21 +53,20 @@ namespace DevRelief {
                     m_logger->debug("\tsave");
                     loader.save(m_appState);
                     if (m_appState.getType() == EXECUTE_API) {
-                        m_logger->debug("\texecute API %s",m_appState.getExecuteValue().text());
+                        m_logger->debug("\texecute API %s",m_appState.getExecuteValue());
                         ApiResult result;
-                        runApi(m_appState.getExecuteValue().text(),m_appState.getParameters()->asObject(),result);
+                        runApi(m_appState.getExecuteValue(),m_appState.getParameters()->asObject(),result);
                         m_logger->debug("\tAPI ran");
                     } else if (m_appState.getType() == EXECUTE_SCRIPT) {
                         m_logger->debug("\tscript state run");
                         JsonObject* params = m_appState.getParameters();
                         const char * name = m_appState.getExecuteValue();
                         ApiResult result;
-                        runScript(name,params,result);   
-                        params->destroy();                     
+                        runScript(name,params,result);                    
                     }
                 } 
             }
-            return m_appState.getExecuteValue().text();
+            return m_appState.getExecuteValue();
         }
 
 

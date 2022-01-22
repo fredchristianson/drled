@@ -98,6 +98,14 @@ namespace DevRelief
                 return NULL;
             };
 
+            IScriptElement* getCurrentElement() const override { return m_currentElement;}
+            IScriptElement* setCurrentElement(IScriptElement* element) override { 
+                auto prev = m_currentElement;
+                m_currentElement = element;
+
+                return prev;
+            }
+
 
         protected:
             virtual void initializeStep()=0;
@@ -108,11 +116,12 @@ namespace DevRelief
             Logger* m_logger;    
             ScriptStep * m_currentStep;
             ScriptStep * m_lastStep;
+            IScriptElement* m_currentElement; 
     };
 
     class RootContext : public ScriptContext {
         public:
-        RootContext(HSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
+        RootContext(IHSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
         {
             m_strip = strip;
             m_params = m_paramRoot.getTopObject();
@@ -135,13 +144,12 @@ namespace DevRelief
         }
 
         void finalizeStep() {
-            m_strip->show();
         }
 
         protected:
         JsonRoot  m_paramRoot;
         JsonObject* m_params;
-        HSLStrip* m_strip;
+        IHSLStrip* m_strip;
     };
 
 

@@ -56,6 +56,7 @@ void ScriptLoaderTestSuite::memLeakScriptCommand(TestResult& result) {
     script->destroy();
 }
 
+
 void ScriptLoaderTestSuite::testScriptTextToJsonLoaderMemLeak(TestResult& result) {
     m_logger->showMemory();
     m_logger->debug("before create ScriptDataLoader");

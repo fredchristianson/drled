@@ -13,6 +13,7 @@ namespace DevRelief{
                 m_position = 0;
                 m_parent = parent;
                 m_op = INHERIT;
+                m_overflow = OVERFLOW_ALLOW;
             }
 
             virtual ~ScriptHSLStrip() {
@@ -20,10 +21,28 @@ namespace DevRelief{
             }
 
             void setPosition(int index){
+                m_logger->debug("position=%d",index);
                 m_position = index;
 
             }
-            int getPosition() { return m_position;}
+
+            virtual int getPosition() { 
+                if (m_overflow == OVERFLOW_ALLOW || (m_position>=0 && m_position<getLength())){
+                    m_logger->never("allow pos %d %d %d",m_overflow,m_position,getLength());
+                    return m_position;
+                }
+                int len = getLength();
+                if (m_overflow == OVERFLOW_WRAP && len > 0) { 
+                    m_logger->never("wrap pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len);
+                    return m_position % len;
+                }
+                if (m_overflow == OVERFLOW_CLIP) {
+                    m_logger->never("clip pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len,m_position<0?0 : m_position>= len ? len-1:m_position);
+                    return m_position<0?0 : m_position>= len ? len-1:m_position;
+                }
+                m_logger->never("getPosition %d %d",m_overflow,m_position);
+                return m_position;
+            }
             
             void setOp(HSLOperation op) override { m_op = op;}
 
@@ -40,22 +59,22 @@ namespace DevRelief{
 
 
             void setHue(int16_t hue) override {
-                if (hue<0 || m_parent == NULL) { return;}
+                if (hue<0 || m_parent == NULL || invalidPosition()) { return;}
                 m_parent->setHue(hue,getPosition(),getOp());
             }
 
             void setSaturation(int16_t saturation) override {
-                if (saturation<0 || m_parent == NULL) { return;}
+                if (saturation<0 || m_parent == NULL|| invalidPosition()) { return;}
                 m_parent->setSaturation(saturation,getPosition(),getOp());
             }
 
             void setLightness(int16_t lightness) override {
-                if (lightness<0 || m_parent == NULL) { return;}
+                if (lightness<0 || m_parent == NULL|| invalidPosition()) { return;}
                 m_parent->setLightness(lightness,getPosition(),getOp());
             }
 
             void setRGB(const CRGB& rgb) override {
-                if (m_parent == NULL) { return;}
+                if (m_parent == NULL|| invalidPosition()) { return;}
                 m_parent->setRGB(rgb);
             }            
 
@@ -75,7 +94,7 @@ namespace DevRelief{
             }
 
             void setRGB(const CRGB& rgb,int position, HSLOperation op) override {
-                m_parent->setRGB(rgb);
+                m_parent->setRGB(rgb,position,op);
             }   
 
             virtual void setParent(IScriptHSLStrip*parent) {
@@ -88,12 +107,20 @@ namespace DevRelief{
                 }
                 return NULL;
             }
-        protected:
 
+            /* return previous value*/
+            PositionOverflow setOverflow(PositionOverflow overflow) override {PositionOverflow prev = m_overflow; m_overflow = overflow; return prev;}
+        protected:
+            virtual bool invalidPosition() {
+                if (m_overflow != OVERFLOW_CLIP) { return false;}
+                return m_position < 0 || m_position >= getLength();
+            }
             int m_position;
             IScriptHSLStrip* m_parent;
             HSLOperation m_op;
             Logger* m_logger;
+            
+            PositionOverflow m_overflow;
     };
 
     class RootHSLStrip : public ScriptHSLStrip {
@@ -102,7 +129,7 @@ namespace DevRelief{
                 m_base = NULL;
             }
 
-            ~RootHSLStrip() {
+            virtual ~RootHSLStrip() {
 
             }
 
@@ -125,22 +152,26 @@ namespace DevRelief{
             
             void setHue(int16_t hue,int position, HSLOperation op) override {
                 if (hue<0) { return;}
-                m_base->setHue(position,hue,op);
+                setPosition(position);
+                m_base->setHue(getPosition(),hue,op);
             }
 
             void setSaturation(int16_t saturation,int position, HSLOperation op) override {
                 if (saturation<0) { return;}
-                m_base->setSaturation(position,saturation,op);
+                setPosition(position);                
+                m_base->setSaturation(getPosition(),saturation,op);
             }
 
             void setLightness(int16_t lightness,int position, HSLOperation op) override {
                 if (lightness<0) { return;}
-                m_base->setLightness(position,lightness,op);
+                setPosition(position);
+                m_base->setLightness(getPosition(),lightness,op);
             }
 
-            void setRGB(const CRGB& rgb) override {
-
-            }
+            void setRGB(const CRGB& rgb,int position, HSLOperation op) override {
+                setPosition(position);
+                m_base->setRGB(getPosition(),rgb,op);
+            }  
 
             int getLength() override {
                 return m_base->getCount();
@@ -149,6 +180,8 @@ namespace DevRelief{
             void setHSLStrip(IHSLStrip* base) {
                 m_base = base;
             }
+
+
 
         protected:
             IHSLStrip* m_base;

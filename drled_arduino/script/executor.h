@@ -95,7 +95,9 @@ namespace DevRelief {
                     return;
                 }
                 m_logger->debug("\tm_script->setp()");
+                //m_ledStrip->clear();
                 m_script->step();
+                //m_ledStrip->show();
                 m_logger->debug("\tfinished m_script->setp()");
 
             }
