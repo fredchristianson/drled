@@ -66,6 +66,7 @@ class IHSLStrip {
         virtual int getStart()=0;
         virtual void clear()=0;
         virtual void show()=0;
+
 };
 
 class DRLedStrip {
@@ -82,7 +83,7 @@ class DRLedStrip {
         virtual void clear() =0;
         virtual void setBrightness(uint16_t brightness)=0;
         virtual void setColor(uint16_t index,const CRGB& color)=0;
-        virtual int getCount()=0;
+        virtual int getLEDCount()=0;
         virtual void show()=0;
 
         virtual void setColor(uint16_t index, CHSL& color) {
@@ -90,9 +91,9 @@ class DRLedStrip {
         }
 
         long validCheck;
+
         // use getCompoundLedStrip to find a base virtual strip made of multiple other strips
         virtual CompoundLedStrip* getCompoundLedStrip()=0; 
-
 
     protected:
         Logger* m_logger;
@@ -133,7 +134,7 @@ class AdafruitLedStrip : public DRLedStrip {
             m_controller->setPixelColor(index,m_controller->Color(color.red,color.green,color.blue));
         }
 
-        virtual int getCount() { return m_controller->numPixels();}
+        virtual int getLEDCount() { return m_controller->numPixels();}
         virtual void show() {
             m_logger->debug("show strip %d, %d",m_controller->getPin(),m_controller->numPixels());
             //m_controller->setBrightness(40);
@@ -210,8 +211,8 @@ class CompoundLedStrip : public DRLedStrip {
         virtual void setColor(uint16_t index,const CRGB& color)  {
             int strip = 0;
             uint16_t oindex = index;
-            while(strip < count && strip < 4 && strips[strip] != NULL && index >= strips[strip]->getCount()) {
-                index -= strips[strip]->getCount();
+            while(strip < count && strip < 4 && strips[strip] != NULL && index >= strips[strip]->getLEDCount()) {
+                index -= strips[strip]->getLEDCount();
                 strip++;
             }
             if (strip >= count || strip >= 4) {
@@ -230,23 +231,23 @@ class CompoundLedStrip : public DRLedStrip {
             // if (index == 0) {
             //     m_logger->error("set color %d %d %d %d: %d,%d,%d",index,count,strips[strip]->getCount(),strip,color.red,color.green,color.blue);
             // }
-            if (index<strips[strip]->getCount()){
+            if (index<strips[strip]->getLEDCount()){
                 strips[strip]->setColor(index,color);
             } else {
-                m_logger->error("bad index %d %d %d",index,strip,(strips[strip] == NULL ? -1 : strips[strip]->getCount()));
+                m_logger->error("bad index %d %d %d",index,strip,(strips[strip] == NULL ? -1 : strips[strip]->getLEDCount()));
             }
         };
-        virtual int getCount() {
+        virtual int getLEDCount() {
             size_t ledcount = 0;
             for(int i=0;i<count;i++) {
                 if (strips[i] == NULL) {
                     m_logger->error("strip %d is NULL",i);
                 } else {
                    // m_logger->debug("get count strip %d",i);
-                    ledcount += strips[i]->getCount();
+                    ledcount += strips[i]->getLEDCount();
                 }
             }
-            m_logger->never("getcount()=%d",ledcount);
+            m_logger->never("getLEDCount()=%d",ledcount);
             return ledcount;
         }
 
@@ -286,7 +287,7 @@ class AlteredStrip : public DRLedStrip {
             m_base->setColor(translateIndex(index),translateColor(color));
         }
 
-        virtual int getCount() { return translateCount(m_base->getCount());}
+        virtual int getLEDCount() { return translateCount(m_base ? m_base->getLEDCount() : 0);}
         virtual void show() {m_base->show();}
         virtual CompoundLedStrip* getCompoundLedStrip() { return m_base ? m_base->getCompoundLedStrip() : NULL;}
 
@@ -310,7 +311,7 @@ class ReverseStrip: public AlteredStrip {
 
     protected:
         uint16_t translateIndex(uint16_t index) { 
-            return getCount()-index-1;
+            return getLEDCount()-index-1;
         }
 };
 
@@ -320,7 +321,7 @@ class RotatedStrip: public AlteredStrip {
 
     protected:
         uint16_t translateIndex(int16_t index) { 
-            size_t count =  getCount();
+            size_t count =  getLEDCount();
             return (index + count + m_rotationCount) % count;
         }
 
@@ -401,7 +402,7 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
                 return;
             }
             m_logger->debug("Clear HSLStrip");
-            int count = m_base->getCount();
+            int count = m_base->getLEDCount();
             m_logger->debug("HSLStrip realloc for %d leds",count);
             reallocHSLData(count);
             m_logger->debug("clear HSL values");
@@ -411,7 +412,7 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
             //memset(m_hue,-1,sizeof(int16_t)*count);
             memset(m_saturation,-1,sizeof(int8_t)*count);
             memset(m_lightness,-1,sizeof(int8_t)*count);
-            m_base->clear();
+            //m_base->clear();
         }
 
         void show() {
@@ -436,7 +437,8 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
             m_base->show();
         }
 
-        int getCount() { return AlteredStrip::getCount();}
+        int getLEDCount() { return m_base->getLEDCount();}
+        int getCount() { return m_base->getLEDCount();}
         virtual IHSLStrip* getFirstHSLStrip() { return this;}
         virtual CompoundLedStrip* getCompoundLedStrip() { return m_base?m_base->getCompoundLedStrip() : NULL;}
 
@@ -512,6 +514,37 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
         HSLOperation m_op;
 };
 
+// derive from this class to create a filter that only does one thing (e.g. hue)
+// the default implementation of all IHSLStrip methods just pass through
+// to the base strip
+class HSLFilter : public DRLedStrip, IHSLStrip {
+    public:
+        HSLFilter(IHSLStrip* base)  {
+            m_base = NULL;
+        }
+
+        void setBase(IHSLStrip* base) { m_base = base;}
+
+        void setHue(int index, int16_t hue, HSLOperation op=REPLACE) { if (m_base) { m_base->setHue(index,hue,op);}}
+        void setSaturation(int index, int16_t saturation, HSLOperation op=REPLACE) { if (m_base) { m_base->setSaturation(index,saturation,op);}}
+        void setLightness(int index, int16_t lightness, HSLOperation op=REPLACE) { if (m_base) { m_base->setLightness(index,lightness,op);}}
+        void setRGB(int index, const CRGB& rgb, HSLOperation op=REPLACE) { if (m_base) { m_base->setRGB(index,rgb,op);}}
+        int getCount() { if (m_base) { return m_base->getCount();} else return 0;}
+        int getLEDCount() { if (m_base) { return m_base->getCount();} else return 0;}
+        int getStart() { if (m_base) { return m_base->getStart();} else return 0;}
+        void clear() { if (m_base) { m_base->clear();}}
+        void show() { if (m_base) { m_base->show();}}
+        void setBrightness(uint16_t brightness) { /*filter cannot do this */};
+        void setColor(uint16_t index, CHSL& color) { if (m_base) {m_base->setRGB(index,HSLToRGB(color),REPLACE);}}
+        void setColor(uint16_t index, const CRGB& color) { if (m_base) {m_base->setRGB(index,color,REPLACE);}}
+        CompoundLedStrip* getCompoundLedStrip() { return NULL; /* filters can't do this */}
+
+    protected:
+        IHSLStrip* m_base;  
+};
+
 }
 
 #endif 
+
+

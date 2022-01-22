@@ -26,31 +26,36 @@ namespace DevRelief
             m_durationMsecs = 0;
             m_frequencyMsecs = 50;
             m_rootContext = NULL;
-            m_rootContainer = new ScriptRootContainer();
+            m_rootContainer = NULL;
         }
 
         virtual ~Script() {
-            m_logger->never("~Script %x",this);
+            m_logger->test("~Script %x",this);
             if (m_rootContext) {
-                m_logger->never("destroy rootcontext %x",m_rootContext);
+                m_logger->test("destroy rootcontext %x",m_rootContext);
                 m_rootContext->destroy();
             }
             if (m_rootContainer) {
-                m_logger->never("destroy rootcontainer %x",m_rootContainer);
+                m_logger->test("destroy rootcontainer %x",m_rootContainer);
                 m_rootContainer->destroy();
             }
-            m_logger->never("~Script done");
+            m_logger->test("~Script done");
         }
 
         virtual void destroy() {
-            m_logger->never("destroy Script");
+            m_logger->test("destroy Script");
             delete this;
         }
 
 
-        void begin(HSLStrip* strip, JsonObject* params) {
+        void begin(IHSLStrip* strip, JsonObject* params) {
             m_logger->debug("Begin script %x %s",strip,m_name.text());
-            m_rootContainer->setStrip(strip);
+            m_realStrip = strip;
+            getRootContainer()->setStrip(strip);
+
+            if (m_rootContext) {
+                m_rootContext->destroy();
+            }
             m_rootContext = new RootContext(strip,params);
 
         }
@@ -58,11 +63,13 @@ namespace DevRelief
         void step() {
             auto lastStep = m_rootContext->getLastStep();
             if (lastStep && m_frequencyMsecs>0 && lastStep->getStartMsecs() + m_frequencyMsecs > millis()) {
-                m_logger->never("too soon %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
+                m_logger->test("too soon %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
                 return; // to soon to start next step
             }
             m_logger->never("step %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
             m_logger->never("Begin step %s",m_name.text());
+            
+            m_realStrip->clear();
             m_rootContext->beginStep();
             m_logger->never("\tupdate layout");
 
@@ -72,6 +79,7 @@ namespace DevRelief
             m_logger->never("\tend step");
 
             m_rootContext->endStep();
+            m_realStrip->show();
             m_logger->never("\tstep done");
 
         }
@@ -87,12 +95,18 @@ namespace DevRelief
         }
         int getFrequency() { return m_frequencyMsecs;}
 
-        ScriptRootContainer* getRootContainer() { return m_rootContainer;}
+        ScriptRootContainer* getRootContainer() { 
+            if (m_rootContainer == NULL){
+                m_rootContainer = new ScriptRootContainer();
+            }
+            return m_rootContainer;
+        }
     private:
         Logger *m_logger;
         DRString m_name;
         ScriptRootContainer* m_rootContainer;
         RootContext* m_rootContext;
+        IHSLStrip* m_realStrip;
         int         m_durationMsecs;
         int         m_frequencyMsecs;
     };

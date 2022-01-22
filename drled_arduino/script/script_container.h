@@ -61,6 +61,7 @@ namespace DevRelief
 
         void updateLayout(IScriptContext* context) override {
             m_logger->never("updateLayout for container type %s",getType());
+            auto previousElement = context->setCurrentElement(this);
             auto strip = getStrip();
             int stripPos = 0;
             int stripLength = strip->getLength();
@@ -68,33 +69,39 @@ namespace DevRelief
                 if (child->isPositionable()) {
                     m_logger->never("\tupdate positionable child");
                     IElementPosition* pos = child->getPosition();
+                    pos->updateValues(context);
                     pos->setParent(getPosition());
                     IScriptHSLStrip* parent = pos->isPositionAbsolute() ? strip->getRoot() : strip;
                     child->getStrip()->setParent(parent);
                     if (pos->isCover()){
-                        pos->setPosition(0,parent->getLength(),context);
-                        return;   
-                    }
-                    m_logger->never("\tgot IElementPosition %x",pos);
-                    int offset = 0;
-                    if (pos->getOffset()) {
-                        offset = pos->evalOffset(context);
-                        m_logger->never("\tgot offset %d",offset);
-                    }
-                    int length = stripLength - stripPos - offset;
-                    if (pos->getLength()){
-                        length = pos->evalLength(context);
-                        m_logger->never("\tgot length %d",length);
-                    }
-                    m_logger->never("Set element position %d %d",stripPos+offset,length);
-
-                    if (pos->isCenter()) {
-                        int center = (parent->getLength()-length)/2;
-                        pos->setPosition(center+offset,length,context);
+                        m_logger->never("cover %d",parent->getLength());
+                        pos->setPosition(0,parent->getLength(),context); 
                     } else {
-                        pos->setPosition(stripPos+offset,length,context);
-                        if (pos->isFlow() && pos->getLength()) {
-                            stripPos += offset+length;
+                        m_logger->never("\tgot IElementPosition %x",pos);
+                        int offset = 0;
+                        if (pos->hasOffset()) {
+                            offset = pos->getOffset();
+                            m_logger->never("\tgot offset %d",offset);
+                        }
+                        int length = stripLength - stripPos - offset;
+                        if (pos->hasLength()){
+                            length = pos->getLength();
+                            m_logger->never("\tgot length %d",length);
+                        }
+                        m_logger->never("Set element position %d %d",stripPos+offset,length);
+                        int pixelOffset = pos->toPixels(offset);
+                        int pixelLength = pos->toPixels(length);
+                        if (pos->isCenter()) {
+                            
+                            int center = (parent->getLength()-pixelLength)/2;
+                            m_logger->never("parent %d,  length %d, center %d",parent->getLength(),pixelLength,center);
+                            pos->setPosition(center,pixelLength,context);
+                            stripPos = center+pixelLength;
+                        } else {
+                            pos->setPosition(stripPos+pixelOffset,pixelLength,context);
+                            if (pos->isFlow() && pos->hasLength()) {
+                                stripPos += offset+pixelLength;
+                            }
                         }
                     }
                 } else {
@@ -102,13 +109,20 @@ namespace DevRelief
                 }
                 child->updateLayout(context);
             });
+            context->setCurrentElement(previousElement);
             m_logger->never("\position update done");
         };
 
         void draw(IScriptContext* context) override {
+            auto previousElement = context->setCurrentElement(this);
+            m_logger->always("draw container %s %d",m_type,m_position->getOverflow());
+            m_strip->setOverflow(m_position->getOverflow());
+
             m_children.each([&](IScriptElement* child) {
+                context->setCurrentElement(child);
                 child->draw(context);
             });
+            context->setCurrentElement(previousElement);
         };
 
         bool isPositionable()  const override { return true;}
@@ -127,19 +141,19 @@ namespace DevRelief
 
     class ScriptRootContainer : public ScriptContainer {
         public:
-            ScriptRootContainer() : ScriptContainer(S_ROOT_CONTAINER,&m_rootStrip, new RootElementPosition()) {
-                m_position->setUnit(POS_PIXEL);
-                m_position->setPosition(0,100,NULL);
-                m_position->setUnit(POS_PERCENT);
+            ScriptRootContainer() : ScriptContainer(S_ROOT_CONTAINER,&m_rootStrip, &m_rootPosition) {
+            }
+
+            void setStrip(IHSLStrip*strip) {
+                m_rootStrip.setHSLStrip(strip);
+
+                m_rootPosition.setPosition(0,strip->getCount(),NULL);
             }
 
             virtual ~ScriptRootContainer() {
-                
             }
 
-            void setStrip(IHSLStrip* strip) {
-                m_rootStrip.setHSLStrip(strip);
-            }
+
             void updateLayout(IScriptContext* context) override {
                 context->setStrip(&m_rootStrip);
                 int length = m_rootStrip.getLength();
@@ -148,6 +162,7 @@ namespace DevRelief
             }
         private:
             RootHSLStrip m_rootStrip;
+            RootElementPosition m_rootPosition;
     };
 
 

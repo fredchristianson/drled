@@ -126,7 +126,7 @@ namespace DevRelief {
 
     class ScriptLEDElement : public ScriptElement{
         public:
-            ScriptLEDElement(const char* type) : ScriptElement(type, &m_strip) {
+            ScriptLEDElement(const char* type) : ScriptElement(type, &m_elementStrip) {
                 m_position = NULL;
             }
 
@@ -135,7 +135,8 @@ namespace DevRelief {
             }
 
             virtual void draw(IScriptContext*context) {
-                IScriptHSLStrip* strip = &m_strip;
+                IScriptHSLStrip* strip = &m_elementStrip;
+                strip->setOverflow(m_position->getOverflow());
                 int stripLength = strip->getLength();
                 m_logger->never("ScriptLEDElement draw %d",strip->getLength());
                 int start = m_position ? m_position->getStart() : 0;
@@ -162,14 +163,14 @@ namespace DevRelief {
 
             bool isPositionable()  const override { return true;}
             IElementPosition* getPosition() const override { 
-                m_logger->debug("return m_position  %x",m_position);
+                //m_logger->debug("return m_position  %x",m_position);
                 return m_position;
             }
         protected:
             
             virtual void drawLED(IScriptContext*context,IScriptHSLStrip* strip,int index)=0;
             ScriptElementPosition* m_position;
-            ElementHSLStrip m_strip;
+            ElementHSLStrip m_elementStrip;
             
     };
 

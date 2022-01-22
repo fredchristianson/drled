@@ -14,7 +14,7 @@ Logger AnimationLogger("Animation",ANIMATION_LOGGER_LEVEL);
 Logger ApiResultLogger("ApiResult",API_RESULT_LOGGER_LEVEL);
 Logger APP_LOGGER("DRLed",APP_LOGGER_LEVEL);
 Logger AppStateLogger("AppState",APP_STATE_LOGGER_LEVEL);
-Logger StateLoaderLogger("AppStateDataLoader",APP_STATE_LOGGER_LEVEL);
+Logger AppStateLoaderLogger("AppStateDataLoader",APP_STATE_LOGGER_LEVEL);
 Logger ColorLogger("Color",COLOR_LOGGER_LEVEL);
 Logger CompoundLogger("CompoundStrip",COMPOUND_STRIP_LOGGER_LEVEL);
 Logger ConfigLogger("Config",CONFIG_LOGGER_LEVEL);
