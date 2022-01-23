@@ -14,10 +14,19 @@ namespace DevRelief{
                 m_parent = parent;
                 m_op = INHERIT;
                 m_overflow = OVERFLOW_ALLOW;
+                m_elementPosition = NULL;
             }
 
             virtual ~ScriptHSLStrip() {
 
+            }
+
+            void setElementPosition(IElementPosition*pos) {
+                m_elementPosition = pos;
+                if (pos) {
+                    m_overflow = pos->getOverflow();
+
+                }
             }
 
             void setPosition(int index){
@@ -27,21 +36,27 @@ namespace DevRelief{
             }
 
             virtual int getPosition() { 
+                int pos = m_position;
                 if (m_overflow == OVERFLOW_ALLOW || (m_position>=0 && m_position<getLength())){
                     m_logger->never("allow pos %d %d %d",m_overflow,m_position,getLength());
-                    return m_position;
-                }
-                int len = getLength();
-                if (m_overflow == OVERFLOW_WRAP && len > 0) { 
-                    m_logger->never("wrap pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len);
-                    return m_position % len;
-                }
-                if (m_overflow == OVERFLOW_CLIP) {
-                    m_logger->never("clip pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len,m_position<0?0 : m_position>= len ? len-1:m_position);
-                    return m_position<0?0 : m_position>= len ? len-1:m_position;
+                    pos = m_position;
+                } else {
+                    int len = getLength();
+                    if (m_overflow == OVERFLOW_WRAP && len > 0) { 
+                        m_logger->never("wrap pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len);
+                        pos = m_position % len;
+                    } else if (m_overflow == OVERFLOW_CLIP) {
+                        m_logger->never("clip pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len,m_position<0?0 : m_position>= len ? len-1:m_position);
+                        pos= m_position<0?0 : m_position>= len ? len-1:m_position;
+                    }
                 }
                 m_logger->never("getPosition %d %d",m_overflow,m_position);
-                return m_position;
+                if (m_elementPosition != NULL) {
+                    m_logger->never("\tadd offset %d",m_elementPosition->getOffset());
+                    pos += m_elementPosition->getOffset();
+                }
+                m_logger->debug("\tposition=%d",pos);
+                return pos;
             }
             
             void setOp(HSLOperation op) override { m_op = op;}
@@ -54,6 +69,9 @@ namespace DevRelief{
             }
 
             int getLength() override {
+                if (m_elementPosition) {
+                    return m_elementPosition->getCount();
+                }
                 return m_parent ? m_parent->getLength() : 0;
             }
 
@@ -79,21 +97,22 @@ namespace DevRelief{
             }            
 
             void setHue(int16_t hue,int position, HSLOperation op) override {
-                if (hue<0) { return;}
+                if (hue<0 || m_parent == NULL || invalidPosition()) { return;}
                 m_parent->setHue(hue,position,op);
             }
 
             void setSaturation(int16_t saturation,int position, HSLOperation op) override {
-                if (saturation<0) { return;}
+                if (saturation<0 || m_parent == NULL|| invalidPosition()) { return;}
                 m_parent->setSaturation(saturation);
             }
 
             void setLightness(int16_t lightness,int position, HSLOperation op) override {
-                if (lightness<0) { return;}
+                if (lightness<0 || m_parent == NULL|| invalidPosition()) { return;}
                 m_parent->setLightness(lightness);
             }
 
             void setRGB(const CRGB& rgb,int position, HSLOperation op) override {
+                if (m_parent == NULL|| invalidPosition()) { return;}
                 m_parent->setRGB(rgb,position,op);
             }   
 
@@ -117,6 +136,7 @@ namespace DevRelief{
             }
             int m_position;
             IScriptHSLStrip* m_parent;
+            IElementPosition* m_elementPosition;
             HSLOperation m_op;
             Logger* m_logger;
             

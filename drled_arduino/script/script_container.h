@@ -66,7 +66,8 @@ namespace DevRelief
             auto previousElement = context->setCurrentElement(this);
             auto strip = getStrip();
             int stripPos = 0;
-            int stripLength = strip->getLength();
+            IElementPosition* containerPos = getPosition();
+            int stripLength = containerPos ? containerPos->getCount() : strip->getLength();
             m_children.each([&](IScriptElement* child) {
                 if (child->isPositionable()) {
                     m_logger->always("\tupdate positionable child %s",child->getType());
@@ -76,8 +77,9 @@ namespace DevRelief
                     pos->setParent(getPosition());
                     IScriptHSLStrip* parent = pos->isPositionAbsolute() ? strip->getRoot() : strip;
                     child->getStrip()->setParent(parent);
+                    child->getStrip()->setElementPosition(pos);
                     if (pos->isCover()){
-                        m_logger->always("cover %d",parent->getLength());
+                        m_logger->always("cover %d",stripLength);
                         pos->setPosition(0,parent->getLength(),context); 
                     } else {
                         m_logger->always("\tgot IElementPosition %x",pos);
@@ -123,6 +125,13 @@ namespace DevRelief
 
             m_children.each([&](IScriptElement* child) {
                 context->setCurrentElement(child);
+                if (child->isPositionable()) {
+                    IElementPosition*pos = child->getPosition();
+                    IScriptHSLStrip*strip = child->getStrip();
+                    if (pos && strip){
+                        strip->setElementPosition(pos);
+                    }
+                }
                 child->draw(context);
             });
             context->setCurrentElement(previousElement);

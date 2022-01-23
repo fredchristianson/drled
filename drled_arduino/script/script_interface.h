@@ -122,6 +122,7 @@ namespace DevRelief{
             virtual void setParent(IScriptHSLStrip*parent)=0;
             virtual PositionOverflow setOverflow(PositionOverflow overflow)=0;
             virtual IScriptHSLStrip* getRoot()=0;
+            virtual void setElementPosition(IElementPosition*pos)=0;
     };
 
     class IScriptContext {

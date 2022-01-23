@@ -189,7 +189,7 @@ namespace DevRelief {
 
             virtual void draw(IScriptContext*context) {
                 IScriptHSLStrip* strip = &m_elementStrip;
-                strip->setOverflow(m_position->getOverflow());
+                strip->setElementPosition(getPosition());
                 int stripLength = strip->getLength();
                 m_logger->never("ScriptLEDElement draw %d",strip->getLength());
                 int start = m_position ? m_position->getStart() : 0;
