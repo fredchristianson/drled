@@ -20,7 +20,6 @@ namespace DevRelief {
             ~ScriptExecutor() { 
                 endScript();
                 delete m_ledStrip;
-                delete m_logger;
             }
 
             void turnOff() {

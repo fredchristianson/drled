@@ -39,7 +39,9 @@ class DataLoader {
                 JsonRoot* root = parser.read(buffer.text());
                 if (root) {
                     buffer.clear(); // free file read memory before parsing json
-                    return reader(root->asObject());
+                    bool result = reader(root->asObject());
+                    root->destroy();
+                    return result;
                 }
             }
             return false;
