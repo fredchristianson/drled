@@ -57,7 +57,7 @@ namespace DevRelief
                 m_rootContext->destroy();
             }
             m_rootContext = new RootContext(strip,params);
-
+            m_logger->debug("created RootContext");
         }
 
         void step() {

@@ -72,9 +72,10 @@ namespace DevRelief {
                 m_logger->debug("get elements");
                 JsonArray* elements = scriptJson->getArray("elements");
                 m_logger->debug("get container");
-                IScriptContainer * container = script->getRootContainer();
+                ScriptRootContainer * container = script->getRootContainer();
+                container->fromJson(scriptJson);
                 m_logger->debug("parse elements in container %x",container);
-                container->elementsFromJson(elements);
+                //container->elementsFromJson(elements);
                 m_logger->debug("parse done");
                 //parseElements(elements,container);
 

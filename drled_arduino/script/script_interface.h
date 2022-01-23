@@ -35,7 +35,7 @@ namespace DevRelief{
     class IElementPosition {
         public:
             virtual void destroy()=0;
-            virtual void updateValues(IScriptContext*context)=0;
+            virtual void evaluateValues(IScriptContext*context)=0;
 
             virtual bool hasOffset() const=0;
             virtual int getOffset() const=0;
@@ -66,6 +66,9 @@ namespace DevRelief{
 
             // convert val to pixel count if needed (for percent or inherited unit)
             virtual int toPixels(int val)const=0;
+
+            virtual bool toJson(JsonObject* json) const=0;
+            virtual bool fromJson(JsonObject* json)=0;
         protected:
 
     };
@@ -192,8 +195,8 @@ namespace DevRelief{
         public:
             virtual void destroy()=0;
             virtual bool isContainer() const =0;
-            virtual const char* getType()=0;
-            virtual void toJson(JsonObject* json)=0;
+            virtual const char* getType() const =0;
+            virtual void toJson(JsonObject* json) const=0;
             virtual void fromJson(JsonObject* json)=0;
 
             virtual void updateLayout(IScriptContext* context)=0;
@@ -211,7 +214,15 @@ namespace DevRelief{
             virtual const PtrList<IScriptElement*>& getChildren() const =0;
     };
     
+    class ScriptElementCreator {
+        public:
+            ScriptElementCreator(IScriptContainer* container);
 
+            IScriptElement* elementFromJson(IJsonElement* json);
+        private:
+            IScriptContainer* m_container;
+            Logger* m_logger;
+    };
 };
 
 #endif
