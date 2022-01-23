@@ -115,7 +115,7 @@ namespace DevRelief
 
         void draw(IScriptContext* context) override {
             auto previousElement = context->setCurrentElement(this);
-            m_logger->always("draw container %s %d",m_type,m_position->getOverflow());
+            m_logger->debug("draw container %s %d",m_type,m_position->getOverflow());
             m_strip->setOverflow(m_position->getOverflow());
 
             m_children.each([&](IScriptElement* child) {

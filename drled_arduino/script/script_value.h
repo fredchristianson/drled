@@ -21,7 +21,9 @@ namespace DevRelief
             ScriptValue() {
                 m_logger = &ScriptValueLogger;
             }
-            virtual ~ScriptValue() {}
+            virtual ~ScriptValue() {
+                m_logger->always("~ScriptValue");
+            }
 
             void destroy() override { delete this;}
 

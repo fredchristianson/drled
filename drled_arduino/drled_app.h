@@ -156,10 +156,11 @@ namespace DevRelief {
                 ScriptDataLoader loader;
                 Script* script = loader.parse( req->pathArg(0).c_str());
                 if (script){
-                    SharedPtr<JsonRoot> json = loader.toJson(*script);
+                    JsonRoot* json = loader.toJson(*script);
                     ApiResult result(json->getTopObject());
                     result.send(req);
-                    delete script;
+                    script->destroy();
+                    json->destroy();
                     return;
                 }
                 resp->send(404,"text/json","script not loaded");
@@ -178,27 +179,37 @@ namespace DevRelief {
 
             m_httpServer->routeBracesPost( "/api/script/{}",[this](Request* req, Response* resp){
                 m_logger->debug("save script");
+                m_logger->showMemory();
                 m_executor.endScript();
                 m_logger->debug("old script ended");
+                m_logger->showMemory();
                 auto body = req->arg("plain").c_str();
                 m_logger->debug("\tgot new script:%s",body);
+                m_logger->showMemory();
                 auto name =req->pathArg(0).c_str();
                 m_logger->debug("\tname: %s",name);
                 if (name != NULL) {
                     ScriptDataLoader loader;
                     loader.save(name,body);
+                    m_logger->debug("saved");
+                    m_logger->showMemory();
                 }
                 m_logger->debug("\tget params");
                 JsonRoot* params = getParameters(req);
+                m_logger->showMemory();
                 m_logger->debug("\tgot params");
                 ApiResult result;
                 m_logger->debug("\trun script");
+                m_logger->showMemory();
                 runScript(name,params->getTopObject(),result);
                 m_logger->debug("\tsend result");
+                m_logger->showMemory();
                 result.send(req);
+                m_logger->showMemory();
                 m_logger->debug("\tdelete params");
                 params->destroy();
                 m_logger->debug("\tdeleted params");
+                m_logger->showMemory();
             });
 
 
@@ -306,10 +317,12 @@ namespace DevRelief {
     
 
         bool runScript(const char * name, JsonObject* params, ApiResult& result) {
+
             ScriptDataLoader loader;
             m_logger->never("load script %s",name);
             m_executor.turnOff();
             Script* script  = loader.load(name);
+
             if (script){
                 m_logger->never("\tm_executor.setScript");
                 m_executor.setScript(script,params);
