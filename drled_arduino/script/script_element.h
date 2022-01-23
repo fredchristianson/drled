@@ -25,15 +25,18 @@ namespace DevRelief {
 
             }
 
-            void toJson(JsonObject* json) override {
+            void toJson(JsonObject* json) const override {
+                m_logger->debug("ScriptElement.toJson %s",getType());
                 json->setString("type",m_type);
-                positionToJson(json);
                 valuesToJson(json);
+                m_logger->debug("\tdone %s",getType());
             }
 
             void fromJson(JsonObject* json) override {
-                positionFromJson(json);
+                m_logger->debug("ScriptElement fromJson %s",json==NULL?"<no json>":json->toString().text());
+                m_logger->debug("\tvalues");
                 valuesFromJson(json);
+                m_logger->debug("\tdone");
             }
 
             void destroy() override {
@@ -46,7 +49,7 @@ namespace DevRelief {
                 return false;
             }
 
-            const char * getType(){ return m_type;}
+            const char * getType() const{ return m_type;}
 
             void updateLayout(IScriptContext* context) override {
 
@@ -58,22 +61,17 @@ namespace DevRelief {
             };
 
             bool isPositionable() const override { return false; }
-            IElementPosition* getPosition() const { return NULL;}
+            IElementPosition* getPosition() const override { return NULL;}
 
             IScriptHSLStrip* getStrip() const { return m_strip;}
         protected:
-            virtual void positionToJson(JsonObject* json){
 
-            }
-            virtual void positionFromJson(JsonObject* json){
-                
-            }
 
-            virtual void valuesToJson(JsonObject* json){
-
+            virtual void valuesToJson(JsonObject* json) const{
+                m_logger->warn("ScriptElement type %s does not implement valuesToJson",getType());
             }
             virtual void valuesFromJson(JsonObject* json){
-                
+                m_logger->warn("ScriptElement type %s does not implement valuesFromJson",getType());
             }
 
             IScriptValue* getJsonValue(JsonObject*json, const char * name) {
@@ -93,8 +91,59 @@ namespace DevRelief {
 
             const char * m_type;
             Logger* m_logger;
-
             IScriptHSLStrip* m_strip;
+    };
+
+    class PositionableElement : public ScriptElement {
+        public:
+            PositionableElement(const char * type, IScriptHSLStrip* strip, IElementPosition*position) : ScriptElement(type,strip){
+                m_position = position;
+            }
+
+            virtual ~PositionableElement() {
+
+            }
+
+            void toJson(JsonObject* json) const override {
+                ScriptElement::toJson(json);
+                m_logger->debug("PositionableElement.toJson %s",getType());                
+                positionToJson(json);
+                m_logger->debug("\tdone PositionableElement.toJson %s",getType());                
+            }
+
+            void fromJson(JsonObject* json) override {
+                ScriptElement::fromJson(json);
+                m_logger->debug("\tposition");
+                positionFromJson(json);
+                m_logger->debug("\tdone");
+            }            
+
+            bool isPositionable() const override { return true; }
+            IElementPosition* getPosition() const override { return m_position;}
+
+
+        protected:
+            virtual void positionToJson(JsonObject* json) const{
+                if (isPositionable()) {
+                    IElementPosition* pos = getPosition();
+                    if (pos == NULL) {
+                        m_logger->error("IPositionable does not have a getPosition() %s",getType());
+                    } else {
+                        pos->toJson(json);
+                    }
+                }
+            }
+            virtual void positionFromJson(JsonObject* json){
+                if (isPositionable()) {
+                    IElementPosition*pos = getPosition();
+                    if (pos == NULL) {
+                        m_logger->error("IPositionable does not have a getPosition() %s",getType());
+                    } else {
+                        pos->fromJson(json);
+                    }
+                }
+            }
+            IElementPosition* m_position;
     };
 
     class ValuesElement : public ScriptElement {
@@ -112,26 +161,30 @@ namespace DevRelief {
             }
         protected:
             virtual void valuesFromJson(JsonObject* json){
+                m_logger->debug("ValuesElement.fromJson %s",getType());                
+
                 json->eachProperty([&](const char * name, IJsonElement* val) {
                     m_values.addValue(name,ScriptValue::create(val));
                 });
+                m_logger->debug("\t done ValuesElement.fromJson %s",getType());                
             }
             virtual void valuesToJson(JsonObject* json){
+                m_logger->debug("ValuesElement.toJson %s",getType());                
                 m_values.each([&](NameValue*nameValue) {
                     json->set(nameValue->getName(),nameValue->getValue()->toJson(json->getRoot()));
                 });
+                m_logger->debug("\done ValuesElement.toJson %s",getType());                
             }        
             ScriptValueList m_values;
     };
 
-    class ScriptLEDElement : public ScriptElement{
+    class ScriptLEDElement : public PositionableElement{
         public:
-            ScriptLEDElement(const char* type) : ScriptElement(type, &m_elementStrip) {
-                m_position = NULL;
+            ScriptLEDElement(const char* type) : PositionableElement(type, &m_elementStrip,&m_elementPosition) {
+
             }
 
             virtual ~ScriptLEDElement() {
-                if (m_position) { m_position->destroy();}
             }
 
             virtual void draw(IScriptContext*context) {
@@ -148,29 +201,19 @@ namespace DevRelief {
             }
 
 
-            void valuesToJson(JsonObject* json) override {
-                if (m_position) {
-                    m_position->toJson(json);
-                }
+            void valuesToJson(JsonObject* json) const override {
+
             }
 
             void valuesFromJson(JsonObject* json) override {
-                if (m_position) { m_position->destroy();}
-                m_logger->debug("create ElementPosition from json %x",json);
-                m_position = new ScriptElementPosition(json);                
-                m_logger->debug("\tElementPosition created");
+
             }
 
-            bool isPositionable()  const override { return true;}
-            IElementPosition* getPosition() const override { 
-                //m_logger->debug("return m_position  %x",m_position);
-                return m_position;
-            }
         protected:
             
             virtual void drawLED(IScriptContext*context,IScriptHSLStrip* strip,int index)=0;
-            ScriptElementPosition* m_position;
             ElementHSLStrip m_elementStrip;
+            ScriptElementPosition m_elementPosition;
             
     };
 
@@ -221,9 +264,9 @@ namespace DevRelief {
             virtual int adjustSaturation(IScriptContext*context,IScriptHSLStrip* strip,int saturation) { return saturation;}
             virtual int adjustLightness(IScriptContext*context,IScriptHSLStrip* strip,int lightness) { return lightness;}
 
-            virtual void valuesToJson(JsonObject* json){
+            void valuesToJson(JsonObject* json) const override{
                 ScriptLEDElement::valuesToJson(json);
-                m_logger->debug("valuesToJson");
+                m_logger->debug("HSLElement.valuesToJson");
                 if (m_hue) { 
                     m_logger->debug("\set hue");
                     json->set("hue",m_hue->toJson(json->getRoot()));
@@ -236,8 +279,9 @@ namespace DevRelief {
                     m_logger->debug("\set lightness");
                     json->set("lightness",m_lightness->toJson(json->getRoot()));
                 }
+                m_logger->debug("\tdone HSLElement.valuesToJson");
             }
-            virtual void valuesFromJson(JsonObject* json){
+            void valuesFromJson(JsonObject* json) override {
                 ScriptLEDElement::valuesFromJson(json);
                 m_logger->debug("valuesFromJson");
                 setHue(getJsonValue(json,"hue"));

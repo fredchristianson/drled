@@ -8,7 +8,6 @@
 #include "../lib/led/led_strip.h"
 #include "./script_interface.h"
 #include "./script_element.h"
-#include "./script_element_create.h"
 #include "./script_hsl_strip.h"
 
 namespace DevRelief
@@ -123,13 +122,19 @@ namespace DevRelief
         public:
         RootContext(IHSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
         {
+            m_logger->debug("RootContext(%x,%x)",strip,params);
             m_strip = strip;
+            m_logger->debug("\tget paramRoot object");
             m_params = m_paramRoot.getTopObject();
+
             if (params) {
+                m_logger->debug("\tcopy params %s",params->toString().text());
                 params->eachProperty([&](const char * name, IJsonElement* value){
                     auto v = value->asValue();
                     m_params->setString(name,v? v->getString("unset"):"unset");
                 });
+            } else {
+                m_logger->debug("\tno params passed");
             }
             m_logger->debug("created RootContext %x",this);
         }

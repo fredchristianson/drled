@@ -37,6 +37,7 @@ Logger ScriptContainerLogger("ScriptContainer",SCRIPT_CONTAINER_LOGGER_LEVEL);
 Logger ScriptElementLogger("ScriptElement",SCRIPT_ELEMENT_LOGGER_LEVEL);
 Logger ScriptHSLStripLogger("ScriptHSLStrip",SCRIPT_HSLSTRIP_LOGGER_LEVEL);
 Logger ScriptLoaderLogger("ScriptLoader",SCRIPT_LOADER_LOGGER_LEVEL);
+Logger ScriptPositionLogger("ScriptLoader",SCRIPT_POSITIONLOGGER_LEVEL);
 Logger ScriptValueLogger("ScriptValue",SCRIPT_VALUE_LOGGER_LEVEL);
 Logger ScriptExecutorLogger("ScriptExecutor",SCRIPT_EXECUTOR_LOGGER_LEVEL);
 Logger SharedPtrLogger("SharedPtr",SHARED_PTR_LOGGER_LEVEL);
