@@ -199,7 +199,7 @@ namespace DevRelief {
                 DrawStrip strip(context,parentStrip,&m_elementPosition);
                 strip.eachLED([&](IHSLStripLED& led) {
                     DrawLED* dl = (DrawLED*)&led;
-                    m_logger->debug("\tdraw child LED %d",dl->index());
+                    m_logger->never("\tdraw child LED %d",dl->index());
                     drawLED(led);
                 });
                 m_logger->debug("\t done ScriptLEDElement.draw()");

@@ -93,26 +93,26 @@ namespace DevRelief
         bool isPositionable()  const override { return true;}
     
         void valuesFromJson(JsonObject* json) override {
-            m_logger->debug("Load container json %s %s",getType(),json->toString().text());
+            m_logger->never("Load container json %s %s",getType(),json->toString().text());
             JsonArray* elements = json->getArray("elements");
             elementsFromJson(elements);    
         }    
 
         void valuesToJson(JsonObject* json) const override {
-            m_logger->debug("ScriptContainer.valuesToJson %s",getType());
+            m_logger->never("ScriptContainer.valuesToJson %s",getType());
 
             JsonArray* elements = json->createArray("elements");
             m_children.each([&](IScriptElement*child) {
                 if (child == NULL) {
                     m_logger->error("NULL child found");
                 } else {
-                    m_logger->debug("\tchild %s",child->getType());
+                    m_logger->never("\tchild %s",child->getType());
                     JsonObject* childJson = elements->addNewObject();
                     child->toJson(childJson);
-                    m_logger->debug("\tchild done %s",child->getType());
+                    m_logger->never("\tchild done %s",child->getType());
                 }
             });
-            m_logger->debug("\tdone ScriptContainer.valuesToJson %s",getType());
+            m_logger->never("\tdone ScriptContainer.valuesToJson %s",getType());
         }
 
     protected:
@@ -188,7 +188,7 @@ namespace DevRelief
         }
         if (element) {
             element->fromJson(obj);
-            m_logger->debug("created element type %s",element->getType());
+            m_logger->debug("created element type %s %x",element->getType(),element);
         }
         return element;
     }
