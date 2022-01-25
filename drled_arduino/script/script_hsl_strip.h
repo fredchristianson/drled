@@ -73,23 +73,23 @@ namespace DevRelief{
             void update(IElementPosition * pos, IScriptContext* context) override  {
                 m_logger->debug("ScriptHSLStrip.update %x %x",pos,context);
                 m_unit = pos->getUnit();
-                m_logger->debug("\tunit %d",m_unit);
+                m_logger->never("\tunit %d",m_unit);
                 if (pos->isPositionAbsolute()) {
                     m_logger->always("getRootStrip()");
                     m_parent = context->getRootStrip();
-                    m_logger->debug("\tgot root %x",m_parent);
+                    m_logger->never("\tgot root %x",m_parent);
                 } else {
                     m_parent = context->getStrip();
-                    m_logger->debug("\tgot parent %x",m_parent);
+                    m_logger->never("\tgot parent %x",m_parent);
                 }
                 m_parentLength = m_parent->getLength();
-                m_logger->debug("\tplen %d",m_parentLength);
+                m_logger->never("\tplen %d",m_parentLength);
                 m_length = unitToPixel(pos->getLength());
-                m_logger->debug("\len %d",m_length);
+                m_logger->never("\len %d",m_length);
                 m_offset = unitToPixel(pos->getOffset());
-                m_logger->debug("\toffset %d",m_offset);
+                m_logger->never("\toffset %d",m_offset);
                 m_overflow = pos->getOverflow();
-                m_logger->debug("\toverflow %d",m_overflow);
+                m_logger->never("\toverflow %d",m_overflow);
 
             }
 

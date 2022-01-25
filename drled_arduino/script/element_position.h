@@ -31,14 +31,14 @@ namespace DevRelief {
             }
 
             ~PositionProperties() {
-                m_logger->always("~PositionProperties");
-                m_logger->always("destroy offset");
+                m_logger->never("~PositionProperties");
+                m_logger->never("destroy offset");
                 if (m_offsetValue) { m_offsetValue->destroy();}
-                m_logger->always("destroy length");
+                m_logger->never("destroy length");
                 if (m_lengthValue) { m_lengthValue->destroy();}
-                m_logger->always("destroy stripNumber");
+                m_logger->never("destroy stripNumber");
                 if (m_stripNumberValue) { m_stripNumberValue->destroy();}
-                m_logger->always("destroy done");
+                m_logger->never("destroy done");
 
             }
 
@@ -70,10 +70,6 @@ namespace DevRelief {
                 json->setBool("flow", isFlow());
                 m_logger->debug("\tcover %d",m_cover);
                 json->setBool("cover", isCover());
-                m_logger->debug("\tabsoute %d",m_absolute);
-                m_logger->showMemory();
-                
-                m_logger->showMemory();
                 json->setBool("absoute", m_absolute);
                 m_logger->showMemory();
                 
@@ -89,7 +85,7 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const {
-                m_logger->always("PositionProperties.getUnit %d",m_unit);
+                m_logger->never("PositionProperties.getUnit %d",m_unit);
                 return m_unit;
             }
 
@@ -102,8 +98,8 @@ namespace DevRelief {
             bool isCenter() const { return m_center;}
             bool isFlow() const { return m_flow;}
             bool isCover() const { return m_cover;}
-            bool useRootStrip() const { m_absolute;}
-            bool isPositionRelative() const { return !m_absolute;}
+            bool useRootStrip() const { 
+                return m_absolute;}
             HSLOperation getHSLOperation() const { return m_hslOperation;}
             bool hasOffset() const { return m_offsetValue != NULL;}
             UnitValue getOffset() const { return m_offset;}
@@ -112,21 +108,21 @@ namespace DevRelief {
             bool hasStrip()const  { return m_stripNumberValue != NULL;}
             int getStrip()const { return m_stripNumber;}
 
-            void setClip(IJsonElement* json)  { m_clip = getBool(json,false);}
-            void setWrap(IJsonElement* json)  { m_wrap = getBool(json,false);}
-            void setCenter(IJsonElement* json)  { m_center = getBool(json,false);}
-            void setCover(IJsonElement* json)  { m_cover = getBool(json,false);}
+            void setClip(IJsonElement* json)  { if (json) {m_clip = getBool(json,false);}}
+            void setWrap(IJsonElement* json)  { if (json) { m_wrap = getBool(json,false);}}
+            void setCenter(IJsonElement* json)  { if (json) { m_center = getBool(json,false);}}
+            void setCover(IJsonElement* json)  { if (json) { m_cover = getBool(json,false);}}
 
             // setFlow must be called after center/cover to get the right default
-            void setFlow(IJsonElement* json)  { m_flow = getBool(json,!m_center && !m_cover);}
-            void setPositionAbsolute(IJsonElement* json)  { m_absolute = getBool(json,false);}
+            void setFlow(IJsonElement* json)  { if (json) {m_flow = getBool(json,!m_center && !m_cover);}}
+            void setPositionAbsolute(IJsonElement* json)  {if (json) { m_absolute = getBool(json,false);}}
 
             void setOffset(IJsonElement* json)  { m_offsetValue = ScriptValue::create(json);}
             void setLength(IJsonElement* json)  { m_lengthValue = ScriptValue::create(json);}
             void setStrip(IJsonElement* json)  { m_stripNumberValue = ScriptValue::create(json);}
-            void setUnit(IJsonElement*json) {m_unit = parseJsonUnit(json);}
+            void setUnit(IJsonElement*json) {if (json) {m_unit = parseJsonUnit(json);}}
             void setHSLOperation(IJsonElement*json){
-                m_hslOperation = parseJsonOperation(json);
+                if (json) {m_hslOperation = parseJsonOperation(json);}
             }
             void setHSLOperation(HSLOperation op) { m_hslOperation = op;}
             void setWrap(bool wrap) { m_wrap = wrap;}
@@ -157,10 +153,10 @@ namespace DevRelief {
 
            PositionUnit parseJsonUnit(IJsonElement* json) {
                 PositionUnit unit = POS_INHERIT;
-                m_logger->always("PositionProperties.setUnit");
+                m_logger->never("PositionProperties.setUnit");
                 auto unitVal = json ? json->asValue() : NULL;
                 if (unitVal) {
-                    m_logger->always("\tjson val: %s",unitVal->getString());
+                    m_logger->never("\tjson val: %s",unitVal->getString());
 
                     if (Util::equalAny(unitVal->getString(),"percent","%")) {
                         unit = POS_PERCENT;
@@ -204,14 +200,14 @@ namespace DevRelief {
             }
 
             virtual ~ElementPositionBase() {
-                m_logger->always("~ElementPositionBase  %x %x",m_properties, &DEFAULT_PROPERTIES);
+                m_logger->never("~ElementPositionBase  %x %x",m_properties, &DEFAULT_PROPERTIES);
                 if (m_properties != &DEFAULT_PROPERTIES) {
                     delete m_properties;
                 }
             }
 
             void destroy() override { 
-                m_logger->always("destroy ElementPositionBase");                
+                m_logger->never("destroy ElementPositionBase");                
                 delete this; 
             }
 
@@ -275,7 +271,7 @@ namespace DevRelief {
             bool isCenter() const { return m_properties->isCenter();}
             bool isFlow() const { return m_properties->isFlow();}
             bool isCover() const { return m_properties->isCover();}
-            bool isPositionAbsolute() const { m_properties->useRootStrip();}
+            bool isPositionAbsolute() const { return m_properties->useRootStrip();}
             bool isPositionRelative() const { return !m_properties->useRootStrip();}
 
             bool hasOffset() const { return  m_properties->hasOffset();}
@@ -303,7 +299,7 @@ namespace DevRelief {
                 m_properties->setUnit(POS_PERCENT);
 
                 m_properties->setWrap(true);
-                m_properties->setCover(true);
+                m_properties->setCover(false);
                 m_properties->setHSLOperation(REPLACE);
 
             }
@@ -325,9 +321,9 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const override {
-                m_logger->always("RootElementPosition.getUnit()");
+                m_logger->never("RootElementPosition.getUnit()");
                 PositionUnit unit = m_properties->getUnit();
-                m_logger->always("\tunit=%d",unit);
+                m_logger->never("\tunit=%d",unit);
                 if (unit == POS_INHERIT) { return POS_PERCENT;}
                 return unit;
             }
@@ -356,9 +352,9 @@ namespace DevRelief {
 
             PositionUnit getUnit() const override {
                 PositionUnit unit = m_properties->getUnit();
-                m_logger->always("ScriptElementPosition.getUnit() %d",unit);
+                m_logger->never("ScriptElementPosition.getUnit() %d",unit);
                 if (unit == POS_INHERIT) { 
-                    m_logger->always("\tget parent unit");
+                    m_logger->never("\tget parent unit");
                     return m_parent->getUnit();
                 }
                 return unit;
