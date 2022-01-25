@@ -89,6 +89,7 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const {
+                m_logger->always("PositionProperties.getUnit %d",m_unit);
                 return m_unit;
             }
 
@@ -156,16 +157,19 @@ namespace DevRelief {
 
            PositionUnit parseJsonUnit(IJsonElement* json) {
                 PositionUnit unit = POS_INHERIT;
-                
+                m_logger->always("PositionProperties.setUnit");
                 auto unitVal = json ? json->asValue() : NULL;
                 if (unitVal) {
+                    m_logger->always("\tjson val: %s",unitVal->getString());
+
                     if (Util::equalAny(unitVal->getString(),"percent","%")) {
-                        m_unit = POS_PERCENT;
+                        unit = POS_PERCENT;
                     } else if (Util::equalAny(unitVal->getString(),"pixel","px")) {
-                        m_unit = POS_PIXEL;
+                        unit = POS_PIXEL;
                     }
-                    m_logger->debug("JSON unit %s ==> %d",unitVal->getString(),m_unit);
+                    m_logger->debug("JSON unit %s ==> %d",unitVal->getString(),unit);
                 } 
+                m_logger->debug("\tunit=%d",unit);
                 return unit;
             }
 
@@ -226,11 +230,10 @@ namespace DevRelief {
 
                 if (offsetValue || lengthValue || stripNumberValue ||
                     clip || wrap || absolute || cover || center || flow || unit){
-                        if(m_properties != &DEFAULT_PROPERTIES) {
-                            m_logger->debug("delete properties %x (default=%x)",m_properties,&DEFAULT_PROPERTIES);
-                            delete m_properties;
+                        if(m_properties == NULL || m_properties == &DEFAULT_PROPERTIES) {
+                            m_logger->debug("create properties %x (default=%x)",m_properties,&DEFAULT_PROPERTIES);
+                            m_properties = new PositionProperties();
                         }
-                        m_properties = new PositionProperties();
                         m_properties->setOffset(offsetValue);
                         m_properties->setLength(lengthValue);
                         m_properties->setStrip(stripNumberValue);
@@ -297,6 +300,11 @@ namespace DevRelief {
         public: 
             RootElementPosition() {
                 m_properties = new PositionProperties();
+                m_properties->setUnit(POS_PERCENT);
+
+                m_properties->setWrap(true);
+                m_properties->setCover(true);
+                m_properties->setHSLOperation(REPLACE);
 
             }
 
@@ -312,17 +320,14 @@ namespace DevRelief {
 
 
             void setRootPosition(int offset, int length) {
-                m_properties->setUnit(POS_PIXEL);
                 m_properties->setOffset(offset);
                 m_properties->setLength(length);
-                m_properties->setWrap(true);
-                m_properties->setCover(true);
-                m_properties->setUnit(POS_PIXEL);            
-                m_properties->setHSLOperation(REPLACE);
             }
 
             PositionUnit getUnit() const override {
+                m_logger->always("RootElementPosition.getUnit()");
                 PositionUnit unit = m_properties->getUnit();
+                m_logger->always("\tunit=%d",unit);
                 if (unit == POS_INHERIT) { return POS_PERCENT;}
                 return unit;
             }
@@ -351,7 +356,11 @@ namespace DevRelief {
 
             PositionUnit getUnit() const override {
                 PositionUnit unit = m_properties->getUnit();
-                if (unit == POS_INHERIT) { return m_parent->getUnit();}
+                m_logger->always("ScriptElementPosition.getUnit() %d",unit);
+                if (unit == POS_INHERIT) { 
+                    m_logger->always("\tget parent unit");
+                    return m_parent->getUnit();
+                }
                 return unit;
             }
 

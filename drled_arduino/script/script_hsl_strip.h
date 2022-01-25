@@ -29,7 +29,7 @@ namespace DevRelief{
             IScriptHSLStrip* getParent() const override {  return m_parent;}
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
-                m_logger->debug("ScriptHSLStrip.setHue(%d,%d)",hue,index);
+                m_logger->never("ScriptHSLStrip.setHue(%d,%d)",hue,index);
                 if (!isPositionValid(index)) { 
                     m_logger->debug("Invalid index %d, %d",index,m_length);
                     return;
@@ -59,10 +59,14 @@ namespace DevRelief{
                 int val = uv.getValue();
                 PositionUnit unit = uv.getUnit();
                 if (unit == POS_INHERIT) {
+                    m_logger->debug("\tinherit %d",m_unit);
                     unit = m_unit;
                 }
-                if (uv.getUnit() != POS_PERCENT) { return val;}
-                return val/100.0*m_parentLength;
+                if (unit != POS_PERCENT) { return val;}
+                double pct = val/100.0*m_parentLength;
+                m_logger->debug("\tpct %f",pct);
+                return pct;
+
             }
 
 
@@ -105,7 +109,7 @@ namespace DevRelief{
                     if (tidx < 0) { tidx = 0;}
                     if (tidx >= m_length) {tidx = m_length-1;}
                 }
-                m_logger->debug("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
+                m_logger->never("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
                 return tidx;
             }
             
@@ -135,7 +139,16 @@ namespace DevRelief{
 
             void update(IElementPosition * pos, IScriptContext* context) override  {
                 m_logger->debug("RootHSLStrip.update %x %x",pos,context);
+                m_logger->debug("\tplen %d",m_parentLength);
+                m_unit = pos->getUnit();
+                m_length = unitToPixel(pos->getLength());
+                m_logger->debug("\len %d",m_length);
+                m_offset = unitToPixel(pos->getOffset());
+                m_logger->debug("\toffset %d",m_offset);
+                m_overflow = pos->getOverflow();
+                m_logger->debug("\toverflow %d",m_overflow);
                 m_parentLength = m_length;
+                m_logger->debug("\toverflow=%d offset=%d length=%d unit=%d",m_overflow,m_offset,m_length,m_unit);
             }
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
@@ -243,6 +256,7 @@ namespace DevRelief{
 
                 HSLOperation op = m_position->getHSLOperation();
                 DrawLED led(this,m_context,op);
+                
                 for(int i=0;i<m_length;i++){
                     led.setIndex(i);
                     drawer(led);
