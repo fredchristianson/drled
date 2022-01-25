@@ -43,6 +43,12 @@ namespace DevRelief
               return false;  
             } 
 
+            bool isUnitValue(IScriptContext* ctx) override { return false;}
+            UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) override{
+                UnitValue uv(getIntValue(ctx,defaultValue),defaultUnit);
+                return uv;
+            }
+
             bool equals(IScriptContext*ctx,const char * match) override { return false;}
 
             IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override;
@@ -54,6 +60,17 @@ namespace DevRelief
             }
 
         protected:
+
+            PositionUnit getUnit(const char *val, PositionUnit defaultUnit) {
+                const char * p = val;
+                while(p != NULL && *p!= 0 && *p!='p'&& *p!='%' && *p!='i' ) {
+                    p++;
+                }
+                if (Util::equalAny(p,"px","pixel")) { return POS_PIXEL;}
+                if (Util::equalAny(p,"%","percent")) { return POS_PERCENT;}
+                if (Util::equalAny(p,"inherit")) { return POS_INHERIT;}
+                return defaultUnit;
+            }        
             Logger* m_logger;
     };
 
@@ -89,8 +106,7 @@ namespace DevRelief
         int getMsecValue(IScriptContext* ctx,  int defaultValue) override { return defaultValue;}
         bool isNumber(IScriptContext* ctx) override { return true;}
 
-
-
+    
         DRString toString() { return DRString("System Value: ").append(m_name); }
         private:
             double get(IScriptContext* ctx, double defaultValue){
@@ -525,10 +541,17 @@ namespace DevRelief
         int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
             return Util::toMsecs(m_value);
         }
+
+        UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) override{
+            UnitValue uv(getIntValue(ctx,defaultValue),getUnit(m_value.text(),defaultUnit));
+            return uv;
+        }
+
         bool isString(IScriptContext* ctx) override { return true;}
         IJsonElement* toJson(JsonRoot*root) override { return new JsonString(*root,m_value);}
 
         const char * getValue() { return m_value.text();}
+
 
         DRString toString() override { return m_value; }
 
@@ -544,6 +567,7 @@ namespace DevRelief
             m_start = start;
             m_end = end;
             m_animate = animate;
+            m_unit = POS_UNSET;
 
         }
 
@@ -617,6 +641,17 @@ namespace DevRelief
             m_animate = animator;
         }
 
+        virtual UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) {
+            if (m_start == NULL) { return UnitValue(defaultValue,defaultUnit);}
+            if (m_unit == POS_UNSET) {
+                UnitValue uv = m_start->getUnitValue(ctx,defaultValue,defaultUnit);
+                m_unit = uv.getUnit();
+            }
+            double val = getFloatValue(ctx,defaultValue);  
+            return UnitValue(val,m_unit);      
+        }
+
+
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
             auto start = m_start ? m_start->eval(ctx,defaultValue) : NULL;
             auto end = m_end ? m_end->eval(ctx,defaultValue) : NULL;
@@ -628,6 +663,7 @@ namespace DevRelief
     protected:
         IScriptValue *m_start;
         IScriptValue *m_end;
+        PositionUnit m_unit;
 
         IValueAnimator* m_animate;
     };
@@ -704,7 +740,13 @@ namespace DevRelief
 
         virtual double getFloatValue(IScriptContext* ctx,  double defaultValue)
         {
-            if (m_count == 0) { return defaultValue; }
+            UnitValue val = getFloatUnitValue(ctx, defaultValue,POS_INHERIT);
+            return val.getValue();
+        }
+
+        virtual UnitValue getFloatUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit)
+        {
+            if (m_count == 0) { return UnitValue(defaultValue,defaultUnit); }
 
             double pos = 0;
             IAnimationDomain* domain = ctx->getAnimationPositionDomain();
@@ -716,14 +758,14 @@ namespace DevRelief
             } else {
                 pos = domain->getPosition();
             }
-            double val = getValueAt(ctx, domain, pos,defaultValue);
+            UnitValue val = getValueAt(ctx, domain, pos,defaultValue,POS_INHERIT);
             return val;
         }
 
-        double getValueAt(IScriptContext* ctx,IAnimationDomain* domain, int pos, double defaultValue) {
+        UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, int pos, double defaultValue,PositionUnit defaultUnit) {
             if (pos < 0 || pos >= m_count) {
                 if (m_extend == NO_EXTEND) {
-                    return defaultValue;
+                    return UnitValue(defaultValue,defaultUnit);
                 } else if (m_extend == REPEAT_PATTERN) {
                     pos = abs(pos)%m_count;
                 }
@@ -745,9 +787,9 @@ namespace DevRelief
             }
             IScriptValue* val = element?element->getValue() : NULL;
             if (val == NULL || val->isNull(ctx)) {
-                return defaultValue;
+                return UnitValue(defaultValue,POS_INHERIT);
             }
-            return val->getFloatValue(ctx,defaultValue);
+            return val->getUnitValue(ctx,defaultValue,defaultUnit);
   
         }
         virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
@@ -764,6 +806,10 @@ namespace DevRelief
 
         void setAnimator(IValueAnimator* animator) {
             m_animate = animator;
+        }
+
+        UnitValue getUnitValue(IScriptContext*ctx, double defaultValue, PositionUnit defaultUnit) {
+            return getFloatUnitValue(ctx,defaultValue,defaultUnit);
         }
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{

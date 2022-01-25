@@ -8,7 +8,8 @@ namespace DevRelief{
     {
         POS_PERCENT = 0,
         POS_PIXEL = 1,
-        POS_INHERIT = 2
+        POS_INHERIT = 2,
+        POS_UNSET=999
     };
 
     typedef enum PositionOverflow {
@@ -30,7 +31,15 @@ namespace DevRelief{
     class IScriptHSLStrip;
     class IScriptElement;
 
-
+    class UnitValue {
+        public:
+            UnitValue(double value=0, PositionUnit unit=POS_UNSET) { m_value = value; m_unit = unit;}
+            double getValue() const { return m_value;}
+            PositionUnit getUnit() const { return m_unit;}
+        private: 
+            int m_value;
+            PositionUnit m_unit;
+    };
 
     class IElementPosition {
         public:
@@ -38,16 +47,12 @@ namespace DevRelief{
             virtual void evaluateValues(IScriptContext*context)=0;
 
             virtual bool hasOffset() const=0;
-            virtual int getOffset() const=0;
+            virtual UnitValue getOffset() const=0;
             virtual bool hasLength() const=0;
-            virtual int getLength() const=0;
-
-            virtual bool hasStrip()const =0;
-            virtual int getStrip()const=0;
+            virtual UnitValue getLength() const=0;
 
             virtual PositionUnit getUnit() const=0;
-
-
+            virtual HSLOperation getHSLOperation() const=0;
             virtual bool isCenter() const=0;
             virtual bool isFlow() const=0;
             virtual bool isCover() const=0;
@@ -56,19 +61,14 @@ namespace DevRelief{
             virtual bool isClip() const=0;
             virtual bool isWrap() const=0;
             virtual PositionOverflow getOverflow() const=0;
+
+            // parent is used for inherited values
             virtual IElementPosition* getParent()const=0;
             virtual void setParent(IElementPosition*parent)=0;
             
-            // the layout sets start and count based on parent container and above values
-            virtual void setPosition(int start, int count,IScriptContext* context)=0;
-            virtual int getStart()const =0;
-            virtual int getCount()const =0;
-
-            // convert val to pixel count if needed (for percent or inherited unit)
-            virtual int toPixels(int val)const=0;
-
             virtual bool toJson(JsonObject* json) const=0;
             virtual bool fromJson(JsonObject* json)=0;
+
         protected:
 
     };
@@ -85,44 +85,53 @@ namespace DevRelief{
     class IAnimationDomain {
         public:
             virtual void destroy()=0;
-            virtual void update(IScriptContext*)=0;
+            virtual void evaluateValues(IScriptContext*)=0;
             virtual double getPosition()=0;
+
+            // old
+            
     };
     
     class IAnimationRange {
         public:
             virtual void destroy()=0;
-            virtual void setUnfolded(bool unfold)=0;
-            virtual bool isUnfolded()=0;
             virtual double getHigh()=0;
             virtual double getLow()=0;
             virtual double getDistance()=0;
             virtual double getValue(double percent)=0;
     };
 
+
+    class IHSLStripLED {
+        public:
+            virtual void setHue(int hue)=0;
+            virtual void setSaturation(int saturation)=0;
+            virtual void setLightness(int lightnext)=0;
+            virtual void setRGB(const CRGB& rgb)=0;
+
+            virtual IScriptContext* getContext() const=0;
+            virtual IScriptHSLStrip* getStrip() const = 0;
+    };
+    
+    
     class IScriptHSLStrip {
         public:
-            virtual void setPosition(int index)=0;
-            virtual int getPosition()=0;
+            virtual int getOffset()=0;
             virtual int getLength()=0;
-            virtual HSLOperation getOp()=0;
-            virtual void setOp(HSLOperation op)=0;
-            virtual void setHue(int16_t hue)=0;
-            virtual void setSaturation(int16_t saturation)=0;
-            virtual void setLightness(int16_t lightness)=0;
-            virtual void setRGB(const CRGB& rgb)=0;
-        
-            /* most clients should use the above metheds.  the methods below 
-             * allow hierarchies of strips to position elements */
-            virtual void setHue(int16_t hue, int position, HSLOperation op)=0;
-            virtual void setSaturation(int16_t saturation, int position, HSLOperation op)=0;
-            virtual void setLightness(int16_t lightness, int position, HSLOperation op)=0;
-            virtual void setRGB(const CRGB& rgb, int position, HSLOperation op)=0;
 
-            virtual void setParent(IScriptHSLStrip*parent)=0;
-            virtual PositionOverflow setOverflow(PositionOverflow overflow)=0;
-            virtual IScriptHSLStrip* getRoot()=0;
-            virtual void setElementPosition(IElementPosition*pos)=0;
+
+            // only needed for class DrawStip
+            //virtual void eachLED(IHSLLEDDrawer* drawer)=0;
+
+            virtual void setHue(int16_t hue, int index, HSLOperation op)=0;
+            virtual void setSaturation(int16_t saturation, int index, HSLOperation op)=0;
+            virtual void setLightness(int16_t lightness, int index, HSLOperation op)=0;
+            virtual void setRGB(const CRGB& rgb, int index, HSLOperation op)=0;
+
+            virtual void update(IElementPosition * pos, IScriptContext* context)=0;
+
+            virtual IScriptHSLStrip* getParent() const=0;
+            virtual void setParent(IScriptHSLStrip* parent)=0;
     };
 
     class IScriptContext {
@@ -141,9 +150,12 @@ namespace DevRelief{
 
             virtual void setStrip(IScriptHSLStrip*strip)=0;
             virtual IScriptHSLStrip* getStrip() const = 0;
+            virtual IScriptHSLStrip* getRootStrip() const = 0;
+
             virtual IScriptElement* getCurrentElement() const = 0;
             // set the current element and return previous one
             virtual IScriptElement* setCurrentElement(IScriptElement*element) = 0;
+
     };
 
     class IScriptValue
@@ -154,11 +166,12 @@ namespace DevRelief{
         virtual double getFloatValue(IScriptContext* cmd,  double defaultValue) = 0; 
         virtual bool getBoolValue(IScriptContext* cmd,  bool defaultValue) = 0; 
         virtual int getMsecValue(IScriptContext* cmd,  int defaultValue) = 0; 
-
+        virtual UnitValue getUnitValue(IScriptContext* cmd,  double defaultValue, PositionUnit defaultUnit)=0;
         virtual bool isString(IScriptContext* cmd)=0;
         virtual bool isNumber(IScriptContext* cmd)=0;
         virtual bool isBool(IScriptContext* cmd)=0;
         virtual bool isNull(IScriptContext* cmd)=0;
+        virtual bool isUnitValue(IScriptContext* cmd)=0;
 
         virtual bool equals(IScriptContext*cmd, const char * match)=0;
 
@@ -206,7 +219,8 @@ namespace DevRelief{
             virtual bool isPositionable()const=0;
             virtual IElementPosition* getPosition() const =0;
 
-            virtual IScriptHSLStrip* getStrip() const = 0;
+            virtual void setParent(IScriptElement*)=0;
+            //virtual IScriptHSLStrip* getStrip() const = 0;
     };
 
     class IScriptContainer {

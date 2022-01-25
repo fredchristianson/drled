@@ -67,20 +67,20 @@ namespace DevRelief
                 return; // to soon to start next step
             }
             m_logger->never("step %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
-            m_logger->never("Begin step %s",m_name.text());
+            m_logger->debug("Begin step %s",m_name.text());
             
             m_realStrip->clear();
             m_rootContext->beginStep();
-            m_logger->never("\tupdate layout");
+            m_logger->debug("\tupdate layout");
 
             m_rootContainer->updateLayout(m_rootContext);
-            m_logger->never("\tdraw");
+            m_logger->debug("\tdraw");
             m_rootContainer->draw(m_rootContext);
-            m_logger->never("\tend step");
+            m_logger->debug("\tend step");
 
             m_rootContext->endStep();
             m_realStrip->show();
-            m_logger->never("\tstep done");
+            m_logger->debug("\tstep done");
 
         }
 

@@ -14,10 +14,10 @@ namespace DevRelief {
 
     class ScriptElement : public IScriptElement {
         public:
-            ScriptElement(const char * type, IScriptHSLStrip* strip){
+            ScriptElement(const char * type){
                 m_logger = &ScriptElementLogger;
                 m_type = type;
-                m_strip = strip;
+                m_parent = NULL;
                 m_logger->debug("Create ScriptElement type=%s",m_type);
             }
 
@@ -62,8 +62,13 @@ namespace DevRelief {
 
             bool isPositionable() const override { return false; }
             IElementPosition* getPosition() const override { return NULL;}
-
-            IScriptHSLStrip* getStrip() const { return m_strip;}
+            void setParent(IScriptElement*parent) {
+                m_parent = parent;
+                IElementPosition * pos = getPosition();
+                if (pos) {
+                    pos->setParent(parent->getPosition());
+                }
+            }
         protected:
 
 
@@ -90,13 +95,13 @@ namespace DevRelief {
             }
 
             const char * m_type;
+            IScriptElement* m_parent;
             Logger* m_logger;
-            IScriptHSLStrip* m_strip;
     };
 
     class PositionableElement : public ScriptElement {
         public:
-            PositionableElement(const char * type, IScriptHSLStrip* strip, IElementPosition*position) : ScriptElement(type,strip){
+            PositionableElement(const char * type, IElementPosition*position) : ScriptElement(type){
                 m_position = position;
             }
 
@@ -113,9 +118,9 @@ namespace DevRelief {
 
             void fromJson(JsonObject* json) override {
                 ScriptElement::fromJson(json);
-                m_logger->debug("\tposition");
+                m_logger->debug("PositionableElement.fromJson");
                 positionFromJson(json);
-                m_logger->debug("\tdone");
+                m_logger->debug("\tPositionableElement.fromJson done");
             }            
 
             bool isPositionable() const override { return true; }
@@ -148,7 +153,7 @@ namespace DevRelief {
 
     class ValuesElement : public ScriptElement {
         public:
-            ValuesElement() :ScriptElement(S_VALUES,NULL) {
+            ValuesElement() :ScriptElement(S_VALUES) {
 
             }
 
@@ -180,7 +185,7 @@ namespace DevRelief {
 
     class ScriptLEDElement : public PositionableElement{
         public:
-            ScriptLEDElement(const char* type) : PositionableElement(type, &m_elementStrip,&m_elementPosition) {
+            ScriptLEDElement(const char* type) : PositionableElement(type,&m_elementPosition) {
 
             }
 
@@ -188,16 +193,17 @@ namespace DevRelief {
             }
 
             virtual void draw(IScriptContext*context) {
-                IScriptHSLStrip* strip = &m_elementStrip;
-                strip->setElementPosition(getPosition());
-                int stripLength = strip->getLength();
-                m_logger->never("ScriptLEDElement draw %d",strip->getLength());
-                int start = m_position ? m_position->getStart() : 0;
-                int count = m_position ? m_position->getCount() : stripLength-start;
-                for(int i=0;i<count;i++) {
-                    strip->setPosition(i+start);
-                    drawLED(context,strip,i);
-                }
+                IScriptHSLStrip* parentStrip = context->getStrip();
+                m_elementPosition.evaluateValues(context);
+                m_logger->debug("ScriptLEDElement.draw()");
+                DrawStrip strip(context,parentStrip,&m_elementPosition);
+                strip.eachLED([&](IHSLStripLED& led) {
+                    DrawLED* dl = (DrawLED*)&led;
+                    m_logger->debug("\tdraw child LED %d",dl->index());
+                    drawLED(led);
+                });
+                m_logger->debug("\t done ScriptLEDElement.draw()");
+
             }
 
 
@@ -211,8 +217,7 @@ namespace DevRelief {
 
         protected:
             
-            virtual void drawLED(IScriptContext*context,IScriptHSLStrip* strip,int index)=0;
-            ElementHSLStrip m_elementStrip;
+            virtual void drawLED(IHSLStripLED& led)=0;
             ScriptElementPosition m_elementPosition;
             
     };
@@ -244,25 +249,25 @@ namespace DevRelief {
                 m_lightness = val;
             }
         protected:
-            void drawLED(IScriptContext*context,IScriptHSLStrip* strip,int index) override {
+            void drawLED(IHSLStripLED& led) override {
                 if (m_hue) {
-                    int hue = m_hue->getIntValue(context,-1);
-                    strip->setHue(adjustHue(context,strip, hue));
+                    int hue = m_hue->getIntValue(led.getContext(),-1);
+                    led.setHue(adjustHue(hue));
                 }
                 
                 if (m_lightness) {
-                    int lightness = m_lightness->getIntValue(context,-1);
-                    strip->setLightness(adjustLightness(context,strip, lightness));
+                    int lightness = m_lightness->getIntValue(led.getContext(),-1);
+                    led.setLightness(adjustLightness( lightness));
                 }
                 if (m_saturation) {
-                    int saturation = m_saturation->getIntValue(context,-1);
-                    strip->setSaturation(adjustSaturation(context,strip, saturation));
+                    int saturation = m_saturation->getIntValue(led.getContext(),-1);
+                    led.setSaturation(adjustSaturation( saturation));
                 }
             }
 
-            virtual int adjustHue(IScriptContext*context,IScriptHSLStrip* strip,int hue) { return hue;}
-            virtual int adjustSaturation(IScriptContext*context,IScriptHSLStrip* strip,int saturation) { return saturation;}
-            virtual int adjustLightness(IScriptContext*context,IScriptHSLStrip* strip,int lightness) { return lightness;}
+            virtual int adjustHue(int hue) { return hue;}
+            virtual int adjustSaturation(int saturation) { return saturation;}
+            virtual int adjustLightness(int lightness) { return lightness;}
 
             void valuesToJson(JsonObject* json) const override{
                 ScriptLEDElement::valuesToJson(json);
@@ -304,7 +309,7 @@ namespace DevRelief {
             }
 
         protected:
-            virtual int adjustHue(IScriptContext*context,IScriptHSLStrip* strip,int hue) { 
+            virtual int adjustHue(int hue) { 
                 if (hue <0) { return hue;}
                 return m_map.calculate(1.0*hue/360.0)*360.0;
             }

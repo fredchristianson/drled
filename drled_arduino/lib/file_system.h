@@ -14,7 +14,7 @@ namespace DevRelief {
 
 typedef enum FileType {
     FILE_TEXT = 1,
-    FILE_JSON = 2,
+    FILE_JSON = 2, 
 
     FILE_UNKNOWN_TYPE=999
 };
