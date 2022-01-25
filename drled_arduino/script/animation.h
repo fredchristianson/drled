@@ -155,7 +155,7 @@ namespace DevRelief
             m_lastStep = -1;
         }
 
-        void update(IScriptContext* ctx) override {
+        void evaluateValues(IScriptContext* ctx) override {
             if (m_lastStep == ctx->getStep()->getNumber()) {
                 m_logger->never("time domain no change %d",m_lastStep);
 
@@ -342,7 +342,7 @@ namespace DevRelief
                 m_ease = &DefaultEase;
             }
             m_logger->debug("Animator.get()");
-            m_domain->update(ctx);
+            m_domain->evaluateValues(ctx);
             double position = m_domain->getPosition();
             double ease = m_ease->calculate(position);
             //m_logger->debug("\tpos %f.  ease %f",position,ease);
@@ -430,7 +430,7 @@ namespace DevRelief
 
             Animator animator(domain,m_selectedEase);
             m_logger->debug("\tset unfold");
-            range->setUnfolded(isUnfolded(ctx));
+            // todo: handle in easing range->setUnfolded(isUnfolded(ctx));
             m_logger->debug("\tget value");
 
             if (isPaused(ctx,range)) {
@@ -601,7 +601,7 @@ namespace DevRelief
                     return val;
                 }
                 m_logger->never("return high value %f",range->getHigh());
-                return range->isUnfolded() ? range->getLow() :  range->getHigh();
+                return 0; //range->isUnfolded() ? range->getLow() :  range->getHigh();
             }
 
 

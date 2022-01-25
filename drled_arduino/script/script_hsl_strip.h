@@ -8,221 +8,177 @@ namespace DevRelief{
     extern Logger ScriptHSLStripLogger;
     class ScriptHSLStrip : public IScriptHSLStrip {
         public:
-            ScriptHSLStrip(IScriptHSLStrip* parent=NULL) {
+            ScriptHSLStrip() {
                 m_logger = &ScriptHSLStripLogger;
-                m_position = 0;
-                m_parent = parent;
-                m_op = INHERIT;
-                m_overflow = OVERFLOW_ALLOW;
-                m_elementPosition = NULL;
+                m_offset = 0;
+                m_length = 0;
+                m_overflow = OVERFLOW_CLIP;
+                m_parent = NULL;
+                m_parentLength = 0;
+                m_unit = POS_PERCENT;
             }
 
             virtual ~ScriptHSLStrip() {
 
             }
 
-            void setElementPosition(IElementPosition*pos) {
-                m_elementPosition = pos;
-                if (pos) {
-                    m_overflow = pos->getOverflow();
+            int getOffset() override { return m_offset;}
+            int getLength() override { return m_length;}
 
+            void setParent(IScriptHSLStrip* parent) override { m_parent = parent;}
+            IScriptHSLStrip* getParent() const override {  return m_parent;}
+
+            void setHue(int16_t hue,int index, HSLOperation op) override {
+                m_logger->debug("ScriptHSLStrip.setHue(%d,%d)",hue,index);
+                if (!isPositionValid(index)) { 
+                    m_logger->debug("Invalid index %d, %d",index,m_length);
+                    return;
                 }
+                m_parent->setHue(hue,translateIndex(index),op);
             }
 
-            void setPosition(int index){
-                m_logger->debug("position=%d",index);
-                m_position = index;
-
+            void setSaturation(int16_t saturation,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                m_parent->setSaturation(saturation,translateIndex(index),op);
             }
 
-            virtual int getPosition() { 
-                int pos = m_position;
-                if (m_overflow == OVERFLOW_ALLOW || (m_position>=0 && m_position<getLength())){
-                    m_logger->never("allow pos %d %d %d",m_overflow,m_position,getLength());
-                    pos = m_position;
-                } else {
-                    int len = getLength();
-                    if (m_overflow == OVERFLOW_WRAP && len > 0) { 
-                        m_logger->never("wrap pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len);
-                        pos = m_position % len;
-                    } else if (m_overflow == OVERFLOW_CLIP) {
-                        m_logger->never("clip pos %d %d %d %d",m_overflow,m_position,getLength(),m_position%len,m_position<0?0 : m_position>= len ? len-1:m_position);
-                        pos= m_position<0?0 : m_position>= len ? len-1:m_position;
-                    }
-                }
-                m_logger->never("getPosition %d %d",m_overflow,m_position);
-                if (m_elementPosition != NULL) {
-                    m_logger->never("\tadd offset %d",m_elementPosition->getOffset());
-                    pos += m_elementPosition->getOffset();
-                }
-                m_logger->debug("\tposition=%d",pos);
-                return pos;
-            }
-            
-            void setOp(HSLOperation op) override { m_op = op;}
-
-            HSLOperation getOp() override {
-                if (m_op == INHERIT) {
-                    return m_parent ? m_parent->getOp() : REPLACE;
-                }
-                return m_op;
+            void setLightness(int16_t lightness,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                
+                m_parent->setLightness(lightness,translateIndex(index),op);
             }
 
-            int getLength() override {
-                if (m_elementPosition) {
-                    return m_elementPosition->getCount();
-                }
-                return m_parent ? m_parent->getLength() : 0;
-            }
-
-
-            void setHue(int16_t hue) override {
-                if (hue<0 || m_parent == NULL || invalidPosition()) { return;}
-                m_parent->setHue(hue,getPosition(),getOp());
-            }
-
-            void setSaturation(int16_t saturation) override {
-                if (saturation<0 || m_parent == NULL|| invalidPosition()) { return;}
-                m_parent->setSaturation(saturation,getPosition(),getOp());
-            }
-
-            void setLightness(int16_t lightness) override {
-                if (lightness<0 || m_parent == NULL|| invalidPosition()) { return;}
-                m_parent->setLightness(lightness,getPosition(),getOp());
-            }
-
-            void setRGB(const CRGB& rgb) override {
-                if (m_parent == NULL|| invalidPosition()) { return;}
-                m_parent->setRGB(rgb);
-            }            
-
-            void setHue(int16_t hue,int position, HSLOperation op) override {
-                if (hue<0 || m_parent == NULL || invalidPosition()) { return;}
-                m_parent->setHue(hue,position,op);
-            }
-
-            void setSaturation(int16_t saturation,int position, HSLOperation op) override {
-                if (saturation<0 || m_parent == NULL|| invalidPosition()) { return;}
-                m_parent->setSaturation(saturation);
-            }
-
-            void setLightness(int16_t lightness,int position, HSLOperation op) override {
-                if (lightness<0 || m_parent == NULL|| invalidPosition()) { return;}
-                m_parent->setLightness(lightness);
-            }
-
-            void setRGB(const CRGB& rgb,int position, HSLOperation op) override {
-                if (m_parent == NULL|| invalidPosition()) { return;}
-                m_parent->setRGB(rgb,position,op);
-            }   
-
-            virtual void setParent(IScriptHSLStrip*parent) {
-                m_parent = parent;
-            }
-
-            IScriptHSLStrip* getRoot()  override {
-                if (m_parent) {
-                    return m_parent->getRoot();
-                }
-                return NULL;
-            }
-
-            /* return previous value*/
-            PositionOverflow setOverflow(PositionOverflow overflow) override {PositionOverflow prev = m_overflow; m_overflow = overflow; return prev;}
+            void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
+                
+                m_parent->setRGB(rgb,translateIndex(index),op);
+            }  
         protected:
-            virtual bool invalidPosition() {
-                if (m_overflow != OVERFLOW_CLIP) { return false;}
-                return m_position < 0 || m_position >= getLength();
+
+            int unitToPixel(const UnitValue& uv) {
+                m_logger->debug("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
+                int val = uv.getValue();
+                PositionUnit unit = uv.getUnit();
+                if (unit == POS_INHERIT) {
+                    unit = m_unit;
+                }
+                if (uv.getUnit() != POS_PERCENT) { return val;}
+                return val/100.0*m_parentLength;
             }
-            int m_position;
-            IScriptHSLStrip* m_parent;
-            IElementPosition* m_elementPosition;
-            HSLOperation m_op;
-            Logger* m_logger;
+
+
+            void update(IElementPosition * pos, IScriptContext* context) override  {
+                m_logger->debug("ScriptHSLStrip.update %x %x",pos,context);
+                m_unit = pos->getUnit();
+                m_logger->debug("\tunit %d",m_unit);
+                if (pos->isPositionAbsolute()) {
+                    m_logger->always("getRootStrip()");
+                    m_parent = context->getRootStrip();
+                    m_logger->debug("\tgot root %x",m_parent);
+                } else {
+                    m_parent = context->getStrip();
+                    m_logger->debug("\tgot parent %x",m_parent);
+                }
+                m_parentLength = m_parent->getLength();
+                m_logger->debug("\tplen %d",m_parentLength);
+                m_length = unitToPixel(pos->getLength());
+                m_logger->debug("\len %d",m_length);
+                m_offset = unitToPixel(pos->getOffset());
+                m_logger->debug("\toffset %d",m_offset);
+                m_overflow = pos->getOverflow();
+                m_logger->debug("\toverflow %d",m_overflow);
+
+            }
+
+            virtual bool isPositionValid(int index) {
+                if (m_parent == NULL || m_length <= 0) { return false;}
+                if (m_overflow != OVERFLOW_CLIP) { return true;}
+                return index >= 0 || index < m_length;
+            }
+
+            virtual int translateIndex(int index){
+                int tidx = index+m_offset;
+                if (m_overflow == OVERFLOW_WRAP) {
+                    if (tidx<0) { tidx = m_length- (tidx%m_length);}
+                    if (tidx>=m_length) { tidx = (tidx %m_length);}
+                } else if (m_overflow == OVERFLOW_CLIP) {
+                    // shouldn't happen since isPositionValid() was false if tidx out of range
+                    if (tidx < 0) { tidx = 0;}
+                    if (tidx >= m_length) {tidx = m_length-1;}
+                }
+                m_logger->debug("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
+                return tidx;
+            }
             
+
+            IScriptHSLStrip* m_parent;
+            int m_parentLength;
+            int m_length;
+            int m_offset;
+            PositionUnit m_unit;
             PositionOverflow m_overflow;
+            Logger* m_logger;
     };
 
     class RootHSLStrip : public ScriptHSLStrip {
         public:
             RootHSLStrip( ) : ScriptHSLStrip(){
                 m_base = NULL;
+                m_offset = 0;
+                m_overflow = OVERFLOW_WRAP;
+                m_parentLength = 0;
             }
 
             virtual ~RootHSLStrip() {
 
             }
 
-            IScriptHSLStrip* getRoot()  override { return this;}
-            void setHue(int16_t hue) override {
-                if (hue<0) { return;}
-                m_base->setHue(getPosition(),hue,getOp());
+
+            void update(IElementPosition * pos, IScriptContext* context) override  {
+                m_logger->debug("RootHSLStrip.update %x %x",pos,context);
+                m_parentLength = m_length;
             }
 
-            void setSaturation(int16_t saturation) override {
-                if (saturation<0) { return;}
-                m_base->setSaturation(getPosition(),saturation,getOp());
+            void setHue(int16_t hue,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}
+                m_base->setHue(translateIndex(index),hue,op);
             }
 
-            void setLightness(int16_t lightness) override {
-                if (lightness<0) { return;}
-                m_base->setLightness(getPosition(),lightness,getOp());
+            void setSaturation(int16_t saturation,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                m_base->setSaturation(translateIndex(index),saturation,op);
             }
 
-            
-            void setHue(int16_t hue,int position, HSLOperation op) override {
-                if (hue<0) { return;}
-                setPosition(position);
-                m_base->setHue(getPosition(),hue,op);
+            void setLightness(int16_t lightness,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                
+                m_base->setLightness(translateIndex(index),lightness,op);
             }
 
-            void setSaturation(int16_t saturation,int position, HSLOperation op) override {
-                if (saturation<0) { return;}
-                setPosition(position);                
-                m_base->setSaturation(getPosition(),saturation,op);
-            }
-
-            void setLightness(int16_t lightness,int position, HSLOperation op) override {
-                if (lightness<0) { return;}
-                setPosition(position);
-                m_base->setLightness(getPosition(),lightness,op);
-            }
-
-            void setRGB(const CRGB& rgb,int position, HSLOperation op) override {
-                setPosition(position);
-                m_base->setRGB(getPosition(),rgb,op);
+            void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
+                
+                m_base->setRGB(translateIndex(index),rgb,op);
             }  
-
-            int getLength() override {
-                return m_base->getCount();
-            }
 
             void setHSLStrip(IHSLStrip* base) {
                 m_base = base;
+                m_length = base ? base->getCount() : 0;
+                m_offset = 0;
+                m_parentLength = m_length;
             }
 
+
+            virtual bool isPositionValid(int index) {
+                return index >= 0 || index < m_length;
+            }
 
 
         protected:
             IHSLStrip* m_base;
     };
 
-    class ElementHSLStrip : public ScriptHSLStrip {
-        public:
-            ElementHSLStrip(){
-
-            }
-
-            virtual ~ElementHSLStrip() {
-
-            }
-
-    };
-
-    
     class ContainerElementHSLStrip : public ScriptHSLStrip {
         public:
-            ContainerElementHSLStrip(){
+            ContainerElementHSLStrip() : ScriptHSLStrip() {
 
             }
 
@@ -231,6 +187,84 @@ namespace DevRelief{
             }
 
     };
+
+    class DrawLED : public IHSLStripLED {
+        public:
+            DrawLED(IScriptHSLStrip* strip, IScriptContext*context,HSLOperation op) {
+                m_strip = strip;
+                m_context = context;
+                m_operation = op;
+            }
+
+            void setIndex(int p) {
+                m_index = p;
+            }
+
+            int index() { return m_index;}
+
+
+            void setHue(int hue) override {
+                m_strip->setHue(hue,m_index,m_operation);
+            }
+            void setSaturation(int saturation) override {
+                m_strip->setSaturation(saturation,m_index,m_operation);
+            }
+            void setLightness(int lightness) override {
+                m_strip->setLightness(lightness,m_index,m_operation);
+            }
+            void setRGB(const CRGB& rgb)  override {
+                m_strip->setRGB(rgb,m_index,m_operation);
+            }
+
+            IScriptContext* getContext() const override { return m_context;}
+            IScriptHSLStrip* getStrip() const override { return m_strip;}
+        private:
+            int m_index;
+            HSLOperation m_operation;
+            IScriptHSLStrip* m_strip;
+            IScriptContext * m_context;
+    };
+
+    class DrawStrip : public ScriptHSLStrip {
+        public:
+            DrawStrip(IScriptContext* context, IScriptHSLStrip*parent, IElementPosition*position) : ScriptHSLStrip(){
+                m_context = context;
+                m_parent = parent;
+                m_position = position;
+                m_position->evaluateValues(context);
+                update(position,context);
+            }
+
+            virtual ~DrawStrip() {
+
+            }
+
+            void eachLED(auto&& drawer) {
+
+                HSLOperation op = m_position->getHSLOperation();
+                DrawLED led(this,m_context,op);
+                for(int i=0;i<m_length;i++){
+                    led.setIndex(i);
+                    drawer(led);
+                }
+            }
+
+
+
+            // void setHue(int16_t hue, int position, HSLOperation op) { m_parent->setHue(hue,position+m_offset,op);}
+            // void setSaturation(int16_t saturation, int position, HSLOperation op) { m_parent->setSaturation(saturation,position+m_offset,op);}
+            // void setLightness(int16_t lightness, int position, HSLOperation op) { m_parent->setLightness(lightness,position+m_offset,op);}
+            // void setRGB(const CRGB& rgb, int position, HSLOperation op) { m_parent->setRGB(rgb,position+m_offset,op);}
+
+
+        private:
+            IScriptContext* m_context;
+            IElementPosition*m_position;
+
+
+    };
+
+    
 
 }
 

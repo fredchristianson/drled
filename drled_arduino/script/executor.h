@@ -88,16 +88,16 @@ namespace DevRelief {
             }
 
             void step() {
-                m_logger->debug("step %x %x",m_ledStrip,m_script);
+                m_logger->never("step %x %x",m_ledStrip,m_script);
                 if (m_ledStrip == NULL || m_script == NULL) {
-                    m_logger->debug("\t***REMOVED*** to run");
+                    m_logger->periodic(DEBUG_LEVEL,10000,"\t***REMOVED*** to run");
                     return;
                 }
-                m_logger->debug("\tm_script->setp()");
+                m_logger->never("\tm_script->setp()");
                 //m_ledStrip->clear();
                 m_script->step();
                 //m_ledStrip->show();
-                m_logger->debug("\tfinished m_script->setp()");
+                m_logger->never("\tfinished m_script->step()");
 
             }
         private:

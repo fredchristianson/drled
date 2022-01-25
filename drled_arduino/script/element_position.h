@@ -10,23 +10,28 @@
 namespace DevRelief {
     extern Logger ScriptPositionLogger;
 
-    class ElementPositionBase : public IElementPosition {
-        public: 
-            ElementPositionBase() {
+    // most elements won't have defined properties.  
+    // a single default object can hold all of the defaults values
+    // so only elements with specified positions need members/memory
+    class PositionProperties {
+        public:
+            PositionProperties() {
                 m_logger = &ScriptPositionLogger;
+
                 m_offsetValue = NULL;
                 m_lengthValue = NULL;
-                m_stripNumber = NULL;
+                m_stripNumberValue = NULL;
                 m_unit = POS_INHERIT;
-                
-                m_offset = 0;
-                m_length = 0;
+                m_hslOperation = REPLACE;
                 m_clip = false;
-                m_wrap = false;                
-
+                m_wrap = false;   
+                m_offset = UnitValue(0,POS_PERCENT);
+                m_length = UnitValue(100,POS_PERCENT);
+                m_absolute = false;
             }
 
-            virtual ~ElementPositionBase() {
+            ~PositionProperties() {
+                m_logger->always("~PositionProperties");
                 m_logger->always("destroy offset");
                 if (m_offsetValue) { m_offsetValue->destroy();}
                 m_logger->always("destroy length");
@@ -34,62 +39,17 @@ namespace DevRelief {
                 m_logger->always("destroy stripNumber");
                 if (m_stripNumberValue) { m_stripNumberValue->destroy();}
                 m_logger->always("destroy done");
+
             }
 
-            void destroy() override { delete this; }
-
-            
-            bool fromJson(JsonObject*json) override {
-                m_offsetValue = ScriptValue::create(json->getPropertyValue("offset"));
-                m_lengthValue = ScriptValue::create(json->getPropertyValue("length"));
-                m_stripNumberValue = ScriptValue::create(json->getPropertyValue("strip"));
-
-                m_clip = json->getBool("clip",false);
-                m_wrap = json->getBool("wrap",false);
-                m_absolute = json->getBool("absolute",false);
-                m_cover = json->getBool("cover",false);
-                m_center = !m_cover && json->getBool("center",false);
-                m_flow = !m_cover && !m_center &&  json->getBool("flow",true);      
-                auto unitJson = json->getPropertyValue("unit");
-                if (unitJson) {
-                    auto unitVal = unitJson->asValue();
-                    if (unitVal) {
-                        if (Util::equalAny(unitVal->getString(),"percent","%")) {
-                            m_unit = POS_PERCENT;
-                        } else if (Util::equalAny(unitVal->getString(),"pixel","px")) {
-                            m_unit = POS_PIXEL;
-                        } else {
-                            m_unit = POS_INHERIT;
-                        }
-                        m_logger->debug("JSON unit %s ==> %d",unitVal->getString(),m_unit);
-                    } else {
-                        m_logger->debug("Not unit value in JSON");
-                        m_unit = POS_PERCENT;
-                    }
-                }
-
-                // length & offset are the script values 
-                // may be percent or pixel and contant or range/variable/...
-                m_length = 0;
-                m_offset = 0;
-
-                // start & count are the led pixel positions relative to the parent strip.
-                // these are set by the container during layout
-                m_start = 0;
-                m_count = 0;
-                return true;
-            }
-
- 
-            bool toJson(JsonObject* json) const override  {
-                m_logger->debug("ElementPostion.toJson");
-                
+            bool toJson(JsonObject* json) {
+                m_logger->debug("PositionProperties.toJson %x %x",this,m_lengthValue);
                 if (m_lengthValue) { 
                     m_logger->debug("\tlength");
                     json->set("length",m_lengthValue->toJson(json->getRoot()));
                 }
                 if (m_offsetValue) { 
-                    m_logger->debug("\offset");
+                    m_logger->debug("\toffset");
                     json->set("offset",m_offsetValue->toJson(json->getRoot()));
                 }
                 if (m_stripNumberValue) { 
@@ -102,31 +62,38 @@ namespace DevRelief {
                 json->setString("unit", m_unit == POS_PERCENT? "percent": m_unit == POS_PIXEL? "pixel" : "inherit");
                 m_logger->debug("\twrap %d",m_wrap);
                 json->setBool("wrap", isWrap());
+                m_logger->debug("\tclip %d",m_clip);
                 json->setBool("clip", isClip());
+                m_logger->debug("\tcenter %d",m_center);
                 json->setBool("center", isCenter());
+                m_logger->debug("\tflow %d",m_flow);
                 json->setBool("flow", isFlow());
+                m_logger->debug("\tcover %d",m_cover);
                 json->setBool("cover", isCover());
-                m_logger->debug("\tabsolute");
-                if (m_absolute){
-                    m_logger->debug("\ttrue");
-                    json->setBool("absoute", true);
-                } else {
-                    m_logger->debug("\tfalse");
-                    json->setBool("relative", true);
-                }
-                m_logger->debug("\tdone");
-                return true;
-
-            }     
-
-            void evaluateValues(IScriptContext* context) {
-                if (m_offsetValue) { m_offset = m_offsetValue->getIntValue(context,0);}
-                if (m_lengthValue) { m_length = m_lengthValue->getIntValue(context,0);}
-                if (m_stripNumberValue) { m_stripNumber = m_stripNumberValue->getIntValue(context,0);}
+                m_logger->debug("\tabsoute %d",m_absolute);
+                m_logger->showMemory();
+                
+                m_logger->showMemory();
+                json->setBool("absoute", m_absolute);
+                m_logger->showMemory();
+                
+                m_logger->debug("\ttoJson done");
+                return true;                
             }
 
-            PositionOverflow getOverflow() const override { 
-                return m_clip ? OVERFLOW_CLIP : m_wrap ? OVERFLOW_WRAP : OVERFLOW_ALLOW;
+            void evaluateValues(IScriptContext* context) {
+                if (m_offsetValue) { m_offset = m_offsetValue->getUnitValue(context,0,POS_INHERIT);}
+                if (m_lengthValue) { m_length = m_lengthValue->getUnitValue(context,100,POS_INHERIT);}
+                if (m_stripNumberValue) { m_stripNumber = m_stripNumberValue->getIntValue(context,0);}
+
+            }
+
+            PositionUnit getUnit() const {
+                return m_unit;
+            }
+
+            PositionOverflow getOverflow() const { 
+                return m_wrap ? OVERFLOW_WRAP: m_clip ? OVERFLOW_CLIP : OVERFLOW_ALLOW;
             }
 
             bool isClip() const { return m_clip;}
@@ -134,57 +101,83 @@ namespace DevRelief {
             bool isCenter() const { return m_center;}
             bool isFlow() const { return m_flow;}
             bool isCover() const { return m_cover;}
-            bool isPositionAbsolute() const { m_absolute;}
+            bool useRootStrip() const { m_absolute;}
             bool isPositionRelative() const { return !m_absolute;}
-
+            HSLOperation getHSLOperation() const { return m_hslOperation;}
             bool hasOffset() const { return m_offsetValue != NULL;}
-            int getOffset() const { return m_offset;}
+            UnitValue getOffset() const { return m_offset;}
             bool hasLength() const { return m_lengthValue != NULL;}
-            int getLength() const { return m_length;}
-
+            UnitValue getLength() const { return m_length;}
             bool hasStrip()const  { return m_stripNumberValue != NULL;}
             int getStrip()const { return m_stripNumber;}
 
-            // layout sets the position in pixel units
-            void setPosition(int start, int count,IScriptContext* context) override {
-                m_logger->never("setPosition %d %d",start,count);
-                m_start = start;
-                m_count = count;
+            void setClip(IJsonElement* json)  { m_clip = getBool(json,false);}
+            void setWrap(IJsonElement* json)  { m_wrap = getBool(json,false);}
+            void setCenter(IJsonElement* json)  { m_center = getBool(json,false);}
+            void setCover(IJsonElement* json)  { m_cover = getBool(json,false);}
+
+            // setFlow must be called after center/cover to get the right default
+            void setFlow(IJsonElement* json)  { m_flow = getBool(json,!m_center && !m_cover);}
+            void setPositionAbsolute(IJsonElement* json)  { m_absolute = getBool(json,false);}
+
+            void setOffset(IJsonElement* json)  { m_offsetValue = ScriptValue::create(json);}
+            void setLength(IJsonElement* json)  { m_lengthValue = ScriptValue::create(json);}
+            void setStrip(IJsonElement* json)  { m_stripNumberValue = ScriptValue::create(json);}
+            void setUnit(IJsonElement*json) {m_unit = parseJsonUnit(json);}
+            void setHSLOperation(IJsonElement*json){
+                m_hslOperation = parseJsonOperation(json);
             }
+            void setHSLOperation(HSLOperation op) { m_hslOperation = op;}
+            void setWrap(bool wrap) { m_wrap = wrap;}
+            void setClip(bool clip) { m_clip = clip;}
+            void setCover(bool cover) { m_cover = cover;}
+            void setUnit(PositionUnit unit) { m_unit = unit;}
+            void setOffset(int val) { m_offset = val;}
+            void setLength(int val) { m_length = val;}
 
-            int toPixels(int val)const override { 
-                int rval = val;
-                PositionUnit unit = getUnit();
-                IElementPosition* parent=NULL;
-                if (unit == POS_PERCENT && (parent=getParent())) {
-                    rval = (parent->getCount())*(val/100.0);
-                }
-                m_logger->never("toPixel %d(%d) %d=>%d",unit,m_unit,val,rval);
-                return rval;
-            }
-
-            PositionUnit getUnit() const override {
-                if (m_unit == POS_INHERIT) {
-                    auto parent = getParent();
-                    return parent ? parent->getUnit() : POS_PERCENT;
-                }
-                return m_unit;
-            }
-
-
-            int getCount() const override { return m_count;}
-            int getStart() const override { return m_start;}
 
         protected:
-            Logger* m_logger;    
+            bool getBool(IJsonElement* json, bool defaultValue) { 
+                if (json==NULL) {return defaultValue;}
+                IJsonValueElement* val = json->asValue();
+                if (val == NULL) { return defaultValue;}
+                return val->getBool(defaultValue);
+            }
+
+            HSLOperation parseJsonOperation(IJsonElement*json) {
+                if (json == NULL) { return INHERIT;}
+                auto opVal = json->asValue();
+                if (opVal) {
+                    return  (HSLOperation)Util::mapText2Int(opVal->getString(),
+                    "replace:0,add:1,subtract:2,sub:2,average:3,avg:3,min:4,max:5",INHERIT);
+                }
+                return INHERIT;
+            }
+
+           PositionUnit parseJsonUnit(IJsonElement* json) {
+                PositionUnit unit = POS_INHERIT;
+                
+                auto unitVal = json ? json->asValue() : NULL;
+                if (unitVal) {
+                    if (Util::equalAny(unitVal->getString(),"percent","%")) {
+                        m_unit = POS_PERCENT;
+                    } else if (Util::equalAny(unitVal->getString(),"pixel","px")) {
+                        m_unit = POS_PIXEL;
+                    }
+                    m_logger->debug("JSON unit %s ==> %d",unitVal->getString(),m_unit);
+                } 
+                return unit;
+            }
+
+            Logger* m_logger;
             // evaluatable values
             IScriptValue* m_offsetValue;
             IScriptValue* m_lengthValue;
             IScriptValue* m_stripNumberValue;
-            
+
             // evaluated values
-            int16_t m_offset;
-            int16_t m_length;
+            UnitValue m_offset;
+            UnitValue m_length;
             bool    m_clip;
             bool    m_wrap;
             uint8_t m_stripNumber;
@@ -192,16 +185,118 @@ namespace DevRelief {
             bool m_center;
             bool m_cover;
             bool m_flow;
-            bool m_absolute;
+            bool m_absolute;        
+            HSLOperation m_hslOperation;
+    };
 
-            // the values after layout
-            int m_start;
-            int m_count;
+    PositionProperties DEFAULT_PROPERTIES;
+
+    class ElementPositionBase : public IElementPosition {
+        public: 
+            ElementPositionBase() {
+                m_logger = &ScriptPositionLogger;
+                m_properties = &DEFAULT_PROPERTIES;
+            
+            }
+
+            virtual ~ElementPositionBase() {
+                m_logger->always("~ElementPositionBase  %x %x",m_properties, &DEFAULT_PROPERTIES);
+                if (m_properties != &DEFAULT_PROPERTIES) {
+                    delete m_properties;
+                }
+            }
+
+            void destroy() override { 
+                m_logger->always("destroy ElementPositionBase");                
+                delete this; 
+            }
+
+            
+            bool fromJson(JsonObject*json) override {
+                IJsonElement * offsetValue = json->getPropertyValue("offset");
+                IJsonElement * lengthValue = json->getPropertyValue("length");
+                IJsonElement * stripNumberValue = json->getPropertyValue("strip");
+                IJsonElement * clip = json->getPropertyValue("clip");
+                IJsonElement * wrap = json->getPropertyValue("wrap");
+                IJsonElement * absolute = json->getPropertyValue("absolute");
+                IJsonElement * cover = json->getPropertyValue("cover");
+                IJsonElement * center = json->getPropertyValue("center");
+                IJsonElement * flow = json->getPropertyValue("flow");
+                IJsonElement * unit = json->getPropertyValue("unit");
+
+                if (offsetValue || lengthValue || stripNumberValue ||
+                    clip || wrap || absolute || cover || center || flow || unit){
+                        if(m_properties != &DEFAULT_PROPERTIES) {
+                            m_logger->debug("delete properties %x (default=%x)",m_properties,&DEFAULT_PROPERTIES);
+                            delete m_properties;
+                        }
+                        m_properties = new PositionProperties();
+                        m_properties->setOffset(offsetValue);
+                        m_properties->setLength(lengthValue);
+                        m_properties->setStrip(stripNumberValue);
+                        m_properties->setClip(clip);
+                        m_properties->setWrap(wrap);
+                        m_properties->setPositionAbsolute(absolute);
+                        m_properties->setCover(cover);
+                        m_properties->setCenter(center);
+                        m_properties->setFlow(flow);
+                        m_properties->setUnit(unit);
+                    }
+                // length & offset are the script values 
+                // may be percent or pixel and contant or range/variable/...
+                IJsonElement * length = 0;
+                IJsonElement * offset = 0;
+
+                return true;
+            }
+
+ 
+            bool toJson(JsonObject* json) const override  {
+                if (m_properties == &DEFAULT_PROPERTIES){
+                    return true;
+                }
+                return m_properties->toJson(json);
+
+            }     
+
+            void evaluateValues(IScriptContext* context) {
+                m_properties->evaluateValues(context);
+            }
+
+            PositionOverflow getOverflow() const override { 
+                return m_properties->getOverflow();
+            }
+
+            bool isClip() const { return m_properties->isClip();}
+            bool isWrap() const { return m_properties->isWrap();}
+            bool isCenter() const { return m_properties->isCenter();}
+            bool isFlow() const { return m_properties->isFlow();}
+            bool isCover() const { return m_properties->isCover();}
+            bool isPositionAbsolute() const { m_properties->useRootStrip();}
+            bool isPositionRelative() const { return !m_properties->useRootStrip();}
+
+            bool hasOffset() const { return  m_properties->hasOffset();}
+            UnitValue getOffset() const { return m_properties->getOffset();}
+            bool hasLength() const { return m_properties->hasLength();}
+            UnitValue getLength() const { return m_properties->getLength();}
+            HSLOperation getHSLOperation() const { return m_properties->getHSLOperation();}
+
+            bool hasStrip()const  { return m_properties->hasStrip();}
+            int getStrip()const { return m_properties->getStrip();}
+
+
+
+        protected:
+ 
+        protected:
+            Logger* m_logger;    
+            PositionProperties* m_properties;
     };
 
     class RootElementPosition : public ElementPositionBase {
         public: 
             RootElementPosition() {
+                m_properties = new PositionProperties();
 
             }
 
@@ -215,18 +310,23 @@ namespace DevRelief {
                 m_logger->debug("RootElementPosition cannot have a parent");
             }
 
-            // the root always works in pixels
-            // it's m_unit may be percent (default) for inerhit
-            int toPixels(int val)const override { return val;}
 
-            void setPosition(int start, int count,IScriptContext* context) override {
-                m_logger->error("cannot setPosition() on RootElementPosition");
+            void setRootPosition(int offset, int length) {
+                m_properties->setUnit(POS_PIXEL);
+                m_properties->setOffset(offset);
+                m_properties->setLength(length);
+                m_properties->setWrap(true);
+                m_properties->setCover(true);
+                m_properties->setUnit(POS_PIXEL);            
+                m_properties->setHSLOperation(REPLACE);
             }
 
-            void setRootPosition(int start, int count) {
-                m_start = start;
-                m_count = count;
+            PositionUnit getUnit() const override {
+                PositionUnit unit = m_properties->getUnit();
+                if (unit == POS_INHERIT) { return POS_PERCENT;}
+                return unit;
             }
+
         protected:
             int m_ledCount;
     };
@@ -235,24 +335,25 @@ namespace DevRelief {
     class ScriptElementPosition : public ElementPositionBase {
         public:
             ScriptElementPosition() {
-
                 m_parent = NULL;
-
             }
 
-            ScriptElementPosition(JsonObject* json) {
-                fromJson(json);
-            }
-
-
-
+ 
             virtual ~ScriptElementPosition() {
+                m_logger->debug("~destroy ScriptElementPosition");
 
             }
 
-            void destroy() override { delete this;}
+            void destroy() override { 
+                m_logger->debug("destroy ScriptElementPosition");
+                delete this;
+            }
 
-
+            PositionUnit getUnit() const override {
+                PositionUnit unit = m_properties->getUnit();
+                if (unit == POS_INHERIT) { return m_parent->getUnit();}
+                return unit;
+            }
 
             IElementPosition* getParent()const override {return m_parent;}
             void setParent(IElementPosition*parent) { m_parent = parent;}

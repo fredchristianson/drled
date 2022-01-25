@@ -60,6 +60,14 @@ namespace DevRelief
 
             void setStrip(IScriptHSLStrip*strip) { m_strip = strip;}
             IScriptHSLStrip* getStrip() const override { return m_strip;}
+            IScriptHSLStrip* getRootStrip() const override {
+                IScriptHSLStrip* root = m_strip;
+                while(root != NULL && root->getParent() != NULL) {
+                    root = root->getParent();
+                }
+                return root;
+            }
+
             IScriptStep* getStep() override {
                 return m_currentStep;
             };
@@ -123,7 +131,7 @@ namespace DevRelief
         RootContext(IHSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
         {
             m_logger->debug("RootContext(%x,%x)",strip,params);
-            m_strip = strip;
+            m_baseStrip = strip;
             m_logger->debug("\tget paramRoot object");
             m_params = m_paramRoot.getTopObject();
 
@@ -144,6 +152,8 @@ namespace DevRelief
 
         }
 
+
+
         void initializeStep() {
 
         }
@@ -154,7 +164,7 @@ namespace DevRelief
         protected:
         JsonRoot  m_paramRoot;
         JsonObject* m_params;
-        IHSLStrip* m_strip;
+        IHSLStrip* m_baseStrip;
     };
 
 
