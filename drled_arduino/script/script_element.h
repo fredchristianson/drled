@@ -160,14 +160,21 @@ namespace DevRelief {
             }
 
             void add(const char * name, IScriptValue* val) {
-                m_values.addValue(name,val);
+                m_values.setValue(name,val);
             }
+
+            virtual void draw(IScriptContext*context) override {
+                m_values.each([&](NameValue*nameValue){
+                    context->setValue(nameValue->getName(),new ScriptValueReference(nameValue->getValue()));
+                });
+            }
+
         protected:
             virtual void valuesFromJson(JsonObject* json){
                 m_logger->debug("ValuesElement.fromJson %s",getType());                
 
                 json->eachProperty([&](const char * name, IJsonElement* val) {
-                    m_values.addValue(name,ScriptValue::create(val));
+                    m_values.setValue(name,ScriptValue::create(val));
                 });
                 m_logger->debug("\t done ValuesElement.fromJson %s",getType());                
             }
@@ -190,7 +197,7 @@ namespace DevRelief {
             virtual ~ScriptLEDElement() {
             }
 
-            virtual void draw(IScriptContext*context) {
+            virtual void draw(IScriptContext*context) override {
                 IScriptHSLStrip* parentStrip = context->getStrip();
                 m_elementPosition.evaluateValues(context);
                 m_logger->debug("ScriptLEDElement.draw()");

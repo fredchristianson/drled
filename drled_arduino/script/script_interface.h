@@ -151,7 +151,9 @@ namespace DevRelief{
 
             virtual IAnimationDomain* getAnimationPositionDomain()=0;
 
+            virtual void setValue(const char* name, IScriptValue* value)=0;
             virtual IScriptValue* getValue(const char * name)=0;
+            virtual IScriptValue* getSysValue(const char * name)=0;
 
             virtual void setStrip(IScriptHSLStrip*strip)=0;
             virtual IScriptHSLStrip* getStrip() const = 0;
@@ -160,6 +162,9 @@ namespace DevRelief{
             virtual IScriptElement* getCurrentElement() const = 0;
             // set the current element and return previous one
             virtual IScriptElement* setCurrentElement(IScriptElement*element) = 0;
+
+            virtual void enterScope()=0;
+            virtual void leaveScope();
 
     };
 
@@ -172,23 +177,32 @@ namespace DevRelief{
         virtual bool getBoolValue(IScriptContext* cmd,  bool defaultValue) = 0; 
         virtual int getMsecValue(IScriptContext* cmd,  int defaultValue) = 0; 
         virtual UnitValue getUnitValue(IScriptContext* cmd,  double defaultValue, PositionUnit defaultUnit)=0;
+
+        // is...() methods return true if they are able to return that type of value
         virtual bool isString(IScriptContext* cmd)=0;
         virtual bool isNumber(IScriptContext* cmd)=0;
         virtual bool isBool(IScriptContext* cmd)=0;
         virtual bool isNull(IScriptContext* cmd)=0;
         virtual bool isUnitValue(IScriptContext* cmd)=0;
 
+        // allow testing for value matches without evaluating nested string values
         virtual bool equals(IScriptContext*cmd, const char * match)=0;
 
 
         // evaluate this IScriptValue with the given command and return a new
-        // IScriptValue.  mainly useful to get a random number one time
+        // IScriptValue.  
+        // mainly useful to get a random number one time and copy to new value
         virtual IScriptValue* eval(IScriptContext*cmd, double defaultValue)=0; 
 
 
         virtual bool isRecursing() = 0; // mainly for evaluating variable values
 
+        // used to generate JSON text to save or return to value
         virtual IJsonElement* toJson(JsonRoot* jsonRoot)=0;
+        
+        // stringify to value that can be used in a variable's default 
+        virtual DRString stringify()=0;
+        
         // for debugging
         virtual DRString toString() = 0;
 
@@ -200,6 +214,8 @@ namespace DevRelief{
         virtual void destroy() =0; // cannot delete pure virtual interfaces. they must all implement destroy
         virtual bool hasValue(const char *name) = 0;
         virtual IScriptValue *getValue(const char *name) = 0;
+        virtual void setValue(const char *name, IScriptValue*val)=0;
+        virtual IScriptValueProvider* getParentScope()=0;
     };
 
     class IValueAnimator {

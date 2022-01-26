@@ -15,9 +15,54 @@ namespace DevRelief
 {
     extern Logger ScriptValueLogger;
 
+    // ScriptValueReference is a pointer to another ScriptValue 
+    // the pointer can be deleted while the real value remains
+    class ScriptValueReference : public IScriptValue {
+        public:
+            ScriptValueReference(IScriptValue* ref) {
+                m_reference = ref;
+            }
+
+            virtual ~ScriptValueReference() { /* do not delete m_reference*/}
+            void destroy() { delete this;}
+
+            int getIntValue(IScriptContext* ctx,  int defaultValue)  { return m_reference->getIntValue(ctx,defaultValue);}
+            double getFloatValue(IScriptContext* ctx,  double defaultValue)  { return m_reference->getFloatValue(ctx,defaultValue);} 
+            bool getBoolValue(IScriptContext* ctx,  bool defaultValue)  { return m_reference->getBoolValue(ctx,defaultValue); }
+            int getMsecValue(IScriptContext* ctx,  int defaultValue)  { return m_reference->getMsecValue(ctx,defaultValue);}
+            UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) { return m_reference->getUnitValue(ctx,defaultValue,defaultUnit);}
+            bool isString(IScriptContext* ctx) { return m_reference->isString(ctx);}
+            bool isNumber(IScriptContext* ctx) { return m_reference->isNumber(ctx);}
+            bool isBool(IScriptContext* ctx) { return m_reference->isBool(ctx);}
+            bool isNull(IScriptContext* ctx) { return m_reference->isNull(ctx);}
+            bool isUnitValue(IScriptContext* ctx) { return m_reference->isUnitValue(ctx);}
+
+            bool equals(IScriptContext*ctx, const char * match) { return m_reference->equals(ctx,match);}
+
+
+            // evaluate this IScriptValue with the given command and return a new
+            // IScriptValue.  mainly useful to get a random number one time
+            IScriptValue* eval(IScriptContext*ctx, double defaultValue) { m_reference->eval(ctx,defaultValue); }
+
+
+            bool isRecursing() { return m_reference->isRecursing();} 
+
+            IJsonElement* toJson(JsonRoot* jsonRoot) { m_reference-> toJson(jsonRoot);}
+            // for debugging
+            DRString toString() { return m_reference->toString();}           
+
+            DRString stringify() { return m_reference->stringify();}
+        private:
+            IScriptValue* m_reference;
+    };
+
     class ScriptValue : public IScriptValue {
         public:
-            static ScriptValue* create(IJsonElement*json);
+            static IScriptValue* create(IJsonElement*json);
+            static IScriptValue* createFromString(const char * string);
+            static IScriptValue* createFromArray(JsonArray* json);
+            static IScriptValue* createFromObject(JsonObject* json);
+
             ScriptValue() {
                 m_logger = &ScriptValueLogger;
             }
@@ -59,6 +104,8 @@ namespace DevRelief
                 return obj;
             }
 
+            DRString stringify() override { return "";}
+
         protected:
 
             PositionUnit getUnit(const char *val, PositionUnit defaultUnit) {
@@ -74,76 +121,7 @@ namespace DevRelief
             Logger* m_logger;
     };
 
-    class ScriptSystemValue : public ScriptValue {
-        public:
-            ScriptSystemValue(const char* name) {
-                LinkedList<DRString> vals;
-                if (Util::split(name,':',vals)==2) {
-                    m_logger->debug("got name and scope");
-                    m_scope = vals.get(0);
-                    m_name = vals.get(1);
-                } else {
-                    m_name = vals.get(0);
-                }
-            }
-
-            int getIntValue(IScriptContext* ctx,  int defaultValue) override
-            {
-                return (int)getFloatValue(ctx,(double)defaultValue);
-            }
-
-            double getFloatValue(IScriptContext* ctx,  double defaultValue) override
-            {
-                return get(ctx,defaultValue);
-            }
-
-        bool getBoolValue(IScriptContext* ctx,  bool defaultValue) override
-            {
-                double d = getFloatValue(ctx,0);
-                return d != 0;
-            }
-        
-        int getMsecValue(IScriptContext* ctx,  int defaultValue) override { return defaultValue;}
-        bool isNumber(IScriptContext* ctx) override { return true;}
-
-    
-        DRString toString() { return DRString("System Value: ").append(m_name); }
-        private:
-            double get(IScriptContext* ctx, double defaultValue){
-                double val = defaultValue;
-                if (Util::equal(m_name,"start")) {
-                    val = 0; // todo: where is start in this version ctx->getStrip()->getStart();
-                } else if (Util::equal(m_name,"count")) {
-                    val = ctx->getStrip()->getLength();
-                } else if (Util::equal(m_name,"step")) {
-                    val = ctx->getStep()->getNumber();
-                } else if (Util::equal(m_name,"red")) {
-                    val = HUE::RED;
-                }  else if (Util::equal(m_name,"orange")) {
-                    val = HUE::ORANGE;
-                }  else if (Util::equal(m_name,"yellow")) {
-                    val = HUE::YELLOW;
-                }  else if (Util::equal(m_name,"green")) {
-                    val = HUE::GREEN;
-                }  else if (Util::equal(m_name,"cyan")) {
-                    val = HUE::CYAN;
-                }  else if (Util::equal(m_name,"blue")) {
-                    val = HUE::BLUE;
-                }  else if (Util::equal(m_name,"magenta")) {
-                    val = HUE::MAGENTA;
-                }  else if (Util::equal(m_name,"purple")) {
-                    val = HUE::PURPLE;
-                } 
-
-
-                m_logger->never("SystemValue %s:%s %f",m_scope.get(),m_name.get(),val);
-                return val;
-            }
-            DRString m_scope;
-            DRString m_name;
-
-
-    };
+ 
   
     class NameValue
     {
@@ -185,15 +163,24 @@ namespace DevRelief
     class ScriptFunction : public ScriptValue
     {
     public:
-        ScriptFunction(const char *name, FunctionArgs* args) : m_name(name), m_args(args)
+        ScriptFunction(const char *name, FunctionArgs* args=NULL) : m_name(name)
         {
             randomSeed(analogRead(0)+millis());
+            if (args == NULL) {
+                m_args = new FunctionArgs();
+            } else {
+                m_args = args;
+            }
             m_funcState = -1;
         }
 
         virtual ~ScriptFunction()
         {
             delete m_args;
+        }
+
+        void addArg(IScriptValue*val) {
+            m_args->add(val);
         }
         int getIntValue(IScriptContext* ctx,  int defaultValue) override
         {
@@ -392,7 +379,7 @@ namespace DevRelief
 
         virtual DRString toString() { return DRString::fromFloat(m_value); }
         IJsonElement* toJson(JsonRoot*root) override { return new JsonFloat(*root,m_value);}
-
+        DRString stringify() override { return DRString::fromFloat(m_value);}
     protected:
         double m_value;
     };
@@ -436,6 +423,7 @@ namespace DevRelief
             return drv;
         }
 
+        DRString stringify() override { return m_value ? "true":"false";}
     protected:
         bool m_value;
     };
@@ -485,6 +473,8 @@ namespace DevRelief
             m_logger->debug("\tcreated DRString");
             return drv;
         }
+
+        DRString stringify() override { return "null";}
 
     protected:
 
@@ -554,28 +544,46 @@ namespace DevRelief
 
 
         DRString toString() override { return m_value; }
+        DRString stringify() override { return m_value;}
 
     protected:
         DRString m_value;
     };
 
-    class ScriptRangeValue : public ScriptValue
+    class AnimatedValue : public ScriptValue {
+        public:
+            AnimatedValue() {
+                m_counter = 0;
+            }
+
+            ~AnimatedValue() {
+                
+            }
+
+        protected:
+            double getAnimatedValue(double start,double end){
+                int pct = (end-start)*m_counter/100.0;
+                m_counter = (m_counter+1) % 100;
+                return start + (end-start)*pct;
+            }
+
+            int m_counter;
+
+    };
+
+    class ScriptRangeValue : public AnimatedValue
     {
     public:
-        ScriptRangeValue(IScriptValue *start, IScriptValue *end,IValueAnimator * animate=NULL )
+        ScriptRangeValue(IScriptValue *start, IScriptValue *end )
         {
             m_start = start;
             m_end = end;
-            m_animate = animate;
-            m_unit = POS_UNSET;
-
         }
 
         virtual ~ScriptRangeValue()
         {
             if (m_start) {m_start->destroy();}
             if (m_end) {m_end->destroy();}
-            if (m_animate) {m_animate->destroy();}
         }
 
         int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
@@ -602,19 +610,7 @@ namespace DevRelief
             }
             double start = m_start->getFloatValue(ctx, 0);
             double end = m_end->getFloatValue(ctx,  1);
-            double value = 0;
-            if (m_animate) {
-                AnimationRange range(start,end);
-                value = m_animate->get(ctx,&range);
-            } else {
-                AnimationRange range(start,end,false);
-                Animator animator((ctx->getAnimationPositionDomain()));
-                CubicBezierEase ease;
-                animator.setEase(&ease);
-
-                value = animator.get(&range,ctx);
-                
-            }
+            double value = getAnimatedValue(start,end);
             m_logger->never("Range %f-%f got %f",start,end,value);
             return value;
   
@@ -637,35 +633,26 @@ namespace DevRelief
             return result;
         }
 
-        void setAnimator(IValueAnimator* animator) {
-            m_animate = animator;
-        }
-
-        virtual UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) {
+         virtual UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) {
             if (m_start == NULL) { return UnitValue(defaultValue,defaultUnit);}
-            if (m_unit == POS_UNSET) {
-                UnitValue uv = m_start->getUnitValue(ctx,defaultValue,defaultUnit);
-                m_unit = uv.getUnit();
-            }
+            UnitValue uv = m_start->getUnitValue(ctx,defaultValue,defaultUnit);
+            PositionUnit unit = uv.getUnit();
             double val = getFloatValue(ctx,defaultValue);  
-            return UnitValue(val,m_unit);      
+            return UnitValue(val,unit);      
         }
 
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
             auto start = m_start ? m_start->eval(ctx,defaultValue) : NULL;
             auto end = m_end ? m_end->eval(ctx,defaultValue) : NULL;
-            auto animator = m_animate ? m_animate->clone(ctx) : NULL;
-            return new ScriptRangeValue(start,end,animator);
+            return new ScriptRangeValue(start,end);
         }
 
 
     protected:
         IScriptValue *m_start;
         IScriptValue *m_end;
-        PositionUnit m_unit;
 
-        IValueAnimator* m_animate;
     };
 
 
@@ -835,25 +822,23 @@ namespace DevRelief
     class ScriptVariableValue : public IScriptValue
     {
     public:
-        ScriptVariableValue(const char *value) : m_name(value)
+        ScriptVariableValue(bool isSysValue, const char *value,IScriptValue* defaultValue) : m_name(value)
         {
             m_logger = &ScriptValueLogger;
-            m_logger->debug("Created ScriptVariableValue %s.", value);
-            m_hasDefaultValue = false;
+            m_logger->debug("Created ScriptVariableValue %s %d.", value, isSysValue);
+            m_defaultValue = defaultValue;
+            m_isSysValue = isSysValue;
             m_recurse = false;
         }
 
         virtual ~ScriptVariableValue()
         {
-            
+            if (m_defaultValue) { m_defaultValue->destroy();}
         }
 
-        void setDefaultValue(double val) {
-            m_defaultValue = val;
-            m_hasDefaultValue = true;
-        }
 
         void destroy() override { delete this;}
+
         virtual int getIntValue(IScriptContext*ctx,  int defaultValue) override
         {
             return getFloatValue(ctx,defaultValue);
@@ -861,60 +846,70 @@ namespace DevRelief
 
         virtual double getFloatValue(IScriptContext*ctx,  double defaultValue) override
         {
-            int dv = m_hasDefaultValue ? m_defaultValue : defaultValue;
             if (m_recurse) {
                 m_logger->never("variable getFloatValue() recurse");
-                return dv;
+                return m_defaultValue ? m_defaultValue->getFloatValue(ctx,defaultValue) : defaultValue;
             }
             m_recurse = true;
-            IScriptValue * val = ctx->getValue(m_name);
-            if (val != NULL) {
-                dv = val->getFloatValue(ctx,dv);
-            }
+            IScriptValue * val = getScriptValue(ctx);
+            double result = val->getFloatValue(ctx,defaultValue);
             m_recurse = false;
-            return dv;
+            return result;
         }
 
         virtual bool getBoolValue(IScriptContext*ctx,  bool defaultValue) override
         {
-            m_recurse = true;
-            IScriptValue * val = ctx->getValue(m_name);
-            bool dv = m_hasDefaultValue ? (m_defaultValue != 0) : defaultValue;
-            if (val != NULL) {
-                dv = val->getBoolValue(ctx,dv);
+            if (m_recurse) {
+                m_logger->never("variable getFloatValue() recurse");
+                return m_defaultValue ? m_defaultValue->getBoolValue(ctx,defaultValue) : defaultValue;
             }
+            m_recurse = true;
+            IScriptValue * val = getScriptValue(ctx);
+            bool result =  val->getBoolValue(ctx,defaultValue);
+           
             m_recurse = false;
-            return dv;
+            return result;
         }
 
         bool equals(IScriptContext*ctx, const char * match) override {
-            IScriptValue * val = ctx->getValue(m_name);
+            IScriptValue * val = getScriptValue(ctx);
             return val ? val->equals(ctx,match) : false;
         }
 
         int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
-            IScriptValue * val = ctx->getValue(m_name);
+            IScriptValue * val = getScriptValue(ctx);
 
             return val ? val->getMsecValue(ctx,defaultValue) : defaultValue;
         }
 
+        UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) override { 
+            IScriptValue * val = getScriptValue(ctx);
+
+            return val ? val->getUnitValue(ctx,defaultValue,defaultUnit) : UnitValue(defaultValue,defaultUnit);
+        }
+
         bool isNumber(IScriptContext* ctx) { 
-            IScriptValue * val = ctx->getValue(m_name);
+            IScriptValue * val = getScriptValue(ctx);
             return val ? val->isNumber(ctx) : false;
 
          }
         bool isString(IScriptContext* ctx) { 
-            IScriptValue * val = ctx->getValue(m_name);
-            return val ? val->isString(ctx) : false;
+            IScriptValue * val = getScriptValue(ctx);
+            return val->isString(ctx);
 
          }
         bool isBool(IScriptContext* ctx) { 
-            IScriptValue * val = ctx->getValue(m_name);
-            return val ? val->isBool(ctx) : false;
+            IScriptValue * val = getScriptValue(ctx);
+            return val->isBool(ctx);
          }
          bool isNull(IScriptContext* ctx) { 
-            IScriptValue * val = ctx->getValue(m_name);
-            return val ? val->isNull(ctx) : false;
+            IScriptValue * val = getScriptValue(ctx);
+            return val->isNull(ctx);
+         }
+
+        bool isUnitValue(IScriptContext* ctx) override { 
+            IScriptValue * val = getScriptValue(ctx);
+            return val->isUnitValue(ctx);
          }
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
@@ -922,42 +917,85 @@ namespace DevRelief
 
         }
 
+        IJsonElement* toJson(JsonRoot* jsonRoot) override {
+            DRFormattedString val("%s(%s)",(m_isSysValue?"sys":"var"),m_name.text());
+            if (m_defaultValue) {
+                DRString text = m_defaultValue->stringify();
+                if (text.getLength()>0) {
+                    val.append("|");
+                    val.append(text);
+                }
+                
+            }
+            return new JsonString(*jsonRoot,val.text());
+        }
         
         virtual DRString toString() { return DRString("Variable: ").append(m_name); }
 
         bool isRecursing() { return m_recurse;}
+
+        DRString stringify() { return "";} // cannot stringify vars
     protected:
+        IScriptValue* getScriptValue(IScriptContext*context) {
+            IScriptValue* val = m_isSysValue ? context->getSysValue(m_name) : context->getValue(m_name);
+            if (val == NULL)  {
+                val = m_defaultValue;
+            }
+
+            return val ? val : &NULL_VALUE;
+        }
         DRString m_name;
-        bool m_hasDefaultValue;
-        double m_defaultValue;
+        bool m_isSysValue;
+        IScriptValue*  m_defaultValue;
         Logger *m_logger;
         bool m_recurse;
+
+        static ScriptNullValue NULL_VALUE;
     };
+
+    ScriptNullValue ScriptVariableValue::NULL_VALUE;
 
     class ScriptValueList : public IScriptValueProvider {
         public:
-            ScriptValueList() {
+            ScriptValueList(IScriptValueProvider* parentScope=NULL) {
                 m_logger = &ScriptValueLogger;
-                m_logger->debug("create ScriptValueList()");
+                m_logger->never("create ScriptValueList()");
+                m_parentScope = parentScope;
             }
+
+
 
             virtual ~ScriptValueList() {
-                m_logger->debug("delete ~ScriptValueList()");
+                m_logger->never("delete ~ScriptValueList()");
             }
 
+            IScriptValueProvider* getParentScope() { return m_parentScope;}
             bool hasValue(const char *name) override  {
                 return getValue(name) != NULL;
             }
             
             IScriptValue *getValue(const char *name)  override {
+                m_logger->debug("getValue %s",name);
                 NameValue** first = m_values.first([&](NameValue*&nv) {
 
                     return strcmp(nv->getName(),name)==0;
                 });
-                return first ? (*first)->getValue() : NULL;
+                if (first) {
+                    IScriptValue* found = (*first)->getValue();
+                    if (found) {
+                        m_logger->debug("\tfound %s",found->toString().text());
+                        return found;
+                    }
+                }
+                if (m_parentScope) {
+                    m_logger->debug("\tuse parent scope");
+                    return m_parentScope->getValue(name);
+                }
+                m_logger->debug("\tnot found");
+                return NULL;
             }
 
-            void addValue(const char * name,IScriptValue * value) {
+            void setValue(const char * name,IScriptValue * value) {
                 if (Util::isEmpty(name) || value == NULL) {
                     return;
                 }
@@ -975,6 +1013,7 @@ namespace DevRelief
             int count() { return m_values.size();}
         private:
             PtrList<NameValue*> m_values;
+            IScriptValueProvider* m_parentScope;
             Logger* m_logger;
    };
 
@@ -982,23 +1021,84 @@ namespace DevRelief
         return new ScriptNumberValue(getFloatValue(ctx,defaultValue));
    }
 
-   ScriptValue* ScriptValue::create(IJsonElement*json){
+   IScriptValue* ScriptValue::create(IJsonElement*json){
        if (json == NULL) { 
            return NULL;
        }
+       IScriptValue * result = NULL;
        if (json->asValue()) {
            IJsonValueElement* jsonVal = json->asValue();
             if (json->isNumber()) {
-                return new ScriptNumberValue(jsonVal->getInt(0));
+                result = new ScriptNumberValue(jsonVal->getInt(0));
             } else if (json->isString()) {
-                return new ScriptStringValue(jsonVal->getString(""));
+                //return new ScriptStringValue(jsonVal->getString(""));
+                result = createFromString(jsonVal->getString(""));
             } else if (json->isBool()) {
-                return new ScriptBoolValue(jsonVal->getBool(false));
+                result = new ScriptBoolValue(jsonVal->getBool(false));
             } else if (json->isNull()) {
-                return new ScriptNullValue();
+                result = new ScriptNullValue();
             }
+       } else if (json->asArray()) {
+           result = createFromArray(json->asArray());
+       } else if (json->asObject()) {
+           result = createFromObject(json->asObject());
        }
-       return NULL;
+       return result;
    }
+
+   IScriptValue* ScriptValue::createFromString(const char * string){
+       while(string != NULL && isspace(*string)) {
+           string++;
+       }
+       if (string == NULL || string[0] == 0) { return NULL;}
+       IScriptValue* result = NULL;
+       if (Util::startsWith(string,"var(") || Util::startsWith(string,"sys(")){
+           LinkedList<DRString> nameDefault;
+           bool isSysVar = string[0] == 's';
+           Util::split(string+4,')',nameDefault);
+           if (nameDefault.size() == 1) {
+               ScriptValueLogger.always("create variable %d %s",isSysVar,nameDefault.get(0));
+               result = new ScriptVariableValue(isSysVar, nameDefault.get(0).text(),NULL);
+           } else if (nameDefault.size() == 2) {
+               const char * defString = nameDefault.get(1).text();
+               while (defString != NULL && defString[0] != 0 && defString[0] == '|'){
+                   defString++;
+               }
+               ScriptValueLogger.always("create variable %d %s | %s",isSysVar,nameDefault.get(0), defString);
+
+                result = new ScriptVariableValue(isSysVar, nameDefault.get(0),createFromString(defString));
+           } else {
+               ScriptValueLogger.debug("Cannot create variable for %s",string);
+           }
+       } else if (Util::equal(string,"null")) { result = new ScriptNullValue();}
+       else if (Util::equal(string,"true")) { result = new ScriptBoolValue(true);}
+       else if (Util::equal(string,"false")) { result = new ScriptBoolValue(false);}
+       else { result = new ScriptStringValue(string);}
+       return result;
+   }
+
+   IScriptValue* ScriptValue::createFromArray(JsonArray* json){
+       if (json == NULL || json->getCount() == 0) { return NULL;}
+       int count = json->getCount();
+       ScriptFunction* func = new ScriptFunction(json->getAt(0)->asValue()->getString());
+       for(int i=1;i<count;i++){
+           func->addArg(create(json->getAt(i)));
+       }
+       return func;
+   }
+
+   IScriptValue* ScriptValue::createFromObject(JsonObject* json){
+        AnimatedValue* result = NULL;
+        JsonArray* pattern = json->getArray("pattern");
+        IJsonElement* start = json->getPropertyValue("start");
+        IJsonElement* end = json->getPropertyValue("end");
+        if (pattern) {
+            ScriptValueLogger.error("pattern not implemented");
+        } else if (start && end) {
+            result = new ScriptRangeValue(create(start),create(end));
+        }
+        return result;
+   }
+
 }
 #endif
