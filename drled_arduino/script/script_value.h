@@ -557,7 +557,12 @@ namespace DevRelief
                m_easeIn = json ? ScriptValue::create(json->getPropertyValue("ease-in")) : NULL;
                m_easeOut = json ? ScriptValue::create(json->getPropertyValue("ease-out")) : NULL;
                m_easeInOut =json ?  ScriptValue::create(json->getPropertyValue("ease")) : NULL;
-               m_logger->always("AnimatedValue %x %x %x",m_easeIn,m_easeOut,m_easeInOut);
+               m_unfold = false;
+               if (json && json->getPropertyValue("unfold")){
+                   IJsonValueElement * val = json->getPropertyValue("unfold")->asValue();
+                   m_unfold = val ? val->getBool(false) : false;
+               }
+               m_logger->never("AnimatedValue %x %x %x",m_easeIn,m_easeOut,m_easeInOut);
             }
 
             ~AnimatedValue()  {
@@ -570,7 +575,7 @@ namespace DevRelief
         protected:
             double getAnimatedValue(IScriptContext* ctx, double start,double end){
                 PositionDomain* domain = ctx->getAnimationPositionDomain();
-                AnimationRange range(start,end,false);
+                AnimationRange range(start,end,m_unfold);
                 CubicBezierEase cubicBezier(getEaseIn(ctx),getEaseOut(ctx));
                 Animator animator(domain,&range,setupEase(ctx,&cubicBezier));
                 double result = animator.getRangeValue();
@@ -594,18 +599,18 @@ namespace DevRelief
 
             AnimationEase* setupEase(IScriptContext*ctx, CubicBezierEase* cubic) {
                 if (m_easeInOut && m_easeInOut->equals(ctx,"linear")) {
-                    m_logger->debug("use linear ease");
+                    m_logger->never("use linear ease");
                     return LinearEase::INSTANCE;
                 }
                 else {
-                    m_logger->debug("used cubic ease %f %f",getEaseIn(ctx),getEaseOut(ctx));
+                    m_logger->never("used cubic ease %f %f",getEaseIn(ctx),getEaseOut(ctx));
                     return cubic;
                 }
             }
             IScriptValue * m_easeIn;
             IScriptValue * m_easeOut;
             IScriptValue * m_easeInOut;
-            
+            bool m_unfold;
 
             
 

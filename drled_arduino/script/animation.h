@@ -56,8 +56,8 @@ namespace DevRelief
             return value;
         }
 
-        double getLow() { return m_low; }
-        double getHigh() { return m_high; }
+        double getMinValue() override { return m_low; }
+        double getMaxValue() override { return m_high; }
         double getDistance() { return (m_high-m_low) * (m_unfold ? 2 : 1);}
         void setUnfolded(bool unfold=true) { m_unfold = unfold;}
         bool isUnfolded() { return m_unfold;}
@@ -96,9 +96,7 @@ namespace DevRelief
 
     public:
         Logger *m_logger;
-        virtual double getMin() const = 0;
-        virtual double getMax() const= 0;
-        virtual double getValue() const= 0;
+
 
         
     protected:

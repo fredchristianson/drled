@@ -88,13 +88,17 @@ namespace DevRelief{
         public:
             virtual void destroy()=0;
             virtual double getPercent()=0; // return current posion as % from min to max (0..1)
-            
+            virtual double getMin() const = 0;
+            virtual double getMax() const= 0;
+            virtual double getValue() const= 0;
     };
     
     class IAnimationRange {
         public:
             virtual void destroy()=0;
             
+            virtual double getMinValue()=0;
+            virtual double getMaxValue()=0;
             virtual double getValue(double percent)=0;
     };
 
