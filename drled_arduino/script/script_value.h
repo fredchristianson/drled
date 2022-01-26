@@ -22,7 +22,7 @@ namespace DevRelief
                 m_logger = &ScriptValueLogger;
             }
             virtual ~ScriptValue() {
-                m_logger->always("~ScriptValue");
+                m_logger->never("~ScriptValue");
             }
 
             void destroy() override { delete this;}

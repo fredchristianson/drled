@@ -175,6 +175,9 @@ namespace DevRelief
         }
 
         const char * type = obj->getString("type",NULL);
+        if (type == NULL) {
+            type = guessType(obj);
+        }
         IScriptElement* element = NULL;
         if (type == NULL) {
             m_logger->error("json is missing a type");
@@ -193,6 +196,17 @@ namespace DevRelief
             m_logger->debug("created element type %s %x",element->getType(),element);
         }
         return element;
+    }
+
+    const char * ScriptElementCreator::guessType(JsonObject* json){
+        if (json->getPropertyValue("hue")||json->getPropertyValue("lightness")||json->getPropertyValue("saturation")){
+            return S_RHSL;
+        } else if (json->getPropertyValue("red")||json->getPropertyValue("green")||json->getPropertyValue("green")){
+            return S_RGB;
+        } else if (json->getPropertyValue("elements")){
+            return S_SEGMENT;
+        }
+        return NULL;
     }
 }
 #endif
