@@ -28,6 +28,9 @@ namespace DevRelief {
                 m_offset = UnitValue(0,POS_PERCENT);
                 m_length = UnitValue(100,POS_PERCENT);
                 m_absolute = false;
+                m_cover = false;
+                m_center = false;
+                m_flow = false;
             }
 
             ~PositionProperties() {
@@ -103,7 +106,10 @@ namespace DevRelief {
             HSLOperation getHSLOperation() const { return m_hslOperation;}
             bool hasOffset() const { return m_offsetValue != NULL;}
             UnitValue getOffset() const { return m_offset;}
-            bool hasLength() const { return m_lengthValue != NULL;}
+            bool hasLength() const {
+                m_logger->never("hasLength %x",m_lengthValue);
+                return m_lengthValue != NULL;
+            }
             UnitValue getLength() const { return m_length;}
             bool hasStrip()const  { return m_stripNumberValue != NULL;}
             int getStrip()const { return m_stripNumber;}
@@ -276,7 +282,10 @@ namespace DevRelief {
 
             bool hasOffset() const { return  m_properties->hasOffset();}
             UnitValue getOffset() const { return m_properties->getOffset();}
-            bool hasLength() const { return m_properties->hasLength();}
+            bool hasLength() const { 
+                m_logger->never("ElementPosition.hasLength %d",m_properties->hasLength());
+                return m_properties->hasLength();
+            }
             UnitValue getLength() const { return m_properties->getLength();}
             HSLOperation getHSLOperation() const { return m_properties->getHSLOperation();}
 

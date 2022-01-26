@@ -55,27 +55,27 @@ namespace DevRelief{
         protected:
 
             int unitToPixel(const UnitValue& uv) {
-                m_logger->debug("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
+                m_logger->never("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
                 int val = uv.getValue();
                 PositionUnit unit = uv.getUnit();
                 if (unit == POS_INHERIT) {
-                    m_logger->debug("\tinherit %d",m_unit);
+                    m_logger->never("\tinherit %d",m_unit);
                     unit = m_unit;
                 }
                 if (unit != POS_PERCENT) { return val;}
                 double pct = val/100.0*m_parentLength;
-                m_logger->debug("\tpct %f",pct);
+                m_logger->never("\tpct %f",pct);
                 return pct;
 
             }
 
 
             void update(IElementPosition * pos, IScriptContext* context) override  {
-                m_logger->debug("ScriptHSLStrip.update %x %x",pos,context);
+                m_logger->never("ScriptHSLStrip.update %x %x",pos,context);
                 m_unit = pos->getUnit();
                 m_logger->never("\tunit %d",m_unit);
                 if (pos->isPositionAbsolute()) {
-                    m_logger->always("getRootStrip()");
+                    m_logger->never("getRootStrip()");
                     m_parent = context->getRootStrip();
                     m_logger->never("\tgot root %x",m_parent);
                 } else {
@@ -83,11 +83,23 @@ namespace DevRelief{
                     m_logger->never("\tgot parent %x",m_parent);
                 }
                 m_parentLength = m_parent->getLength();
-                m_logger->never("\tplen %d",m_parentLength);
-                m_length = unitToPixel(pos->getLength());
-                m_logger->never("\len %d",m_length);
-                m_offset = unitToPixel(pos->getOffset());
-                m_logger->never("\toffset %d",m_offset);
+                m_logger->never("\m_parentLength %d",m_parentLength);
+                if (pos->isCover()) {
+                    m_offset = 0;
+                    m_length = m_parentLength;
+                    m_logger->debug("\tcover %d %d",m_offset,m_length);
+                } else {
+                    m_length = pos->hasLength() ? unitToPixel(pos->getLength()) : m_parentLength;
+                    m_logger->never("\len %d",m_length);
+                    if (pos->isCenter()) {
+                        int margin = (m_parentLength - m_length)/2;
+                        m_offset = margin;
+                        m_logger->never("\tcenter %d %d",m_offset,m_length);
+                    } else {
+                        m_offset = pos->hasOffset() ? unitToPixel(pos->getOffset()) : 0;
+                        m_logger->never("\toffset/len %d/%d",m_offset,m_length);
+                    }
+                }
                 m_overflow = pos->getOverflow();
                 m_logger->never("\toverflow %d",m_overflow);
 
@@ -102,12 +114,12 @@ namespace DevRelief{
             virtual int translateIndex(int index){
                 int tidx = index+m_offset;
                 if (m_overflow == OVERFLOW_WRAP) {
-                    if (tidx<0) { tidx = m_length- (tidx%m_length);}
-                    if (tidx>=m_length) { tidx = (tidx %m_length);}
+                    if (index<0) { tidx = m_length- (index%m_length);}
+                    else { tidx = m_offset + (index %m_length);}
                 } else if (m_overflow == OVERFLOW_CLIP) {
                     // shouldn't happen since isPositionValid() was false if tidx out of range
-                    if (tidx < 0) { tidx = 0;}
-                    if (tidx >= m_length) {tidx = m_length-1;}
+                    if (tidx < m_offset) { tidx = m_offset;}
+                    if (tidx >= m_offset+m_length) {tidx = m_offset+m_length-1;}
                 }
                 m_logger->never("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
                 return tidx;

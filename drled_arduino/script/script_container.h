@@ -68,13 +68,15 @@ namespace DevRelief
             auto previousElement = context->setCurrentElement(this);
             m_logger->debug("getPosition");
             IElementPosition*pos = getPosition();
-            m_logger->debug("evaluateValues %x",pos);
+            JsonRoot root;
+            JsonObject*obj = root.getTopObject();
+            pos->toJson(obj);
+            m_logger->debug("evaluateValues %x %s",pos,obj->toString().text());
             pos->evaluateValues(context);
             m_logger->debug("update strip %x",m_strip);
             m_strip->update(pos,context);
             context->setStrip(m_strip);
             m_logger->debug("draw container %s %d",m_type,m_position->getOverflow());
-            //m_strip->setOverflow(m_position->getOverflow());
 
             m_children.each([&](IScriptElement* child) {
                 m_logger->debug("set current element  %x %s",child, child->getType());
