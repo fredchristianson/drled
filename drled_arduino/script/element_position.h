@@ -30,7 +30,7 @@ namespace DevRelief {
                 m_absolute = false;
                 m_cover = false;
                 m_center = false;
-                m_flow = false;
+                m_flow = true;
             }
 
             ~PositionProperties() {

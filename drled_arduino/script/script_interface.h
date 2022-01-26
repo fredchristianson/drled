@@ -132,6 +132,10 @@ namespace DevRelief{
 
             virtual IScriptHSLStrip* getParent() const=0;
             virtual void setParent(IScriptHSLStrip* parent)=0;
+
+            virtual int getFlowIndex() const=0;
+            virtual void setFlowIndex(int index)=0;
+
     };
 
     class IScriptContext {
@@ -233,6 +237,8 @@ namespace DevRelief{
             ScriptElementCreator(IScriptContainer* container);
 
             IScriptElement* elementFromJson(IJsonElement* json);
+        protected:
+            const char * guessType(JsonObject* json);
         private:
             IScriptContainer* m_container;
             Logger* m_logger;

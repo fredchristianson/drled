@@ -79,7 +79,7 @@ namespace DevRelief {
                 m_logger->debug("parse done");
                 //parseElements(elements,container);
 
-#ifdef DEBUG
+#ifdef OFF
                 m_logger->debug("script toJson");
                     JsonRoot* newJson = toJson(*script);
                     m_logger->debug("Result script: %s",newJson->toString().get());
