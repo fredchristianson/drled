@@ -77,7 +77,9 @@ namespace DevRelief
         AnimationDomain()
         {
             m_logger = &AnimationLogger;
-            m_changed = true;
+            m_min = 0;
+            m_max = 0;
+            m_pos = 0;
             m_logger->never("create AnimationDomain");
         }
 
@@ -94,30 +96,14 @@ namespace DevRelief
             return current/distance;
         }
 
-    public:
-        Logger *m_logger;
-
-
-        
-    protected:
-        bool m_changed;
-        double m_lastValue;
-
-    };
-
- 
-
-    class PositionDomain : public AnimationDomain
-    {
-    public:
-        PositionDomain()
-        {
-            m_min = 0;
-            m_max = 0;
-            m_pos = 0;
+        void setPosition(double pos, double min, double max) {
+            m_pos = pos;
+            m_min = min;
+            m_max = max;
         }
-
-    public:
+        void setPos(double p) { m_pos = p;}
+        void setMin(double m) { m_min = m;}
+        void setMax(double m) { m_max = m;}
 
         double getValue() const override
         {
@@ -132,23 +118,79 @@ namespace DevRelief
             return m_min;
         }
 
-        void setPosition(double pos, double min, double max) {
-            m_changed = true;
-            m_pos = pos;
-            m_min = min;
-            m_max = max;
-        }
-        void setPos(double p) { m_pos = p;m_changed = true;}
-        void setMin(double m) { m_min = m;m_changed = true;}
-        void setMax(double m) { m_max = m;m_changed = true;}
-    private:
+    protected:
+        Logger *m_logger;
+
+
+        
+    protected:
         double m_min;        
         double m_max;
         double m_pos;
     };
 
-    class StepDomain : public AnimationDomain
+ 
+
+    class PositionDomain : public AnimationDomain
     {
+    public:
+        PositionDomain()
+        {
+
+        }
+
+    public:
+
+
+
+
+    private:
+
+    };
+
+    class TimeDomain : public AnimationDomain {
+        public:
+            TimeDomain(unsigned long startMSecs){
+                m_startMsecs = startMSecs;
+                m_durationMsecs = 0;
+                setPosition(startMSecs,startMSecs,startMSecs);
+            }
+
+            void setDuration(int durationMsecs){
+                m_durationMsecs = durationMsecs;
+                m_min = m_startMsecs;
+                m_max = m_startMsecs + m_durationMsecs;
+                m_pos = millis();
+                while(m_max < m_pos) {
+                    m_min += m_durationMsecs;
+                    m_max += m_durationMsecs;
+                }
+            }
+
+        protected:
+            unsigned long m_startMsecs;
+            unsigned long m_durationMsecs;
+
+    };
+
+    class SpeedDomain : public TimeDomain
+    {  
+        public:
+            SpeedDomain(unsigned long startMsecs) : TimeDomain(startMsecs){
+
+            }
+            
+            void setRange(AnimationRange* range, double stepsPerSecond) {
+                setDuration(1000.0*range->getDistance()/stepsPerSecond);
+            }
+    };
+
+    class DurationDomain : public TimeDomain
+    {  
+        public:
+            DurationDomain(unsigned long startMsecs) :TimeDomain(startMsecs) {
+            }
+            
     };
 
     

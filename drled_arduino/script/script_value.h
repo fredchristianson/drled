@@ -554,10 +554,26 @@ namespace DevRelief
     class AnimatedValue : public ScriptValue {
         public:
             AnimatedValue( JsonObject* json) {
+                
                m_easeIn = json ? ScriptValue::create(json->getPropertyValue("ease-in")) : NULL;
                m_easeOut = json ? ScriptValue::create(json->getPropertyValue("ease-out")) : NULL;
                m_easeInOut =json ?  ScriptValue::create(json->getPropertyValue("ease")) : NULL;
-               m_unfold = false;
+
+                m_speedDomain = NULL;
+                m_durationDomain = NULL;
+                m_speed = NULL;
+                m_duration = NULL;
+                m_speed =json ?  ScriptValue::create(json->getPropertyValue("speed")) : NULL;
+                if (m_speed != NULL) {
+                    m_speedDomain = new SpeedDomain(millis());
+                } else {
+                    m_duration =json ?  ScriptValue::create(json->getPropertyValue("duration")) : NULL;
+                    if (m_duration != NULL) {
+                        m_durationDomain = new DurationDomain(millis());
+                    }
+                }
+
+                m_unfold = false;
                if (json && json->getPropertyValue("unfold")){
                    IJsonValueElement * val = json->getPropertyValue("unfold")->asValue();
                    m_unfold = val ? val->getBool(false) : false;
@@ -569,20 +585,35 @@ namespace DevRelief
                 if (m_easeIn) { m_easeIn->destroy();}
                 if (m_easeOut) { m_easeOut->destroy();}
                 if (m_easeInOut) { m_easeInOut->destroy();}
+                if (m_speed) { m_speed->destroy();}
+                if (m_duration) { m_duration->destroy();}
+                if (m_speedDomain) { m_speedDomain->destroy();}
+                if (m_durationDomain) { m_durationDomain->destroy();}
             }
 
 
         protected:
             double getAnimatedValue(IScriptContext* ctx, double start,double end){
-                PositionDomain* domain = ctx->getAnimationPositionDomain();
                 AnimationRange range(start,end,m_unfold);
+                double result = start;
+                if (m_speedDomain) {
+                    m_speedDomain->setRange(&range,m_speed->getFloatValue(ctx,1));
+                    result = animate(ctx,m_speedDomain,&range);
+                } else if (m_duration) {
+                    m_durationDomain->setDuration(m_duration->getMsecValue(ctx,1000));
+                    result = animate(ctx,m_durationDomain,&range);
+                } else {
+                    PositionDomain* domain = ctx->getAnimationPositionDomain();
+                    result = animate(ctx,domain,&range);
+                }
+                return result;
+            }
+
+            double animate(IScriptContext*ctx, IAnimationDomain* domain, IAnimationRange*range) {
                 CubicBezierEase cubicBezier(getEaseIn(ctx),getEaseOut(ctx));
-                Animator animator(domain,&range,setupEase(ctx,&cubicBezier));
+                Animator animator(domain,range,setupEase(ctx,&cubicBezier));
                 double result = animator.getRangeValue();
-                m_logger->never("getAnimatedValue [%f-%f]==>[%f-%f]  %f ==> %f",
-                    domain->getMin(),domain->getMax(),
-                    start,end,
-                    domain->getValue(),result);
+
                 return result;
             }
 
@@ -610,10 +641,12 @@ namespace DevRelief
             IScriptValue * m_easeIn;
             IScriptValue * m_easeOut;
             IScriptValue * m_easeInOut;
+            IScriptValue * m_speed;
+            IScriptValue * m_duration;
+            SpeedDomain * m_speedDomain;
+            DurationDomain* m_durationDomain;
             bool m_unfold;
-
-            
-
+            unsigned long m_startMSecs;
     };
 
     class ScriptRangeValue : public AnimatedValue
