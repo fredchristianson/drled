@@ -17,8 +17,8 @@ namespace DevRelief{
                 m_parentLength = 0;
                 m_unit = POS_PERCENT;
                 m_flowIndex = 0;
-                m_logger->debug("init m_flowIndex %d",m_flowIndex);
                 m_position = NULL;
+                m_reverse = false;
             }
 
             virtual ~ScriptHSLStrip() {
@@ -57,11 +57,9 @@ namespace DevRelief{
             }  
   
             int getFlowIndex() const { 
-                m_logger->always("return m_flowIndex %d",m_flowIndex);
                 return m_flowIndex;
             }
             void setFlowIndex(int index) { 
-                m_logger->always("set m_flowIndex %d",index);
                 m_flowIndex = index;
                 if (m_position && !m_position->hasLength()) {
                     if (m_position->isFlow() && m_parent) {
@@ -90,21 +88,23 @@ namespace DevRelief{
 
 
             void update(IElementPosition * pos, IScriptContext* context) override  {
-                m_logger->always("ScriptHSLStrip.update %x %x",pos,context);
+                m_logger->never("ScriptHSLStrip.update %x %x",pos,context);
+                m_reverse = pos->isReverse();
+                m_logger->never("\treverse %d",m_reverse);
+                
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
                 m_unit = pos->getUnit();
-                m_logger->always("\tunit %d",m_unit);
                 if (pos->isPositionAbsolute()) {
-                    m_logger->always("getRootStrip()");
+                    m_logger->never("getRootStrip()");
                     m_parent = context->getRootStrip();
-                    m_logger->always("\tgot root %x",m_parent);
+                    m_logger->never("\tgot root %x",m_parent);
                 } else {
                     m_parent = context->getStrip();
-                    m_logger->always("\tgot parent %x",m_parent);
+                    m_logger->never("\tgot parent %x",m_parent);
                 }
                 m_parentLength = m_parent->getLength();
-                m_logger->always("\m_parentLength %d",m_parentLength);
+                m_logger->never("\m_parentLength %d",m_parentLength);
                 if (pos->isCover()) {
                     m_offset = 0;
                     m_length = m_parentLength;
@@ -112,34 +112,38 @@ namespace DevRelief{
                 } else {
                     m_length = pos->hasLength() ? unitToPixel(pos->getLength()) : m_parentLength;
                     m_offset = pos->hasOffset() ? unitToPixel(pos->getOffset()) : 0;
-                    m_logger->always("\len %d",m_length);
+                    m_logger->never("\len %d",m_length);
                     if (pos->isCenter()) {
                         int margin = (m_parentLength - m_length)/2;
                         m_offset += margin;
-                        m_logger->always("\tcenter %d %d",m_offset,m_length);
+                        m_logger->never("\tcenter %d %d",m_offset,m_length);
                     } else {
                         if (pos->isFlow()) {
                             m_offset += m_parent->getFlowIndex();
-                            m_logger->always("\tflow %d",m_offset);
+                            m_logger->never("\tflow %d",m_offset);
                         } else {
-                            m_logger->always("\tno flow %d",m_offset);
+                            m_logger->never("\tno flow %d",m_offset);
                         }
-                        m_logger->always("\toffset/len %d/%d",m_offset,m_length);
+                        m_logger->never("\toffset/len %d/%d",m_offset,m_length);
                     }
                 }
                 m_overflow = pos->getOverflow();
                 m_parent->setFlowIndex(m_offset+m_length);
-                m_logger->always("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
+                m_logger->never("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
 
             }
 
             virtual bool isPositionValid(int index) {
+                
                 if (m_parent == NULL || m_length <= 0) { return false;}
                 if (m_overflow != OVERFLOW_CLIP) { return true;}
                 return index >= 0 || index < m_length;
             }
 
             virtual int translateIndex(int index){
+                if (m_reverse) {
+                    index = m_length - index-1;
+                }                
                 int tidx = index+m_offset;
                 if (m_overflow == OVERFLOW_WRAP) {
                     if (index<0) { tidx = m_length- (index%m_length);}
@@ -150,6 +154,7 @@ namespace DevRelief{
                     if (tidx >= m_offset+m_length) {tidx = m_offset+m_length-1;}
                 }
                 m_logger->never("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
+
                 return tidx;
             }
             
@@ -160,6 +165,7 @@ namespace DevRelief{
             int m_length;
             int m_offset;
             int m_flowIndex;
+            bool m_reverse;
             PositionUnit m_unit;
             PositionOverflow m_overflow;
             Logger* m_logger;

@@ -13,6 +13,9 @@ namespace DevRelief {
     // most elements won't have defined properties.  
     // a single default object can hold all of the defaults values
     // so only elements with specified positions need members/memory
+    //
+    // todo: make different versionse of PositionProperties with just the common ones (e.g. offset,length)
+    //       and complete properties with rarely used (e.g. stripNumber, reverse)
     class PositionProperties {
         public:
             PositionProperties() {
@@ -31,6 +34,7 @@ namespace DevRelief {
                 m_cover = false;
                 m_center = false;
                 m_flow = true;
+                m_reverse = false;
             }
 
             ~PositionProperties() {
@@ -74,7 +78,7 @@ namespace DevRelief {
                 m_logger->debug("\tcover %d",m_cover);
                 json->setBool("cover", isCover());
                 json->setBool("absoute", m_absolute);
-                m_logger->showMemory();
+                json->setBool("reverse", m_reverse);
                 
                 m_logger->debug("\ttoJson done");
                 return true;                
@@ -101,6 +105,7 @@ namespace DevRelief {
             bool isCenter() const { return m_center;}
             bool isFlow() const { return m_flow;}
             bool isCover() const { return m_cover;}
+            bool isReverse() const { return m_reverse;}
             bool useRootStrip() const { 
                 return m_absolute;}
             HSLOperation getHSLOperation() const { return m_hslOperation;}
@@ -127,12 +132,14 @@ namespace DevRelief {
             void setLength(IJsonElement* json)  { m_lengthValue = ScriptValue::create(json);}
             void setStrip(IJsonElement* json)  { m_stripNumberValue = ScriptValue::create(json);}
             void setUnit(IJsonElement*json) {if (json) {m_unit = parseJsonUnit(json);}}
+            void setReverse(IJsonElement*json) { if (json) { m_reverse = getBool(json,false);}}
             void setHSLOperation(IJsonElement*json){
                 if (json) {m_hslOperation = parseJsonOperation(json);}
             }
             void setHSLOperation(HSLOperation op) { m_hslOperation = op;}
             void setWrap(bool wrap) { m_wrap = wrap;}
             void setClip(bool clip) { m_clip = clip;}
+            void setReverse(bool reverse) { m_reverse = reverse;}
             void setCover(bool cover) { m_cover = cover;}
             void setUnit(PositionUnit unit) { m_unit = unit;}
             void setOffset(int val) { m_offset = val;}
@@ -191,7 +198,8 @@ namespace DevRelief {
             bool m_center;
             bool m_cover;
             bool m_flow;
-            bool m_absolute;        
+            bool m_absolute;   
+            bool m_reverse;     
             HSLOperation m_hslOperation;
     };
 
@@ -229,9 +237,10 @@ namespace DevRelief {
                 IJsonElement * center = json->getPropertyValue("center");
                 IJsonElement * flow = json->getPropertyValue("flow");
                 IJsonElement * unit = json->getPropertyValue("unit");
+                IJsonElement * reverse = json->getPropertyValue("reverse");
 
                 if (offsetValue || lengthValue || stripNumberValue ||
-                    clip || wrap || absolute || cover || center || flow || unit){
+                    clip || wrap || absolute || cover || center || flow || unit || reverse){
                         if(m_properties == NULL || m_properties == &DEFAULT_PROPERTIES) {
                             m_logger->debug("create properties %x (default=%x)",m_properties,&DEFAULT_PROPERTIES);
                             m_properties = new PositionProperties();
@@ -246,6 +255,7 @@ namespace DevRelief {
                         m_properties->setCenter(center);
                         m_properties->setFlow(flow);
                         m_properties->setUnit(unit);
+                        m_properties->setReverse(reverse);
                     }
                 // length & offset are the script values 
                 // may be percent or pixel and contant or range/variable/...
@@ -277,6 +287,7 @@ namespace DevRelief {
             bool isCenter() const { return m_properties->isCenter();}
             bool isFlow() const { return m_properties->isFlow();}
             bool isCover() const { return m_properties->isCover();}
+            bool isReverse() const { return m_properties->isReverse();}
             bool isPositionAbsolute() const { return m_properties->useRootStrip();}
             bool isPositionRelative() const { return !m_properties->useRootStrip();}
 

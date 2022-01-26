@@ -60,6 +60,7 @@ namespace DevRelief{
             virtual bool isPositionRelative() const=0;
             virtual bool isClip() const=0;
             virtual bool isWrap() const=0;
+            virtual bool isReverse() const=0;
             virtual PositionOverflow getOverflow() const=0;
 
             // parent is used for inherited values
