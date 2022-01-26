@@ -65,6 +65,7 @@ namespace DevRelief
 
         void draw(IScriptContext* context) override {
             m_logger->debug("setCurrentElement %s %x",getType(),context);
+            context->enterScope();
             auto previousElement = context->setCurrentElement(this);
             m_logger->debug("getPosition");
             IElementPosition*pos = getPosition();
@@ -89,6 +90,7 @@ namespace DevRelief
             context->setStrip(m_strip->getParent());
             m_logger->debug("restore element");
             context->setCurrentElement(previousElement);
+            context->leaveScope();
             m_logger->debug("finished draw %s",getType());
         };
 
@@ -205,6 +207,8 @@ namespace DevRelief
             return S_RGB;
         } else if (json->getPropertyValue("elements")){
             return S_SEGMENT;
+        } else {
+            return S_VALUES;
         }
         return NULL;
     }

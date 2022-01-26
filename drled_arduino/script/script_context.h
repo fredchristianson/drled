@@ -6,6 +6,7 @@
 #include "../lib/util/list.h"
 #include "../lib/json/json.h"
 #include "../lib/led/led_strip.h"
+#include "../lib/led/color.h"
 #include "./script_interface.h"
 #include "./script_element.h"
 #include "./script_hsl_strip.h"
@@ -48,6 +49,7 @@ namespace DevRelief
                 m_currentStep = NULL;
                 m_lastStep = NULL;
                 m_strip = NULL;
+                m_valueList = new ScriptValueList(NULL);
             }
 
             virtual ~ScriptContext() {
@@ -99,11 +101,26 @@ namespace DevRelief
                 return NULL;
             };
 
+            void setValue(const char * name, IScriptValue* value) override  {
+                m_valueList->setValue(name,value);
+            }
 
-            IScriptValue* getValue(const char * name) {
-                m_logger->error("getValue not implemented");
-                return NULL;
+            IScriptValue* getValue(const char * name)override  {
+                if (m_valueList == NULL) { return NULL; }
+                return m_valueList->getValue(name);
             };
+
+            IScriptValue* getSysValue(const char * name)override  {
+                if (m_valueList == NULL) { return NULL; }
+                DRFormattedString fullName("sys:%s",name);
+                return m_valueList->getValue(fullName);
+            };
+
+            void setSysValue(const char * name, IScriptValue* value)  {
+                DRFormattedString fullName("sys:%s",name);
+                m_valueList->setValue(fullName,value);
+            }
+            
 
             IScriptElement* getCurrentElement() const override { return m_currentElement;}
             IScriptElement* setCurrentElement(IScriptElement* element) override { 
@@ -113,6 +130,17 @@ namespace DevRelief
                 return prev;
             }
 
+            void enterScope() override {
+                m_valueList = new ScriptValueList(m_valueList);
+            }
+
+            void leaveScope() override {
+                if (m_valueList) {
+                    auto prev = m_valueList;
+                    m_valueList = prev->getParentScope();
+                    prev->destroy();
+                }
+            }
 
         protected:
             virtual void initializeStep()=0;
@@ -124,6 +152,7 @@ namespace DevRelief
             ScriptStep * m_currentStep;
             ScriptStep * m_lastStep;
             IScriptElement* m_currentElement; 
+            IScriptValueProvider * m_valueList;
     };
 
     class RootContext : public ScriptContext {
@@ -132,18 +161,18 @@ namespace DevRelief
         {
             m_logger->debug("RootContext(%x,%x)",strip,params);
             m_baseStrip = strip;
-            m_logger->debug("\tget paramRoot object");
-            m_params = m_paramRoot.getTopObject();
-
             if (params) {
                 m_logger->debug("\tcopy params %s",params->toString().text());
-                params->eachProperty([&](const char * name, IJsonElement* value){
-                    auto v = value->asValue();
-                    m_params->setString(name,v? v->getString("unset"):"unset");
+                params->eachProperty([&](const char * name, IJsonElement* jsonVal){
+                    IScriptValue* scriptValue = ScriptValue::create(jsonVal);
+                    if (scriptValue) {
+                        setValue(name,scriptValue);
+                    }
                 });
             } else {
                 m_logger->debug("\tno params passed");
             }
+            createSystemValues();
             m_logger->debug("created RootContext %x",this);
         }
 
@@ -162,8 +191,17 @@ namespace DevRelief
         }
 
         protected:
-        JsonRoot  m_paramRoot;
-        JsonObject* m_params;
+        void createSystemValues() {
+            setSysValue("red",new ScriptNumberValue(HUE::RED));
+            setSysValue("orange",new ScriptNumberValue(HUE::ORANGE));
+            setSysValue("yellow",new ScriptNumberValue(HUE::YELLOW));
+            setSysValue("green",new ScriptNumberValue(HUE::GREEN));
+            setSysValue("cyan",new ScriptNumberValue(HUE::CYAN));
+            setSysValue("blue",new ScriptNumberValue(HUE::BLUE));
+            setSysValue("magenta",new ScriptNumberValue(HUE::MAGENTA));
+            setSysValue("purple",new ScriptNumberValue(HUE::PURPLE));
+            
+        }
         IHSLStrip* m_baseStrip;
     };
 
