@@ -51,9 +51,7 @@ namespace DevRelief {
 
             const char * getType() const{ return m_type;}
 
-            void updateLayout(IScriptContext* context) override {
 
-            };
 
             void draw(IScriptContext* context) override {
                 m_logger->never("ScriptElement draw - ***REMOVED***");

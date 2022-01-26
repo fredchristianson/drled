@@ -213,7 +213,6 @@ namespace DevRelief{
             virtual void toJson(JsonObject* json) const=0;
             virtual void fromJson(JsonObject* json)=0;
 
-            virtual void updateLayout(IScriptContext* context)=0;
             virtual void draw(IScriptContext* context)=0;
 
             virtual bool isPositionable()const=0;

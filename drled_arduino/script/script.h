@@ -71,9 +71,7 @@ namespace DevRelief
             
             m_realStrip->clear();
             m_rootContext->beginStep();
-            m_logger->debug("\tupdate layout");
 
-            m_rootContainer->updateLayout(m_rootContext);
             m_logger->debug("\tdraw");
             m_rootContainer->draw(m_rootContext);
             m_logger->debug("\tend step");
