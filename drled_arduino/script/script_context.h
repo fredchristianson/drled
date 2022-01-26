@@ -60,7 +60,14 @@ namespace DevRelief
 
             void destroy() override { delete this;}
 
-            void setStrip(IScriptHSLStrip*strip) { m_strip = strip;}
+            void setStrip(IScriptHSLStrip*strip) {
+                m_strip = strip;
+                if (strip) {
+                    m_positionDomain.setPosition(0,0,strip->getLength());
+                } else {
+                    m_positionDomain.setPosition(0,0,0);
+                }
+            }
             IScriptHSLStrip* getStrip() const override { return m_strip;}
             IScriptHSLStrip* getRootStrip() const override {
                 IScriptHSLStrip* root = m_strip;
@@ -96,9 +103,8 @@ namespace DevRelief
             }
 
             
-            IAnimationDomain* getAnimationPositionDomain() {
-                m_logger->error("getAnimationPositionDomain not implemented");
-                return NULL;
+            PositionDomain* getAnimationPositionDomain() {
+                return &m_positionDomain;
             };
 
             void setValue(const char * name, IScriptValue* value) override  {
@@ -153,6 +159,7 @@ namespace DevRelief
             ScriptStep * m_lastStep;
             IScriptElement* m_currentElement; 
             IScriptValueProvider * m_valueList;
+            PositionDomain m_positionDomain;
     };
 
     class RootContext : public ScriptContext {

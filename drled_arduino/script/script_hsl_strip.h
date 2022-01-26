@@ -304,11 +304,16 @@ namespace DevRelief{
             }
 
             void eachLED(auto&& drawer) {
-
+                
                 HSLOperation op = m_position->getHSLOperation();
                 DrawLED led(this,m_context,op);
-                
+                if (m_length == 0) {
+                    return;
+                }
+                PositionDomain* domain = m_context->getAnimationPositionDomain();
+                if (domain) { domain->setPosition(0,0,m_length-1); }
                 for(int i=0;i<m_length;i++){
+                    if (domain) {domain->setPos(i);}
                     led.setIndex(i);
                     drawer(led);
                 }

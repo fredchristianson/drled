@@ -30,6 +30,7 @@ namespace DevRelief{
     class IScriptValue;
     class IScriptHSLStrip;
     class IScriptElement;
+    class PositionDomain;
 
     class UnitValue {
         public:
@@ -86,19 +87,14 @@ namespace DevRelief{
     class IAnimationDomain {
         public:
             virtual void destroy()=0;
-            virtual void evaluateValues(IScriptContext*)=0;
-            virtual double getPosition()=0;
-
-            // old
+            virtual double getPercent()=0; // return current posion as % from min to max (0..1)
             
     };
     
     class IAnimationRange {
         public:
             virtual void destroy()=0;
-            virtual double getHigh()=0;
-            virtual double getLow()=0;
-            virtual double getDistance()=0;
+            
             virtual double getValue(double percent)=0;
     };
 
@@ -149,7 +145,7 @@ namespace DevRelief{
             virtual IScriptStep* beginStep();
             virtual void endStep();
 
-            virtual IAnimationDomain* getAnimationPositionDomain()=0;
+            virtual PositionDomain* getAnimationPositionDomain()=0;
 
             virtual void setValue(const char* name, IScriptValue* value)=0;
             virtual IScriptValue* getValue(const char * name)=0;

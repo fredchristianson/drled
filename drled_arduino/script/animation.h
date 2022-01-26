@@ -86,52 +86,19 @@ namespace DevRelief
         }
 
         void destroy() override { delete this;}
-        // update based on current state if implementation needs to
-        virtual void update(IScriptContext* ctx) {}
-
-
-        /* return position percent from m_low to m_high.
-            if value is above m_high, use modulus
-         */
-        double getPosition()
-        {
-            m_logger->never("AnimationDomain.getPosition");
-            if (!m_changed) { 
-                m_logger->never("\tno change");
-                return m_lastValue;
-            }
-            m_logger->debug("getPosition()");
-            double value = getValue();
-            double low = getMin();
-            double high = getMax();
-
-            if (value <= low)
-            {
-                m_logger->never("\t low %f<%f",value,low);
-                return 0;
-            }
-            if (value >= high)
-            {
-                m_logger->never("\thigh %f>%f",value,high);
-                return 1;
-            }
-            double diff = high - low;
-            double pct = diff == 0 ? 1 : (value - low) / (diff);
-            m_logger->never("\thigh=%f low=%f diff=%f value=%f pos=%f",high,low,diff,value,pct);
-            m_changed = false;
-            m_lastValue = pct;
-            return pct;
+   
+        double getPercent() override {
+            if (getMin() == getMax() || getMin()==getValue()) { return 0;}
+            double distance = getMax()-getMin();
+            double current = getValue()-getMin();
+            return current/distance;
         }
 
-        bool isChanged() { return m_changed;}
-        double getSpan() {
-            return abs(getMax()-getMin());
-        }
     public:
         Logger *m_logger;
-        virtual double getMin() = 0;
-        virtual double getMax() = 0;
-        virtual double getValue() = 0;
+        virtual double getMin() const = 0;
+        virtual double getMax() const= 0;
+        virtual double getValue() const= 0;
 
         
     protected:
@@ -140,116 +107,29 @@ namespace DevRelief
 
     };
 
-    class TimeDomain : public AnimationDomain
-    {
-    public:
-        // domain wraps after period
-        TimeDomain() : AnimationDomain()
-        {
-            m_durationMmsecs = 0;
-            m_startMillis = millis();
-            m_min = m_startMillis;
-            m_max = m_startMillis;
-            m_val  = m_startMillis;
-            m_repeat = 0;
-            m_lastStep = -1;
-        }
-
-        void evaluateValues(IScriptContext* ctx) override {
-            if (m_lastStep == ctx->getStep()->getNumber()) {
-                m_logger->never("time domain no change %d",m_lastStep);
-
-                return;
-            }
-            m_changed = true;
-            m_val = ctx->getStep()->getStartMsecs();
-            m_lastStep = ctx->getStep()->getNumber();
-            if (m_durationMmsecs == 0) {
-                m_startMillis = m_val;
-                m_min = m_startMillis;
-                m_max = m_startMillis;
-                m_val  = m_startMillis;
-                m_logger->never("time domain duration==0");
-
-            } else {
-                int diff = m_val - m_startMillis;
-                m_repeat = diff / m_durationMmsecs;
-                m_min = m_startMillis + m_repeat*m_durationMmsecs;
-                m_max = m_min + m_durationMmsecs;
-                m_logger->never("time domain %d %d %d %d %d",m_val,m_startMillis,m_min,m_max,m_lastStep);
-            }
-        }
-
-        virtual void setStart(int msecs = -1) {
-            m_startMillis = (msecs == -1) ? millis() : msecs;
-            m_repeat=0;
-        }
-
-        virtual double getMin()
-        {
-            return m_min;
-        }
-        virtual double getMax()
-        {
-            return m_max;
-        }
-        virtual double getValue()
-        {
-            return m_val;
-        }
-
-        virtual int getRepeatCount() { 
-            return m_repeat;
-        }
-
-        void setDurationMsecs(int msecs) {
-            m_durationMmsecs = msecs;
-        }
-    
-
-        void setSpeed(double speed, IAnimationRange* range) {
-            if (speed == 0) { 
-                setDurationMsecs(0);
-            } else {
-                double distance = range->getDistance();
-                int duration = 1000*distance/speed;
-                setDurationMsecs(duration);
-            }            
-        }
-
-        void setDuration(double duration) {
-            m_durationMmsecs = duration;
-        }
-
-    protected:
-        int m_lastStep;
-        int m_durationMmsecs;
-        int m_startMillis;
-        int m_min;
-        int m_max;
-        int m_val;
-        int m_repeat;
-    };
-
-   
+ 
 
     class PositionDomain : public AnimationDomain
     {
     public:
         PositionDomain()
         {
+            m_min = 0;
+            m_max = 0;
+            m_pos = 0;
         }
 
     public:
-        double getValue() override
+
+        double getValue() const override
         {
             return (double)m_pos;
         }
-        double getMax() override
+        double getMax() const override
         {
             return (double)m_max;
         }
-        double getMin() override
+        double getMin() const override
         {
             return m_min;
         }
@@ -290,6 +170,7 @@ namespace DevRelief
     class LinearEase : public AnimationEase
     {
     public:
+        static LinearEase* INSTANCE;
         double calculate(double position)
         {
             m_logger->debug("Linear ease %f",position);
@@ -298,11 +179,11 @@ namespace DevRelief
     };
 
     LinearEase DefaultEase;
-
+    LinearEase* LinearEase::INSTANCE = &DefaultEase;
     class CubicBezierEase : public AnimationEase
     {
     public:
-        CubicBezierEase(double in=0.9, double out=0.1){
+        CubicBezierEase(double in=0, double out=1){
             m_in = in;
             m_out = out;
         }
@@ -330,23 +211,23 @@ namespace DevRelief
     class Animator
     {
     public:
-        Animator(IAnimationDomain* domain, AnimationEase *ease = &DefaultEase) : m_domain(domain), m_ease(ease)
+        Animator(IAnimationDomain* domain, IAnimationRange* range, AnimationEase *ease = &DefaultEase) 
         {
             m_logger = &AnimationLogger;
             m_logger->debug("create Animator()");
+            m_domain = domain;
+            m_range = range;
+            m_ease = ease;
         }
 
-        double get(IAnimationRange* range, IScriptContext* ctx)
+        double getRangeValue()
         {
             if (m_ease == NULL) {
                 m_ease = &DefaultEase;
             }
-            m_logger->debug("Animator.get()");
-            m_domain->evaluateValues(ctx);
-            double position = m_domain->getPosition();
-            double ease = m_ease->calculate(position);
-            //m_logger->debug("\tpos %f.  ease %f",position,ease);
-            double result = range->getValue(ease);
+            double percent = m_domain->getPercent();
+            double ease = m_ease->calculate(percent);
+            double result = m_range->getValue(ease);
             m_logger->never("\tpos %f.  ease %f. result %f.  ",result);
             return result;
         };
@@ -354,354 +235,13 @@ namespace DevRelief
         void setEase(AnimationEase* ease) { m_ease = ease;}
     private:
         IAnimationDomain* m_domain;
+        IAnimationRange*  m_range;
         AnimationEase* m_ease;
         Logger *m_logger;
     };
 
-     class ValueAnimator : public IValueAnimator
-    {
-    public:
-        ValueAnimator()
-        {
-            m_logger = &AnimationLogger;
-            m_unfoldValue = NULL;
-            m_unfold = false;
-            m_selectedEase = &m_cubicBeszierEase;
-            m_cubicBeszierEase.setValues(0,1);
-            m_isComplete = false;
-            m_ease = NULL;
-            m_easeIn = NULL;
-            m_easeOut = NULL;
-        }
+  
 
-        ValueAnimator(ValueAnimator*other, IScriptContext* cmd)
-        {
-            m_logger = &AnimationLogger;
-            m_unfoldValue = other->m_unfoldValue ? other->m_unfoldValue->eval(cmd,false) : NULL;
-            m_ease = other->m_ease ? other->m_ease->eval(cmd,false) : NULL;
-            m_easeIn = other->m_easeIn ? other->m_easeIn->eval(cmd,false) : NULL;
-            m_easeOut = other->m_easeOut ? other->m_easeOut->eval(cmd,false) : NULL;
-            m_unfold = false;
-            m_selectedEase = other->m_selectedEase;
-            m_cubicBeszierEase.setValues(0,1);
-            m_isComplete = false;
-
-        }
-
-        virtual ~ValueAnimator()
-        {
-            if (m_unfoldValue) {m_unfoldValue->destroy();}
-            if (m_ease) {m_ease->destroy();}
-            if (m_easeIn) {m_easeIn->destroy();}
-            if (m_easeOut) {m_easeOut->destroy();}
-        };
-
-        void destroy() override { delete this; }
-
-        bool isComplete() { return m_isComplete;}
-
-        void setUnfold(IScriptValue *unfold)
-        {
-            if (m_unfoldValue) {m_unfoldValue->destroy();}
-            m_unfoldValue = unfold;
-        }
-
-        bool isUnfolded(IScriptContext *cmd) 
-        {
-            return m_unfoldValue && m_unfoldValue->getBoolValue(cmd, false);
-        }
-
-     
-        double get(IScriptContext* ctx, IAnimationRange*range) override {
-            m_logger->debug("ValueAnimator.get() 0x%04X",ctx);
-
-
-            m_logger->debug("\tcheck paused");
-
-            m_logger->debug("\tget domain");
-            IAnimationDomain* domain = getDomain(ctx,range);
-            m_logger->debug("\tset ease");
-            setEaseParameters(ctx);
-            if (domain == NULL) {
-                m_logger->error("Animation domain is NULL");
-                return range->getHigh();
-            }
-            m_logger->debug("\tcreate animator");
-
-            Animator animator(domain,m_selectedEase);
-            m_logger->debug("\tset unfold");
-            // todo: handle in easing range->setUnfolded(isUnfolded(ctx));
-            m_logger->debug("\tget value");
-
-            if (isPaused(ctx,range)) {
-                m_logger->debug("\treturn pause value");
-                return getPauseValue(ctx,range);
-            }
-            double value = animator.get(range,ctx);
-            m_lastValue = value;
-            m_logger->never("ValueAnimator value=%f",value);
-
-            return value;
-          
-        }
-
-        virtual IAnimationDomain* getDomain(IScriptContext* ctx,IAnimationRange*range) =0;
-
-        void setEaseParameters(IScriptContext* ctx) {
-            double in = 0;
-            double out = 1;
-            if ((m_ease != NULL && m_ease->equals(ctx,"linear"))){
-                m_selectedEase = &m_linearEase;
-                return;
-            } else {
-                m_selectedEase = &m_cubicBeszierEase;
-            }
-            if (m_ease) {
-                in = 1-m_ease->getFloatValue(ctx,1);
-                out = 1-in;
-                m_logger->never("got ease %x %f %f",this,in,out);
-            }
-            if (m_easeIn) {
-                in = 1-m_easeIn->getFloatValue(ctx,0.123);
-                m_logger->never("got ease-in %x %f",this,in);
-
-            }
-
-            if (m_easeOut) {
-                out = m_easeOut->getFloatValue(ctx,0);
-                m_logger->never("got ease-out %x %f",this,out);
-            }
-            m_logger->never("ease in/out  %f/%f",in,out);
-            m_cubicBeszierEase.setValues(in,out);
-        }
-
-
-        void setEase(IScriptValue* ease) { 
-            m_logger->never("ease %x %x %s",this,ease, (ease ? ease->toString().text():""));
-            m_ease = ease;
-        }
-
-        void setEaseIn(IScriptValue* ease) {
-            m_logger->never("ease-in %x %x %s",this,ease, (ease ? ease->toString().text():""));
-            m_easeIn = ease;
-        }
-        void setEaseOut(IScriptValue* ease) {
-            m_logger->never("ease-out %x %x %s",this,ease, (ease ? ease->toString().text():""));
-            m_easeOut = ease;
-        }
-
-    protected:
-        virtual bool isPaused(IScriptContext* ctx, IAnimationRange*range) { return false;}
-        virtual double getPauseValue(IScriptContext* ctx, IAnimationRange*range) { return m_lastValue;}
-        double m_lastValue;
-        IScriptValue *m_unfoldValue;
-        IScriptValue *m_ease;
-        IScriptValue *m_easeIn;
-        IScriptValue *m_easeOut;
-        CubicBezierEase m_cubicBeszierEase;
-        LinearEase m_linearEase;
-        AnimationEase* m_selectedEase;
-        bool m_unfold;
-        bool m_isComplete;
-
-
-        Logger *m_logger;
-    };
-
-
-    class TimeValueAnimator : public ValueAnimator {
-        public:
-            TimeValueAnimator() {
-                m_repeatValue = NULL;
-                m_delayValue = NULL;
-                m_delayResponseValue = NULL;
-                m_iterationCount = 0;
-                m_delayUntil = 0;
-            }
-
-            TimeValueAnimator(TimeValueAnimator* other,IScriptContext* cmd) : ValueAnimator(other,cmd) {
-                m_repeatValue = other->m_repeatValue ? other->m_repeatValue->eval(cmd,0) : NULL;
-                m_delayValue = other->m_delayValue ? other->m_delayValue->eval(cmd,0) : NULL;
-                m_delayResponseValue = other->m_delayResponseValue ? other->m_delayResponseValue->eval(cmd,0) : NULL;
-                m_iterationCount = 0;
-                m_delayUntil = 0;
-                m_timeDomain.setStart();
-            }
-
-            virtual  ~TimeValueAnimator(){
-                if (m_repeatValue) {m_repeatValue->destroy();}
-                if (m_delayValue) {m_delayValue->destroy();}
-                if (m_delayResponseValue) {m_delayResponseValue->destroy();}
-            }
-
-            virtual void destroy() { delete this;}
-
-            void setRepeatValue(IScriptValue*repeat) { 
-                if (m_repeatValue) {m_repeatValue->destroy();}
-                    m_repeatValue = repeat;
-                }
-            void setRepeatDelayValue(IScriptValue*delay) { 
-                if (m_delayValue) {m_delayValue->destroy();}
-                m_delayValue = delay;
-            }
-            void setDelayResponseValue(IScriptValue*delayResponse) { 
-                if (m_delayResponseValue) {m_delayResponseValue->destroy();}
-                m_delayResponseValue = delayResponse;
-            }
-
-        protected: 
-            bool isPaused(IScriptContext* ctx, IAnimationRange* range) override  { 
-                m_timeDomain.update(ctx);
-                m_logger->debug("check repeat count");
-                if (m_timeDomain.getRepeatCount()==0) {
-                    m_logger->debug("\tno repeat");
-                    return false;
-                };
-                m_logger->debug("\tgot repeat",m_timeDomain.getRepeatCount());
-                if (m_delayUntil == 0) {
-                    m_logger->debug("\tincrement iteration %d",m_iterationCount);
-                    
-                    m_iterationCount += 1;
-                    if (m_repeatValue) {
-                        m_logger->debug("\tcheck max repeat");
-
-                        int maxRepeat = m_repeatValue->getIntValue(ctx,1);
-                        if (m_iterationCount>= maxRepeat) {
-                            m_logger->debug("\treached max");
-                            m_isComplete = true;
-                            //todo:  is this needed?
-                            // ctx->onAnimationComplete(this);
-                            return true;
-                        }
-                    }
-
-                    int delayMsecs = m_delayValue == NULL ? 1 : m_delayValue->getIntValue(ctx,1);
-                    m_delayUntil = millis() + delayMsecs;
-                    return true;
-                } else if (m_delayValue != NULL) {
-                    if (millis() > m_delayUntil) {
-                        m_delayUntil = 0;
-                        m_timeDomain.setStart();
-                        return false;
-                    } else {
-                        return true;
-                    }
-                } else {
-                    m_delayUntil = 0;
-                    m_timeDomain.setStart();
-                    return false;
-                }
-                return false;
-            }
-            
-            double getPauseValue(IScriptContext* ctx, IAnimationRange*range) override {
-                if (m_delayResponseValue != NULL) {
-                    double val = m_delayResponseValue->getFloatValue(ctx,m_lastValue);
-                    m_logger->never("return response value %f (high=%f)",val,range->getHigh());
-                    return val;
-                }
-                m_logger->never("return high value %f",range->getHigh());
-                return 0; //range->isUnfolded() ? range->getLow() :  range->getHigh();
-            }
-
-
-
-            int m_iterationCount;
-            int m_delayUntil;
-            IScriptValue *m_repeatValue;
-            IScriptValue *m_delayValue;
-            IScriptValue *m_delayResponseValue;
-            TimeDomain  m_timeDomain;
-    };
-
-
-    class SpeedValueAnimator : public TimeValueAnimator {
-        public:
-            SpeedValueAnimator(IScriptValue* speed) { m_speedValue = speed;}
-            SpeedValueAnimator(SpeedValueAnimator* other,IScriptContext* ctx) : TimeValueAnimator(other,ctx) {
-                 m_speedValue = other->m_speedValue->eval(ctx,0);
-            }
-
-            virtual ~SpeedValueAnimator(){
-
-            }
-
-            IAnimationDomain* getDomain(IScriptContext* ctx,IAnimationRange*range) override {
-                TimeDomain* domain = &m_timeDomain;
-
-                int speed = m_speedValue->getIntValue(ctx,1);
-                domain->setSpeed(speed,range);
-                return domain;
-            }
-
-            void setSpeed(IScriptValue* speed) { m_speedValue = speed;}
-            
-            IValueAnimator* clone(IScriptContext* ctx) {
-                SpeedValueAnimator* other = new SpeedValueAnimator(this,ctx); //m_speedValue->eval(cmd,0));
-                return other;
-            }
-
-        private: 
-            IScriptValue *m_speedValue;
-
-    };
-    class DurationValueAnimator : public TimeValueAnimator {
-        public:
-            DurationValueAnimator(IScriptValue* duration) { 
-                m_durationValue = duration;
-            }
-
-            DurationValueAnimator(DurationValueAnimator* other,IScriptContext* cmd) : TimeValueAnimator(other,cmd) {
-                 m_durationValue = other->m_durationValue->eval(cmd,0);
-
-            }
-            virtual ~DurationValueAnimator(){
-                if (m_durationValue) {m_durationValue->destroy();}
-            }
-            IAnimationDomain* getDomain(IScriptContext* cmd,IAnimationRange* range) override {
-                TimeDomain* domain = &m_timeDomain;
-
-                int duration = m_durationValue ? m_durationValue->getIntValue(cmd,1000) : 1000;
-                domain->setDuration(duration);
-                return domain;
-            }
-
-            void setDuration(IScriptValue* duration) { m_durationValue = duration;}
-
-            IValueAnimator* clone(IScriptContext* ctx) {
-                m_logger->never("clone duration %f",m_durationValue->getFloatValue(ctx,-2));
-                DurationValueAnimator* other = new DurationValueAnimator(this,ctx); //m_speedValue->eval(cmd,0));
-                m_logger->never("\tcloned duration %f",other->m_durationValue->getFloatValue(ctx,-2));
-                return other;
-            }
-
-        private: 
-            IScriptValue *m_durationValue;
-
-    };
-
-    class PositionValueAnimator : public ValueAnimator {
-        public:
-            PositionValueAnimator() {
-
-            }
-
-            virtual ~PositionValueAnimator(){
-
-            }
-
-            IAnimationDomain* getDomain(IScriptContext* ctx,  IAnimationRange*range) override {
-                IAnimationDomain* domain = ctx->getAnimationPositionDomain();
-                return domain;
-            }
-
-            IValueAnimator* clone(IScriptContext* ctx) {
-                return new PositionValueAnimator();
-            }
-
-        private: 
-
-    };
 
 }
 
