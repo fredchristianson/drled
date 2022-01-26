@@ -2,6 +2,7 @@
 #define DRSCRIPT_VALUE_H
 
 #include "../lib/log/logger.h"
+#include "../lib/json/json.h"
 #include "../lib/util/drstring.h"
 #include "../lib/util/util.h"
 #include "../lib/util/list.h"
@@ -552,29 +553,68 @@ namespace DevRelief
 
     class AnimatedValue : public ScriptValue {
         public:
-            AnimatedValue() {
-                m_counter = 0;
+            AnimatedValue( JsonObject* json) {
+               m_easeIn = json ? ScriptValue::create(json->getPropertyValue("ease-in")) : NULL;
+               m_easeOut = json ? ScriptValue::create(json->getPropertyValue("ease-out")) : NULL;
+               m_easeInOut =json ?  ScriptValue::create(json->getPropertyValue("ease")) : NULL;
+               m_logger->always("AnimatedValue %x %x %x",m_easeIn,m_easeOut,m_easeInOut);
             }
 
-            ~AnimatedValue() {
-                
+            ~AnimatedValue()  {
+                if (m_easeIn) { m_easeIn->destroy();}
+                if (m_easeOut) { m_easeOut->destroy();}
+                if (m_easeInOut) { m_easeInOut->destroy();}
             }
+
 
         protected:
-            double getAnimatedValue(double start,double end){
-                int pct = (end-start)*m_counter/100.0;
-                m_counter = (m_counter+1) % 100;
-                return start + (end-start)*pct;
+            double getAnimatedValue(IScriptContext* ctx, double start,double end){
+                PositionDomain* domain = ctx->getAnimationPositionDomain();
+                AnimationRange range(start,end,false);
+                CubicBezierEase cubicBezier(getEaseIn(ctx),getEaseOut(ctx));
+                Animator animator(domain,&range,setupEase(ctx,&cubicBezier));
+                double result = animator.getRangeValue();
+                m_logger->never("getAnimatedValue [%f-%f]==>[%f-%f]  %f ==> %f",
+                    domain->getMin(),domain->getMax(),
+                    start,end,
+                    domain->getValue(),result);
+                return result;
             }
 
-            int m_counter;
+            double getEaseIn(IScriptContext* ctx) {
+                if (m_easeIn) { return 1.0- m_easeIn->getFloatValue(ctx,1);}
+                if (m_easeInOut) { return 1.0- m_easeInOut->getFloatValue(ctx,1);}
+                return 0;
+            }
+            double getEaseOut(IScriptContext* ctx) {
+                if (m_easeOut) { return m_easeOut->getFloatValue(ctx,1);}
+                if (m_easeInOut) { return m_easeInOut->getFloatValue(ctx,1);}
+                return 0;
+            }
+
+            AnimationEase* setupEase(IScriptContext*ctx, CubicBezierEase* cubic) {
+                if (m_easeInOut && m_easeInOut->equals(ctx,"linear")) {
+                    m_logger->debug("use linear ease");
+                    return LinearEase::INSTANCE;
+                }
+                else {
+                    m_logger->debug("used cubic ease %f %f",getEaseIn(ctx),getEaseOut(ctx));
+                    return cubic;
+                }
+            }
+            IScriptValue * m_easeIn;
+            IScriptValue * m_easeOut;
+            IScriptValue * m_easeInOut;
+            
+
+            
 
     };
 
     class ScriptRangeValue : public AnimatedValue
     {
     public:
-        ScriptRangeValue(IScriptValue *start, IScriptValue *end )
+        ScriptRangeValue(IScriptValue *start, IScriptValue *end, JsonObject* json ) : AnimatedValue(json)
         {
             m_start = start;
             m_end = end;
@@ -610,7 +650,7 @@ namespace DevRelief
             }
             double start = m_start->getFloatValue(ctx, 0);
             double end = m_end->getFloatValue(ctx,  1);
-            double value = getAnimatedValue(start,end);
+            double value = getAnimatedValue(ctx,start,end);
             m_logger->never("Range %f-%f got %f",start,end,value);
             return value;
   
@@ -641,13 +681,14 @@ namespace DevRelief
             return UnitValue(val,unit);      
         }
 
+/*
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
             auto start = m_start ? m_start->eval(ctx,defaultValue) : NULL;
             auto end = m_end ? m_end->eval(ctx,defaultValue) : NULL;
-            return new ScriptRangeValue(start,end);
+            return new ScriptRangeValue(start,end,NULL);
         }
-
+*/
 
     protected:
         IScriptValue *m_start;
@@ -743,7 +784,7 @@ namespace DevRelief
                 domain = m_animate->getDomain(ctx,&range);
  
             } else {
-                pos = domain->getPosition();
+               //todo pos = domain->getPosition();
             }
             UnitValue val = getValueAt(ctx, domain, pos,defaultValue,POS_INHERIT);
             return val;
@@ -761,7 +802,7 @@ namespace DevRelief
             int index = pos % m_count;
             if (m_extend == STRETCH_PATTERN) {
                 double pct = (index*1.0/m_count);   
-                double domainVal = domain->getPosition();
+                double domainVal = 0; //todo domain->getPosition();
                 index = m_count * domainVal;
 
             }
@@ -975,7 +1016,7 @@ namespace DevRelief
             }
             
             IScriptValue *getValue(const char *name)  override {
-                m_logger->debug("getValue %s",name);
+                m_logger->never("getValue %s",name);
                 NameValue** first = m_values.first([&](NameValue*&nv) {
 
                     return strcmp(nv->getName(),name)==0;
@@ -983,15 +1024,15 @@ namespace DevRelief
                 if (first) {
                     IScriptValue* found = (*first)->getValue();
                     if (found) {
-                        m_logger->debug("\tfound %s",found->toString().text());
+                        m_logger->never("\tfound %s",found->toString().text());
                         return found;
                     }
                 }
                 if (m_parentScope) {
-                    m_logger->debug("\tuse parent scope");
+                    m_logger->never("\tuse parent scope");
                     return m_parentScope->getValue(name);
                 }
-                m_logger->debug("\tnot found");
+                m_logger->never("\tnot found");
                 return NULL;
             }
 
@@ -999,7 +1040,7 @@ namespace DevRelief
                 if (Util::isEmpty(name) || value == NULL) {
                     return;
                 }
-                m_logger->debug("add NameValue %s  0x%04X",name,value);
+                m_logger->never("add NameValue %s  0x%04X",name,value);
                 NameValue* nv = new NameValue(name,value);
                 m_values.add(nv);
             }
@@ -1029,7 +1070,7 @@ namespace DevRelief
        if (json->asValue()) {
            IJsonValueElement* jsonVal = json->asValue();
             if (json->isNumber()) {
-                result = new ScriptNumberValue(jsonVal->getInt(0));
+                result = new ScriptNumberValue(jsonVal->getFloat(0));
             } else if (json->isString()) {
                 //return new ScriptStringValue(jsonVal->getString(""));
                 result = createFromString(jsonVal->getString(""));
@@ -1057,18 +1098,18 @@ namespace DevRelief
            bool isSysVar = string[0] == 's';
            Util::split(string+4,')',nameDefault);
            if (nameDefault.size() == 1) {
-               ScriptValueLogger.always("create variable %d %s",isSysVar,nameDefault.get(0));
+               ScriptValueLogger.never("create variable %d %s",isSysVar,nameDefault.get(0));
                result = new ScriptVariableValue(isSysVar, nameDefault.get(0).text(),NULL);
            } else if (nameDefault.size() == 2) {
                const char * defString = nameDefault.get(1).text();
                while (defString != NULL && defString[0] != 0 && defString[0] == '|'){
                    defString++;
                }
-               ScriptValueLogger.always("create variable %d %s | %s",isSysVar,nameDefault.get(0), defString);
+               ScriptValueLogger.never("create variable %d %s | %s",isSysVar,nameDefault.get(0), defString);
 
                 result = new ScriptVariableValue(isSysVar, nameDefault.get(0),createFromString(defString));
            } else {
-               ScriptValueLogger.debug("Cannot create variable for %s",string);
+               ScriptValueLogger.error("Cannot create variable for %s",string);
            }
        } else if (Util::equal(string,"null")) { result = new ScriptNullValue();}
        else if (Util::equal(string,"true")) { result = new ScriptBoolValue(true);}
@@ -1095,8 +1136,9 @@ namespace DevRelief
         if (pattern) {
             ScriptValueLogger.error("pattern not implemented");
         } else if (start && end) {
-            result = new ScriptRangeValue(create(start),create(end));
+            result = new ScriptRangeValue(create(start),create(end),json);
         }
+        
         return result;
    }
 
