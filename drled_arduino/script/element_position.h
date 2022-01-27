@@ -134,7 +134,9 @@ namespace DevRelief {
             void setUnit(IJsonElement*json) {if (json) {m_unit = parseJsonUnit(json);}}
             void setReverse(IJsonElement*json) { if (json) { m_reverse = getBool(json,false);}}
             void setHSLOperation(IJsonElement*json){
+                m_logger->never("PositionProperty.setHSLOperation %x",json);
                 if (json) {m_hslOperation = parseJsonOperation(json);}
+                m_logger->never("PositionProperty.setHSLOperation %d",m_hslOperation);
             }
             void setHSLOperation(HSLOperation op) { m_hslOperation = op;}
             void setWrap(bool wrap) { m_wrap = wrap;}
@@ -155,13 +157,19 @@ namespace DevRelief {
             }
 
             HSLOperation parseJsonOperation(IJsonElement*json) {
-                if (json == NULL) { return INHERIT;}
-                auto opVal = json->asValue();
-                if (opVal) {
-                    return  (HSLOperation)Util::mapText2Int(opVal->getString(),
-                    "replace:0,add:1,subtract:2,sub:2,average:3,avg:3,min:4,max:5",INHERIT);
+                if (json == NULL) { 
+                    m_logger->never("no HSL operation specified");
+                    return INHERIT;
                 }
-                return INHERIT;
+                auto opVal = json->asValue();
+                HSLOperation op = INHERIT;
+                if (opVal) {
+                    m_logger->never("got HSLOp %s",opVal->getString());
+                    op =  (HSLOperation)Util::mapText2Int(
+                    "replace:0,add:1,subtract:2,sub:2,average:3,avg:3,min:4,max:5",opVal->getString(),INHERIT);
+                }
+                m_logger->never("return op %d",op);
+                return op;
             }
 
            PositionUnit parseJsonUnit(IJsonElement* json) {
@@ -238,6 +246,7 @@ namespace DevRelief {
                 IJsonElement * flow = json->getPropertyValue("flow");
                 IJsonElement * unit = json->getPropertyValue("unit");
                 IJsonElement * reverse = json->getPropertyValue("reverse");
+                IJsonElement * op = json->getPropertyValue("op");
 
                 if (offsetValue || lengthValue || stripNumberValue ||
                     clip || wrap || absolute || cover || center || flow || unit || reverse){
@@ -256,11 +265,8 @@ namespace DevRelief {
                         m_properties->setFlow(flow);
                         m_properties->setUnit(unit);
                         m_properties->setReverse(reverse);
+                        m_properties->setHSLOperation(op);
                     }
-                // length & offset are the script values 
-                // may be percent or pixel and contant or range/variable/...
-                IJsonElement * length = 0;
-                IJsonElement * offset = 0;
 
                 return true;
             }

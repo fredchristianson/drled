@@ -21,6 +21,8 @@
 namespace DevRelief {
 
 extern Logger LEDLogger;
+extern Logger AdafruitLogger;
+extern Logger HSLStripLogger;
 
 typedef enum HSLOperation {  
     REPLACE=0,

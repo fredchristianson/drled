@@ -260,6 +260,35 @@ namespace DevRelief{
             IScriptContainer* m_container;
             Logger* m_logger;
     };
+
+    class ScriptPatternElement
+    {
+    public:
+        ScriptPatternElement(int repeatCount, IScriptValue* value)
+        {
+            m_value = value;
+            m_repeatCount = repeatCount;
+        }
+        virtual ~ScriptPatternElement()
+        {
+            if (m_value) {m_value->destroy();}
+        }
+
+        int getRepeatCount() { return m_repeatCount;}
+
+        IScriptValue* getValue() { return m_value;}
+        virtual void destroy() { delete this;}
+
+    private:
+        IScriptValue *m_value;
+        int m_repeatCount;
+    };
+
+    typedef enum PatternExtend {
+        REPEAT_PATTERN=0,
+        STRETCH_PATTERN=1,
+        NO_EXTEND=2
+    };
 };
 
 #endif
