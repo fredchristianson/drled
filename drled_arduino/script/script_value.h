@@ -63,7 +63,7 @@ namespace DevRelief
             static IScriptValue* createFromString(const char * string);
             static IScriptValue* createFromArray(JsonArray* json);
             static IScriptValue* createFromObject(JsonObject* json);
-
+            static ScriptPatternElement* createPatternElement(IJsonElement*json);
             ScriptValue() {
                 m_logger = &ScriptValueLogger;
             }
@@ -734,43 +734,14 @@ namespace DevRelief
 
     };
 
+     
 
-
-    class ScriptPatternElement
+   class PatternValue : public AnimatedValue
     {
     public:
-        ScriptPatternElement(int repeatCount, IScriptValue* value)
+        PatternValue(JsonObject* json) : AnimatedValue(json)
         {
-            m_value = value;
-            m_repeatCount = repeatCount;
-        }
-        virtual ~ScriptPatternElement()
-        {
-            if (m_value) {m_value->destroy();}
-        }
-
-        int getRepeatCount() { return m_repeatCount;}
-
-        IScriptValue* getValue() { return m_value;}
-        virtual void destroy() { delete this;}
-
-    private:
-        IScriptValue *m_value;
-        int m_repeatCount;
-    };
-
-    typedef enum PatternExtend {
-        REPEAT_PATTERN=0,
-        STRETCH_PATTERN=1,
-        NO_EXTEND=2
-    };
-
-   class PatternValue : public ScriptValue
-    {
-    public:
-        PatternValue(IValueAnimator* animate=NULL)
-        {
-            m_animate = animate;
+            m_animate = NULL;
             m_extend = REPEAT_PATTERN;
             m_count = 0;
 
@@ -815,34 +786,20 @@ namespace DevRelief
             if (m_count == 0) { return UnitValue(defaultValue,defaultUnit); }
 
             double pos = 0;
-            IAnimationDomain* domain = ctx->getAnimationPositionDomain();
-            if (m_animate) {
-                AnimationRange range(0,m_count);
-                pos  = m_animate->get(ctx,&range);
-                domain = m_animate->getDomain(ctx,&range);
- 
-            } else {
-               //todo pos = domain->getPosition();
-            }
-            UnitValue val = getValueAt(ctx, domain, pos,defaultValue,POS_INHERIT);
+            double start = 0;
+            /*todo: the calcs below do "stretch".  need "repeat" and "once" */
+            double end = m_count;
+            
+            double value = getAnimatedValue(ctx,start,end);
+            
+            UnitValue val = getValueAt(ctx, NULL/*domain*/, value,defaultValue,POS_INHERIT);
             return val;
         }
 
-        UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, int pos, double defaultValue,PositionUnit defaultUnit) {
-            if (pos < 0 || pos >= m_count) {
-                if (m_extend == NO_EXTEND) {
-                    return UnitValue(defaultValue,defaultUnit);
-                } else if (m_extend == REPEAT_PATTERN) {
-                    pos = abs(pos)%m_count;
-                }
-            }
-            
-            int index = pos % m_count;
-            if (m_extend == STRETCH_PATTERN) {
-                double pct = (index*1.0/m_count);   
-                double domainVal = 0; //todo domain->getPosition();
-                index = m_count * domainVal;
-
+        UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, int index, double defaultValue,PositionUnit defaultUnit) {
+  
+            if (index >= m_elements.size()){
+                index = index % m_elements.size();
             }
             int elementIndex = 0;
             ScriptPatternElement* element = m_elements.get(0);
@@ -851,11 +808,15 @@ namespace DevRelief
                 index -= element->getRepeatCount();
                 element = m_elements.get(elementIndex);
             }
+            m_logger->always("getValueAt(...%d, %d)=>index %d  %x",index,defaultValue,elementIndex,element);
             IScriptValue* val = element?element->getValue() : NULL;
             if (val == NULL || val->isNull(ctx)) {
+                m_logger->never("\tnull");
                 return UnitValue(defaultValue,POS_INHERIT);
             }
-            return val->getUnitValue(ctx,defaultValue,defaultUnit);
+            UnitValue uv = val->getUnitValue(ctx,defaultValue,defaultUnit);
+            m_logger->never("\tuv %d %d",uv.getValue(),uv.getUnit());
+            return uv;
   
         }
         virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
@@ -879,14 +840,8 @@ namespace DevRelief
         }
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
-            auto animator = m_animate ? m_animate->clone(ctx) : NULL;
-            auto clone = new PatternValue(animator);
-            m_elements.each([&](ScriptPatternElement*element) {
-                IScriptValue* vclone = element->getValue()->eval(ctx,defaultValue);
+            return NULL;
 
-                clone->addElement(new ScriptPatternElement(element->getRepeatCount(),vclone));
-            });
-            return clone;
         }
 
 
@@ -897,6 +852,8 @@ namespace DevRelief
         IValueAnimator* m_animate;
         PatternExtend m_extend;
     };
+
+
 
     class ScriptVariableValue : public IScriptValue
     {
@@ -1172,12 +1129,51 @@ namespace DevRelief
         IJsonElement* start = json->getPropertyValue("start");
         IJsonElement* end = json->getPropertyValue("end");
         if (pattern) {
-            ScriptValueLogger.error("pattern not implemented");
+            //ScriptValueLogger.error("pattern not implemented");
+            PatternValue* patternValue = new PatternValue(json);
+            result = patternValue;
+            pattern->each([&](IJsonElement*elemenValue){
+                patternValue->addElement(createPatternElement(elemenValue));
+            });
         } else if (start && end) {
             result = new ScriptRangeValue(create(start),create(end),json);
         }
         
         return result;
+   }
+
+   ScriptPatternElement* ScriptValue::createPatternElement(IJsonElement*json){
+        if (json == NULL) { return NULL;}
+        ScriptPatternElement* element = NULL;
+        IScriptValue * val=NULL;
+        int count = 0;
+        if (json->isObject()) {
+            val = create(json->asObject()->getPropertyValue("value"));
+            int repeat = json->asObject()->getInt("count",1);
+        } else if (json->isString()) {
+            const char * str = json->asValue()->getString(NULL);
+            if (str != NULL) { 
+                const char *  x = strchr(str,'x');
+                if (x == NULL) {
+                    val = createFromString(str);
+                    count = 1;
+                } else {
+                    count = atoi(str);
+                    val = createFromString(x+1);
+                }
+            }
+        } else if (json->isNull()) {
+            val = new ScriptNullValue();
+            count = 1;
+        } else {
+            val = create(json);
+            count = 1;
+        }
+        if (val == NULL) {
+            val = new ScriptNullValue();
+        }
+        element = new ScriptPatternElement(count,val);
+        return element;
    }
 
 }

@@ -41,7 +41,8 @@ namespace DevRelief{
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
-                if (!isPositionValid(index)) { return;}             
+                if (!isPositionValid(index)) { return;}            
+                m_logger->never("ScriptHSLStrip.setSaturation op=%d",op); 
                 m_parent->setSaturation(saturation,translateIndex(index),op);
             }
 
@@ -204,11 +205,13 @@ namespace DevRelief{
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}
+                //m_logger->never("RootHSLStrip setHue  op=%d",op);
                 m_base->setHue(translateIndex(index),hue,op);
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
-                if (!isPositionValid(index)) { return;}             
+                if (!isPositionValid(index)) { return;}     
+                m_logger->never("RootHSLStrip.setSaturation op=%d",op);        
                 m_base->setSaturation(translateIndex(index),saturation,op);
             }
 
@@ -258,6 +261,7 @@ namespace DevRelief{
                 m_strip = strip;
                 m_context = context;
                 m_operation = op;
+                ScriptHSLStripLogger.never("DrawLED() op %d",m_operation);
             }
 
             void setIndex(int p) {
@@ -268,9 +272,11 @@ namespace DevRelief{
 
 
             void setHue(int hue) override {
+                //ScriptHSLStripLogger.never("DrawLED.setHue op %d",m_operation);
                 m_strip->setHue(hue,m_index,m_operation);
             }
             void setSaturation(int saturation) override {
+                ScriptHSLStripLogger.never("DrawLED.setSaturation op %d",m_operation);
                 m_strip->setSaturation(saturation,m_index,m_operation);
             }
             void setLightness(int lightness) override {
@@ -306,6 +312,7 @@ namespace DevRelief{
             void eachLED(auto&& drawer) {
                 
                 HSLOperation op = m_position->getHSLOperation();
+                m_logger->never("eachLED HSL op: %d",op);
                 DrawLED led(this,m_context,op);
                 if (m_length == 0) {
                     return;
