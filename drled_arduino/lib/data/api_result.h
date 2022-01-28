@@ -14,7 +14,7 @@ extern Logger ApiResultLogger;
 
 class ApiResult : public DataObject {
     public:
-        ApiResult(JsonElement *json) {
+        ApiResult(IJsonElement *json) {
             m_logger = &ApiResultLogger;
             m_logger->debug("create JSON ApiResult 0x%04X",json);
             addProperty("code",200);

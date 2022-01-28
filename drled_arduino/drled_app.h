@@ -126,14 +126,8 @@ namespace DevRelief {
                 SharedPtr<JsonRoot> jsonRoot = configDataLoader.toJson(m_config);
                 IJsonElement*json = jsonRoot->getTopElement();
                 ApiResult api(json);
-                DRString apiText;
+                api.send(resp);
                 
-                api.toText(apiText);
-                const char * text = apiText.text();
-                m_logger->debug("sending response");
-                m_logger->debug("%s",text);
-                
-                resp->send(200,"text/json",text);
             });
 
 
