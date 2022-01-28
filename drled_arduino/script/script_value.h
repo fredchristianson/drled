@@ -64,6 +64,9 @@ namespace DevRelief
             static IScriptValue* createFromArray(JsonArray* json);
             static IScriptValue* createFromObject(JsonObject* json);
             static ScriptPatternElement* createPatternElement(IJsonElement*json);
+            static IAnimationEase* createEase(JsonObject* json);
+            static IAnimationDomain* createDomain(JsonObject* json, IAnimationRange* range);
+
             ScriptValue() {
                 m_logger = &ScriptValueLogger;
             }
@@ -91,7 +94,7 @@ namespace DevRelief
 
             bool isUnitValue(IScriptContext* ctx) override { return false;}
             UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) override{
-                UnitValue uv(getIntValue(ctx,defaultValue),defaultUnit);
+                UnitValue uv(getFloatValue(ctx,defaultValue),defaultUnit);
                 return uv;
             }
 
@@ -263,6 +266,9 @@ namespace DevRelief
 
         double invokeSubtract(IScriptContext*ctx,double defaultValue) {
             double first = getArgValue(ctx,0,defaultValue);
+            if (m_args->length()==1) {
+                return -first;
+            }
             double second = getArgValue(ctx,1,defaultValue);
             return first - second;
         }
@@ -553,106 +559,52 @@ namespace DevRelief
 
     class AnimatedValue : public ScriptValue {
         public:
-            AnimatedValue( JsonObject* json) {
-                
-               m_easeIn = json ? ScriptValue::create(json->getPropertyValue("ease-in")) : NULL;
-               m_easeOut = json ? ScriptValue::create(json->getPropertyValue("ease-out")) : NULL;
-               m_easeInOut =json ?  ScriptValue::create(json->getPropertyValue("ease")) : NULL;
-
-                m_speedDomain = NULL;
-                m_durationDomain = NULL;
-                m_speed = NULL;
-                m_duration = NULL;
-                m_speed =json ?  ScriptValue::create(json->getPropertyValue("speed")) : NULL;
-                if (m_speed != NULL) {
-                    m_speedDomain = new SpeedDomain(millis());
-                } else {
-                    m_duration =json ?  ScriptValue::create(json->getPropertyValue("duration")) : NULL;
-                    if (m_duration != NULL) {
-                        m_durationDomain = new DurationDomain(millis());
-                    }
-                }
-
-                m_unfold = false;
-               if (json && json->getPropertyValue("unfold")){
-                   IJsonValueElement * val = json->getPropertyValue("unfold")->asValue();
-                   m_unfold = val ? val->getBool(false) : false;
-               }
-               m_logger->never("AnimatedValue %x %x %x",m_easeIn,m_easeOut,m_easeInOut);
+            AnimatedValue( ) {
+                m_startMSecs = millis();
             }
 
             ~AnimatedValue()  {
-                if (m_easeIn) { m_easeIn->destroy();}
-                if (m_easeOut) { m_easeOut->destroy();}
-                if (m_easeInOut) { m_easeInOut->destroy();}
-                if (m_speed) { m_speed->destroy();}
-                if (m_duration) { m_duration->destroy();}
-                if (m_speedDomain) { m_speedDomain->destroy();}
-                if (m_durationDomain) { m_durationDomain->destroy();}
+                if (m_animator) { m_animator->destroy();}
+            }
+
+            void setAnimator(IValueAnimator* animator) {
+                m_animator = animator;
             }
 
 
+            
+            int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
+                return getIntValue(ctx,defaultValue);
+            }
+            bool isNumber(IScriptContext* ctx) override { return false;}
+
+            virtual int getIntValue(IScriptContext* ctx,  int defaultValue)
+            {
+                return getFloatValue(ctx,(double)defaultValue);
+            }
+
+            virtual double getFloatValue(IScriptContext* ctx,  double defaultValue)
+            {
+                UnitValue uv = getUnitValue(ctx,(double)defaultValue,POS_INHERIT);
+                return uv.getValue();
+            }
+
+
+            virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
+            {
+                return getFloatValue(ctx,defaultValue?1:0) != 0;
+            }
         protected:
-            double getAnimatedValue(IScriptContext* ctx, double start,double end){
-                AnimationRange range(start,end,m_unfold);
-                double result = start;
-                if (m_speedDomain) {
-                    m_speedDomain->setRange(&range,m_speed->getFloatValue(ctx,1));
-                    result = animate(ctx,m_speedDomain,&range);
-                } else if (m_duration) {
-                    m_durationDomain->setDuration(m_duration->getMsecValue(ctx,1000));
-                    result = animate(ctx,m_durationDomain,&range);
-                } else {
-                    PositionDomain* domain = ctx->getAnimationPositionDomain();
-                    result = animate(ctx,domain,&range);
-                }
-                return result;
-            }
+ 
 
-            double animate(IScriptContext*ctx, IAnimationDomain* domain, IAnimationRange*range) {
-                CubicBezierEase cubicBezier(getEaseIn(ctx),getEaseOut(ctx));
-                Animator animator(domain,range,setupEase(ctx,&cubicBezier));
-                double result = animator.getRangeValue();
-
-                return result;
-            }
-
-            double getEaseIn(IScriptContext* ctx) {
-                if (m_easeIn) { return 1.0- m_easeIn->getFloatValue(ctx,1);}
-                if (m_easeInOut) { return 1.0- m_easeInOut->getFloatValue(ctx,1);}
-                return 0;
-            }
-            double getEaseOut(IScriptContext* ctx) {
-                if (m_easeOut) { return m_easeOut->getFloatValue(ctx,1);}
-                if (m_easeInOut) { return m_easeInOut->getFloatValue(ctx,1);}
-                return 0;
-            }
-
-            AnimationEase* setupEase(IScriptContext*ctx, CubicBezierEase* cubic) {
-                if (m_easeInOut && m_easeInOut->equals(ctx,"linear")) {
-                    m_logger->never("use linear ease");
-                    return LinearEase::INSTANCE;
-                }
-                else {
-                    m_logger->never("used cubic ease %f %f",getEaseIn(ctx),getEaseOut(ctx));
-                    return cubic;
-                }
-            }
-            IScriptValue * m_easeIn;
-            IScriptValue * m_easeOut;
-            IScriptValue * m_easeInOut;
-            IScriptValue * m_speed;
-            IScriptValue * m_duration;
-            SpeedDomain * m_speedDomain;
-            DurationDomain* m_durationDomain;
-            bool m_unfold;
             unsigned long m_startMSecs;
+            IValueAnimator* m_animator;
     };
 
     class ScriptRangeValue : public AnimatedValue
     {
     public:
-        ScriptRangeValue(IScriptValue *start, IScriptValue *end, JsonObject* json ) : AnimatedValue(json)
+        ScriptRangeValue(IScriptValue *start, IScriptValue *end) : AnimatedValue()
         {
             m_start = start;
             m_end = end;
@@ -664,42 +616,17 @@ namespace DevRelief
             if (m_end) {m_end->destroy();}
         }
 
-        int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
-            return getIntValue(ctx,defaultValue);
-        }
-        bool isNumber(IScriptContext* ctx) override { return true;}
-
-        virtual int getIntValue(IScriptContext* ctx,  int defaultValue)
-        {
-            return (int)getFloatValue(ctx,(double)defaultValue);
-        }
-
-        virtual double getFloatValue(IScriptContext* ctx,  double defaultValue)
-        {
-            if (m_start == NULL)
-            {
-                m_logger->debug("\tno start.  return end %f");
-                return m_end ? m_end->getIntValue(ctx, defaultValue) : defaultValue;
+        UnitValue getUnitValue(IScriptContext*ctx, double defaultValue, PositionUnit defaultUnit) {
+            if (m_animator == NULL) {
+                return UnitValue(defaultValue,defaultUnit);
             }
-            else if (m_end == NULL)
-            {
-                m_logger->debug("\tno end.  return start %f");
-                return m_start ? m_start->getIntValue(ctx, defaultValue) : defaultValue;
-            }
-            double start = m_start->getFloatValue(ctx, 0);
-            double end = m_end->getFloatValue(ctx,  1);
-            double value = getAnimatedValue(ctx,start,end);
-            m_logger->never("Range %f-%f got %f",start,end,value);
+            m_animator->update(ctx);
+
+            double value = m_animator->getRangeValue(ctx);
             return value;
   
         }
-        virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
-        {
-            int start = m_start->getIntValue(ctx, 0);
-            int end = m_end->getIntValue(ctx, start);
-            // bool probably doesn't make sense for a range.  return true if there is a range rather than single value
-           return start != end;
-        }
+
 
         virtual DRString toString()
         {
@@ -711,13 +638,6 @@ namespace DevRelief
             return result;
         }
 
-         virtual UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) {
-            if (m_start == NULL) { return UnitValue(defaultValue,defaultUnit);}
-            UnitValue uv = m_start->getUnitValue(ctx,defaultValue,defaultUnit);
-            PositionUnit unit = uv.getUnit();
-            double val = getFloatValue(ctx,defaultValue);  
-            return UnitValue(val,unit);      
-        }
 
 /*
 
@@ -739,7 +659,7 @@ namespace DevRelief
    class PatternValue : public AnimatedValue
     {
     public:
-        PatternValue(JsonObject* json) : AnimatedValue(json)
+        PatternValue(JsonObject* json) : AnimatedValue()
         {
             m_animate = NULL;
             m_extend = REPEAT_PATTERN;
@@ -751,6 +671,7 @@ namespace DevRelief
         {
             if (m_animate) {m_animate->destroy();}
         }
+
 
         void setExtend(PatternExtend val) {
             m_extend = val;
@@ -765,39 +686,27 @@ namespace DevRelief
             m_count += element->getRepeatCount();
         }
 
-        int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
-            return getIntValue(ctx,defaultValue);
-        }
-        bool isNumber(IScriptContext* ctx) override { return false;}
+        
+        UnitValue getUnitValue(IScriptContext*ctx, double defaultValue, PositionUnit defaultUnit) {
+            if (m_animator == NULL) {
+                return UnitValue(defaultValue,defaultUnit);
+            }
+            m_animator->update(ctx);
 
-        virtual int getIntValue(IScriptContext* ctx,  int defaultValue)
-        {
-            return (int)getFloatValue(ctx,(double)defaultValue);
-        }
-
-        virtual double getFloatValue(IScriptContext* ctx,  double defaultValue)
-        {
-            UnitValue val = getFloatUnitValue(ctx, defaultValue,POS_INHERIT);
-            return val.getValue();
-        }
-
-        virtual UnitValue getFloatUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit)
-        {
-            if (m_count == 0) { return UnitValue(defaultValue,defaultUnit); }
-
-            double pos = 0;
-            double start = 0;
-            /*todo: the calcs below do "stretch".  need "repeat" and "once" */
-            double end = m_count;
-            
-            double value = getAnimatedValue(ctx,start,end);
-            
+            double value = m_animator->getRangeValue(ctx);
+             
             UnitValue val = getValueAt(ctx, NULL/*domain*/, value,defaultValue,POS_INHERIT);
             return val;
         }
 
-        UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, int index, double defaultValue,PositionUnit defaultUnit) {
+        UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, double value, double defaultValue,PositionUnit defaultUnit) {
   
+            //int index = (int)round(value);
+            //int index = (1.0/m_count)*value; // stretch
+            int index = m_count == 0 ? 0 : (value/(m_count-1))*m_count; // stretch
+            m_logger->never("getValueAt %.2f/%d*%d=%d",value,(m_count-1),m_count,index);
+
+            /*
             if (index >= m_elements.size()){
                 index = index % m_elements.size();
             }
@@ -808,22 +717,23 @@ namespace DevRelief
                 index -= element->getRepeatCount();
                 element = m_elements.get(elementIndex);
             }
-            m_logger->always("getValueAt(...%d, %d)=>index %d  %x",index,defaultValue,elementIndex,element);
+            
+            m_logger->never("getValueAt(...%d, %d)=>index %d  %x",index,defaultValue,elementIndex,element);
+            */
+           if (index < 0) { index = 0;}
+           if (index >= m_elements.size()) { index = m_elements.size()-1;}
+           ScriptPatternElement* element = m_elements.get(index);
             IScriptValue* val = element?element->getValue() : NULL;
             if (val == NULL || val->isNull(ctx)) {
                 m_logger->never("\tnull");
                 return UnitValue(defaultValue,POS_INHERIT);
             }
             UnitValue uv = val->getUnitValue(ctx,defaultValue,defaultUnit);
-            m_logger->never("\tuv %d %d",uv.getValue(),uv.getUnit());
+            m_logger->always("\tuv %f %d",uv.getValue(),uv.getUnit());
             return uv;
   
         }
-        virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
-        {
-            // bool probably doesn't make sense for a pattern.  return true if there are elements
-           return m_count > 0;
-        }
+       
 
         virtual DRString toString()
         {
@@ -831,12 +741,10 @@ namespace DevRelief
             return result;
         }
 
-        void setAnimator(IValueAnimator* animator) {
-            m_animate = animator;
-        }
-
-        UnitValue getUnitValue(IScriptContext*ctx, double defaultValue, PositionUnit defaultUnit) {
-            return getFloatUnitValue(ctx,defaultValue,defaultUnit);
+        virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
+        {
+            // bool probably doesn't make sense for a pattern.  return true if there are elements
+        return m_count > 0;
         }
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
@@ -844,6 +752,7 @@ namespace DevRelief
 
         }
 
+        size_t getCount() { return m_count;}
 
     protected:
         PtrList<ScriptPatternElement*> m_elements;
@@ -853,6 +762,37 @@ namespace DevRelief
         PatternExtend m_extend;
     };
 
+    class PatternRange : public AnimationRange {
+        public:
+            PatternRange(PatternValue * pattern,bool unfold) : AnimationRange(unfold) {
+                m_logger = &ScriptValueLogger;
+                m_pattern = pattern;
+            }
+
+            virtual ~PatternRange() {
+
+            }
+
+            void destroy() { delete this;}
+
+    
+            void update(IScriptContext* ctx){
+                if (m_pattern) {
+                    m_high = m_pattern->getCount()-1;
+                }
+            }
+
+            double getValue(double position) {
+                double val = AnimationRange::getValue(position);
+                m_logger->never("PatternRange %.2f-%.2f %.2f=>%.2f",getMinValue(),getMaxValue(),position,val);
+                return val;
+            }
+
+
+        private:
+            Logger* m_logger;
+            PatternValue* m_pattern;
+    };
 
 
     class ScriptVariableValue : public IScriptValue
@@ -1135,12 +1075,71 @@ namespace DevRelief
             pattern->each([&](IJsonElement*elemenValue){
                 patternValue->addElement(createPatternElement(elemenValue));
             });
+            IAnimationEase* ease = createEase(json);
+            bool unfold = json->getBool("unfold",false);
+            IAnimationRange* range = new PatternRange(patternValue,unfold);
+            IAnimationDomain* domain = createDomain(json,range);
+            IValueAnimator* animator = new Animator(domain,range,ease);
+            patternValue->setAnimator(animator);
         } else if (start && end) {
-            result = new ScriptRangeValue(create(start),create(end),json);
+           // result = new ScriptRangeValue(create(start),create(end),json);
         }
         
         return result;
    }
+
+    IAnimationEase* ScriptValue::createEase(JsonObject* json){
+        IAnimationEase* ease = NULL;
+        double easeValue =1;
+        IJsonElement* easeJson = json->getPropertyValue("ease");
+        IJsonValueElement* easeVal = easeJson ? easeJson->asValue() : NULL;
+        IJsonElement* easeIn = json->getPropertyValue("ease-in");
+        IJsonValueElement* easeInVal = easeIn ? easeIn->asValue() : NULL;
+        IJsonElement* easeOut = json->getPropertyValue("ease-out");
+        IJsonValueElement* easeOutVal = easeOut ? easeOut->asValue() : NULL;
+        if (easeVal) {
+            if (Util::equal(easeVal->getString(),"linear")){
+                return new LinearEase();
+            }
+        }
+        IScriptValue* inValue=NULL;
+        IScriptValue* outValue=NULL;
+        if (easeInVal != NULL) {
+            inValue = ScriptValue::create(easeIn);
+        } else {
+            inValue = ScriptValue::create(easeJson);
+        }
+        if (easeOutVal != NULL) {
+            outValue = ScriptValue::create(easeOut);
+        } else {
+            outValue = ScriptValue::create(easeJson);
+        }
+        return new CubicBezierEase(inValue,outValue);
+        
+    }
+
+    IAnimationDomain* ScriptValue::createDomain(JsonObject* json, IAnimationRange* range){
+        IAnimationDomain* domain = NULL;
+        IJsonElement* speedJson = json->getPropertyValue("speed");
+        IJsonElement* durationJson = json->getPropertyValue("duration");
+        if (speedJson) {
+            IScriptValue* speedValue = create(speedJson);
+            if (speedValue) {
+                domain = new SpeedDomain(speedValue,range);
+            }
+        } else if (durationJson) {
+            IScriptValue* durationValue = create(durationJson);
+            if (durationJson) {
+                domain = new DurationDomain(durationValue);
+            }
+        } else {
+            domain = new ContextPositionDomain();
+        }
+        return domain;
+    }
+
+
+
 
    ScriptPatternElement* ScriptValue::createPatternElement(IJsonElement*json){
         if (json == NULL) { return NULL;}

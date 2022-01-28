@@ -257,6 +257,7 @@ namespace DevRelief {
             void drawLED(IHSLStripLED& led) override {
                 if (m_hue) {
                     int hue = m_hue->getIntValue(led.getContext(),-1);
+                    m_logger->always("drawLED %d %d",led.getIndex(),hue);
                     led.setHue(adjustHue(hue));
                 }
                 

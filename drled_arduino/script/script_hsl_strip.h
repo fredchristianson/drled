@@ -288,6 +288,7 @@ namespace DevRelief{
 
             IScriptContext* getContext() const override { return m_context;}
             IScriptHSLStrip* getStrip() const override { return m_strip;}
+            virtual int getIndex()const {return m_index;}
         private:
             int m_index;
             HSLOperation m_operation;

@@ -25,6 +25,7 @@ namespace DevRelief
             m_name = "unnamed";
             m_durationMsecs = 0;
             m_frequencyMsecs = 50;
+            m_startMsecs = 0;
             m_rootContext = NULL;
             m_rootContainer = NULL;
         }
@@ -51,6 +52,7 @@ namespace DevRelief
         void begin(IHSLStrip* strip, JsonObject* params) {
             m_logger->debug("Begin script %x %s",strip,m_name.text());
             m_realStrip = strip;
+            m_startMsecs = millis();
             getRootContainer()->setStrip(strip);
 
             if (m_rootContext) {
@@ -62,6 +64,9 @@ namespace DevRelief
 
         void step() {
             auto lastStep = m_rootContext->getLastStep();
+            if (m_startMsecs>0 && m_startMsecs+m_durationMsecs<millis()) {
+                return; // past duration
+            }
             if (lastStep && m_frequencyMsecs>0 && lastStep->getStartMsecs() + m_frequencyMsecs > millis()) {
                 m_logger->test("too soon %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
                 return; // to soon to start next step
@@ -107,6 +112,7 @@ namespace DevRelief
         IHSLStrip* m_realStrip;
         int         m_durationMsecs;
         int         m_frequencyMsecs;
+        int m_startMsecs;
     };
 
    

@@ -91,6 +91,7 @@ namespace DevRelief{
             virtual double getMin() const = 0;
             virtual double getMax() const= 0;
             virtual double getValue() const= 0;
+            virtual void update(IScriptContext* ctx)=0;
     };
     
     class IAnimationRange {
@@ -100,8 +101,25 @@ namespace DevRelief{
             virtual double getMinValue()=0;
             virtual double getMaxValue()=0;
             virtual double getValue(double percent)=0;
+            virtual double getDistance()=0; // distance from min to max (max-min+1)
+            virtual bool unfold()=0;
+            virtual void update(IScriptContext* ctx)=0;
     };
 
+    class IAnimationEase {
+        public:
+            virtual void destroy()=0;
+            virtual double calculate(double position) = 0;
+            virtual void update(IScriptContext* ctx)=0;
+    };
+
+    class IValueAnimator {
+    public:
+        virtual void destroy()=0;
+        virtual double getRangeValue(IScriptContext* ctx)=0;
+        virtual IValueAnimator* clone(IScriptContext* ctx)=0;
+        virtual void update(IScriptContext* ctx)=0;
+    };
 
     class IHSLStripLED {
         public:
@@ -112,6 +130,7 @@ namespace DevRelief{
 
             virtual IScriptContext* getContext() const=0;
             virtual IScriptHSLStrip* getStrip() const = 0;
+            virtual int getIndex()const=0;
     };
     
     
@@ -218,13 +237,7 @@ namespace DevRelief{
         virtual IScriptValueProvider* getParentScope()=0;
     };
 
-    class IValueAnimator {
-        public:
-            virtual void destroy()=0;
-            virtual double get(IScriptContext* ctx, IAnimationRange* range)=0;
-            virtual IValueAnimator* clone(IScriptContext* ctx)=0;
-            virtual IAnimationDomain* getDomain(IScriptContext* ctx,IAnimationRange*range)=0;
-    };
+
 
     class IScriptElement {
         public:
