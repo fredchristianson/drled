@@ -327,10 +327,10 @@ namespace DevRelief
         void update(IScriptContext* ctx) override {
             m_in = 1;
             m_out = 1;
-            if (m_in) {
+            if (m_inValue) {
                 m_in = (m_inValue->getFloatValue(ctx,1));
             } 
-            if (m_out) {
+            if (m_outValue) {
                 m_out = m_outValue->getFloatValue(ctx,0);
             }
          }
@@ -406,16 +406,14 @@ namespace DevRelief
 
         double getRangeValue(IScriptContext* ctx)
         {
-            if (m_ease == NULL) {
-                m_ease = &DefaultEase;
-            }
+
             if (m_domain == NULL || m_range==NULL) {
                 m_logger->error("Animator missing domain (%x) or range(%x)",m_domain,m_range);
                 return 0;
             }
             double percent = m_domain->getPercent();
             m_logger->never("Animator percent %f",percent);
-            double ease = m_ease->calculate(percent);
+            double ease = m_ease ? m_ease->calculate(percent) : percent;
             m_logger->never("Animator ease %f",percent);
 
             if (m_range->unfold()) {
