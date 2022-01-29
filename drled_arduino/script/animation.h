@@ -64,7 +64,7 @@ namespace DevRelief
 
         double getMinValue() override { return m_low; }
         double getMaxValue() override { return m_high; }
-        double getDistance() { return (m_high-m_low+1);}
+        double getDistance() { return (abs(m_high-m_low)+1);}
        
     protected:
         double m_lastPosition;
@@ -125,6 +125,8 @@ namespace DevRelief
         {
             return m_min;
         }
+
+        double getDistance() const override { return abs(m_max-m_min)+1;}
 
     protected:
         Logger *m_logger;

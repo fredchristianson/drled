@@ -91,6 +91,7 @@ namespace DevRelief{
             virtual double getMin() const = 0;
             virtual double getMax() const= 0;
             virtual double getValue() const= 0;
+            virtual double getDistance()const =0; // distance from min to max (max-min+1)
             virtual void update(IScriptContext* ctx)=0;
     };
     
@@ -277,27 +278,28 @@ namespace DevRelief{
     class ScriptPatternElement
     {
     public:
-        ScriptPatternElement(int repeatCount, PositionUnit repeatUnit, IScriptValue* value)
+        ScriptPatternElement(IScriptValue* repeatCount, PositionUnit repeatUnit, IScriptValue* value)
         {
             m_value = value;
             m_repeatCount = repeatCount;
-            m_repeatUnit = repeatUnit;
+            m_pixelCount = 0;
         }
         virtual ~ScriptPatternElement()
         {
-            if (m_value) {m_value->destroy();}
+            if (m_value) {m_value->destroy();} 
+            if (m_repeatCount) {m_repeatCount->destroy();}
         }
 
-        int getRepeatCount() const { return m_repeatCount;}
-        PositionUnit getRepeatUnit() const { return m_repeatUnit;}
+        void update(IScriptContext* ctx);
 
+        int getPixelCount() const { return m_pixelCount;}
         IScriptValue* getValue() const { return m_value;}
         virtual void destroy() { delete this;}
 
     private:
         IScriptValue *m_value;
-        int m_repeatCount;
-        PositionUnit m_repeatUnit;
+        IScriptValue* m_repeatCount;
+        int m_pixelCount;
     };
 
     typedef enum PatternExtend {
