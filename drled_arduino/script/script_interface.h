@@ -277,24 +277,27 @@ namespace DevRelief{
     class ScriptPatternElement
     {
     public:
-        ScriptPatternElement(int repeatCount, IScriptValue* value)
+        ScriptPatternElement(int repeatCount, PositionUnit repeatUnit, IScriptValue* value)
         {
             m_value = value;
             m_repeatCount = repeatCount;
+            m_repeatUnit = repeatUnit;
         }
         virtual ~ScriptPatternElement()
         {
             if (m_value) {m_value->destroy();}
         }
 
-        int getRepeatCount() { return m_repeatCount;}
+        int getRepeatCount() const { return m_repeatCount;}
+        PositionUnit getRepeatUnit() const { return m_repeatUnit;}
 
-        IScriptValue* getValue() { return m_value;}
+        IScriptValue* getValue() const { return m_value;}
         virtual void destroy() { delete this;}
 
     private:
         IScriptValue *m_value;
         int m_repeatCount;
+        PositionUnit m_repeatUnit;
     };
 
     typedef enum PatternExtend {

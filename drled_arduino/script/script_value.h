@@ -112,7 +112,7 @@ namespace DevRelief
 
         protected:
 
-            PositionUnit getUnit(const char *val, PositionUnit defaultUnit) {
+            static PositionUnit getUnit(const char *val, PositionUnit defaultUnit) {
                 const char * p = val;
                 while(p != NULL && *p!= 0 && *p!='p'&& *p!='%' && *p!='i' ) {
                     p++;
@@ -701,12 +701,9 @@ namespace DevRelief
 
         UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, double value, double defaultValue,PositionUnit defaultUnit) {
   
-            //int index = (int)round(value);
-            //int index = (1.0/m_count)*value; // stretch
-            int index = m_count == 0 ? 0 : (value/(m_count-1))*m_count; // stretch
-            m_logger->never("getValueAt %.2f/%d*%d=%d",value,(m_count-1),m_count,index);
 
-            /*
+            int index = value;
+            
             if (index >= m_elements.size()){
                 index = index % m_elements.size();
             }
@@ -719,10 +716,10 @@ namespace DevRelief
             }
             
             m_logger->never("getValueAt(...%d, %d)=>index %d  %x",index,defaultValue,elementIndex,element);
-            */
-           if (index < 0) { index = 0;}
-           if (index >= m_elements.size()) { index = m_elements.size()-1;}
-           ScriptPatternElement* element = m_elements.get(index);
+            if (elementIndex >= m_elements.size()) {
+                elementIndex = m_elements.size()-1;
+            }
+            ScriptPatternElement* element = m_elements.get(elementIndex);
             IScriptValue* val = element?element->getValue() : NULL;
             if (val == NULL || val->isNull(ctx)) {
                 m_logger->never("\tnull");
@@ -782,18 +779,57 @@ namespace DevRelief
                 }
             }
 
+            /* extends pattern to full length of strip */
             double getValue(double position) {
+                int count = m_pattern ? m_pattern->getCount() : 0;
+                if (count < 2) { return 0;}
+
                 double val = AnimationRange::getValue(position);
+                int index = (val/(count-1))*count; // stretch
                 m_logger->never("PatternRange %.2f-%.2f %.2f=>%.2f",getMinValue(),getMaxValue(),position,val);
-                return val;
+                return index;
             }
 
 
-        private:
+        protected:
             Logger* m_logger;
             PatternValue* m_pattern;
     };
 
+    class RepeatPatternRange : public PatternRange {
+        public:
+            RepeatPatternRange(PatternValue* pattern,bool alternate) : PatternRange(pattern,false) {
+                // cannot unfold like other animations.  need to alternate drawing the pattern forward then backward
+                m_alternate = alternate;  
+            }
+            virtual ~RepeatPatternRange() {}
+
+            /* 1-to-1 mapping from strip LEDs to value */
+            void update(IScriptContext* ctx){
+                m_high = (ctx->getStrip()->getLength())-1; 
+            }
+
+            /* repeat pattern */
+            double getValue(double position) {
+                int count = m_pattern ? m_pattern->getCount() : 0;
+                if (count < 2) { return 0;}
+
+                double val = AnimationRange::getValue(position);
+                int index = ((int)round(val)) % (count);
+                if (m_alternate) {
+                    // mod the countx2.  first half runs pattern forward.  2nd have goes backward;
+                    index = ((int)round(val)) % ((count-1)*2);
+                    if (index >= (count-1)) { 
+                        index = (count-1)*2-index;
+                    }
+                }
+                m_logger->never("RepeatPatternRange %.2f-%.2f %.2f=>%.2f",getMinValue(),getMaxValue(),position,val);
+                return index;
+            }
+
+        protected:
+            bool m_alternate;
+    };
 
     class ScriptVariableValue : public IScriptValue
     {
@@ -1077,7 +1113,13 @@ namespace DevRelief
             });
             IAnimationEase* ease = createEase(json);
             bool unfold = json->getBool("unfold",false);
-            IAnimationRange* range = new PatternRange(patternValue,unfold);
+            bool repeat = json->getBool("repeat",false);
+            IAnimationRange* range = NULL;
+            if (repeat) {
+                range = new RepeatPatternRange(patternValue,unfold);
+            } else {
+                range = new PatternRange(patternValue,unfold);
+            }
             IAnimationDomain* domain = createDomain(json,range);
             IValueAnimator* animator = new Animator(domain,range,ease);
             patternValue->setAnimator(animator);
@@ -1146,19 +1188,33 @@ namespace DevRelief
         ScriptPatternElement* element = NULL;
         IScriptValue * val=NULL;
         int count = 0;
+        PositionUnit unit = POS_PIXEL;
         if (json->isObject()) {
-            val = create(json->asObject()->getPropertyValue("value"));
-            int repeat = json->asObject()->getInt("count",1);
+            JsonObject* obj = json->asObject();
+            val = create(obj->getPropertyValue("value"));
+            unit = getUnit(obj->getString("unit",NULL),POS_PIXEL);
+            IJsonElement* countProp = obj->getPropertyValue("count");
+            if (countProp && countProp->hasValue()) {
+                IJsonValueElement* countVal = countProp->asValue();
+                if (countProp->isString()){
+                    const char * countStr = countVal->getString();
+                }
+                count = obj->getInt("count",1);
+            }
         } else if (json->isString()) {
             const char * str = json->asValue()->getString(NULL);
             if (str != NULL) { 
-                const char *  x = strchr(str,'x');
-                if (x == NULL) {
-                    val = createFromString(str);
+                LinkedList<DRString> valCount;
+                Util::split(str,'x',valCount);
+                
+                if (valCount.size()==1) {
+                    val = createFromString(valCount.get(0));
                     count = 1;
-                } else {
-                    count = atoi(str);
-                    val = createFromString(x+1);
+                } else if (valCount.size()==2) {
+                    const char * countAndUnit = valCount.get(1).text();
+                    count = atoi(countAndUnit);
+                    unit = getUnit(countAndUnit,POS_PIXEL);
+                    val = createFromString(valCount.get(0).text());
                 }
             }
         } else if (json->isNull()) {
@@ -1171,7 +1227,7 @@ namespace DevRelief
         if (val == NULL) {
             val = new ScriptNullValue();
         }
-        element = new ScriptPatternElement(count,val);
+        element = new ScriptPatternElement(count,unit, val);
         return element;
    }
 
