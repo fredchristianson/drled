@@ -695,38 +695,36 @@ namespace DevRelief
 
             double value = m_animator->getRangeValue(ctx);
              
-            UnitValue val = getValueAt(ctx, NULL/*domain*/, value,defaultValue,POS_INHERIT);
+            UnitValue val = getValueAt(ctx,  value,defaultValue,POS_INHERIT);
             return val;
         }
 
-        UnitValue getValueAt(IScriptContext* ctx,IAnimationDomain* domain, double value, double defaultValue,PositionUnit defaultUnit) {
+        UnitValue getValueAt(IScriptContext* ctx, double value, double defaultValue,PositionUnit defaultUnit) {
   
 
             int index = value;
             
-            if (index >= m_elements.size()){
-                index = index % m_elements.size();
-            }
             int elementIndex = 0;
             ScriptPatternElement* element = m_elements.get(0);
-            while(index >= element->getRepeatCount()) {
+            while(element != NULL && index > element->getRepeatCount()) {
                 elementIndex ++;
                 index -= element->getRepeatCount();
                 element = m_elements.get(elementIndex);
             }
             
-            m_logger->never("getValueAt(...%d, %d)=>index %d  %x",index,defaultValue,elementIndex,element);
             if (elementIndex >= m_elements.size()) {
                 elementIndex = m_elements.size()-1;
             }
-            ScriptPatternElement* element = m_elements.get(elementIndex);
+            m_logger->always("getValueAt(%f) index=%d elementidx=%d repeat=%d",value,index,elementIndex,element ? element->getRepeatCount() : -1);
+
+            
             IScriptValue* val = element?element->getValue() : NULL;
             if (val == NULL || val->isNull(ctx)) {
                 m_logger->never("\tnull");
                 return UnitValue(defaultValue,POS_INHERIT);
             }
             UnitValue uv = val->getUnitValue(ctx,defaultValue,defaultUnit);
-            m_logger->always("\tuv %f %d",uv.getValue(),uv.getUnit());
+            m_logger->never("\tuv %f %d",uv.getValue(),uv.getUnit());
             return uv;
   
         }
@@ -806,7 +804,10 @@ namespace DevRelief
 
             /* 1-to-1 mapping from strip LEDs to value */
             void update(IScriptContext* ctx){
-                m_high = (ctx->getStrip()->getLength())-1; 
+               // m_high = (ctx->getStrip()->getLength())-1; 
+               IAnimationDomain* domain = ctx->getAnimationPositionDomain();
+               int length = domain->getMax()-domain->getMin();
+               m_high = length;
             }
 
             /* repeat pattern */
@@ -823,7 +824,8 @@ namespace DevRelief
                         index = (count-1)*2-index;
                     }
                 }
-                m_logger->never("RepeatPatternRange %.2f-%.2f %.2f=>%.2f",getMinValue(),getMaxValue(),position,val);
+                
+                m_logger->never("RepeatPatternRange count=%d pos=%f val=%f index=%d",count,position,val,index);
                 return index;
             }
 
@@ -1227,6 +1229,7 @@ namespace DevRelief
         if (val == NULL) {
             val = new ScriptNullValue();
         }
+        ScriptValueLogger.always("PatternElement %d %d %s",count,unit,val->toString().text());
         element = new ScriptPatternElement(count,unit, val);
         return element;
    }
