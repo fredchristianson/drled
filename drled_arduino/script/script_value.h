@@ -706,7 +706,7 @@ namespace DevRelief
             
             int elementIndex = 0;
             ScriptPatternElement* element = m_elements.get(0);
-            while(element != NULL && index > element->getRepeatCount()) {
+            while(element != NULL && index >= element->getRepeatCount()) {
                 elementIndex ++;
                 index -= element->getRepeatCount();
                 element = m_elements.get(elementIndex);
@@ -806,7 +806,7 @@ namespace DevRelief
             void update(IScriptContext* ctx){
                // m_high = (ctx->getStrip()->getLength())-1; 
                IAnimationDomain* domain = ctx->getAnimationPositionDomain();
-               int length = domain->getMax()-domain->getMin();
+               int length = domain->getMax()-domain->getMin()+1;
                m_high = length;
             }
 
