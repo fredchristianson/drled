@@ -683,7 +683,7 @@ namespace DevRelief
                 return;
             }
             m_elements.add(element);
-            m_count += element->getRepeatCount();
+            m_count += element->getPixelCount();
         }
 
         
@@ -691,6 +691,11 @@ namespace DevRelief
             if (m_animator == NULL) {
                 return UnitValue(defaultValue,defaultUnit);
             }
+            m_count = 0;
+            m_elements.each([&](ScriptPatternElement* element) {
+                element->update(ctx);
+                m_count += element->getPixelCount();
+            });
             m_animator->update(ctx);
 
             double value = m_animator->getRangeValue(ctx);
@@ -706,16 +711,16 @@ namespace DevRelief
             
             int elementIndex = 0;
             ScriptPatternElement* element = m_elements.get(0);
-            while(element != NULL && index >= element->getRepeatCount()) {
+            while(element != NULL && index >= element->getPixelCount()) {
                 elementIndex ++;
-                index -= element->getRepeatCount();
+                index -= element->getPixelCount();
                 element = m_elements.get(elementIndex);
             }
             
             if (elementIndex >= m_elements.size()) {
                 elementIndex = m_elements.size()-1;
             }
-            m_logger->always("getValueAt(%f) index=%d elementidx=%d repeat=%d",value,index,elementIndex,element ? element->getRepeatCount() : -1);
+            m_logger->always("getValueAt(%f) index=%d elementidx=%d repeat=%d",value,index,elementIndex,element ? element->getPixelCount() : -1);
 
             
             IScriptValue* val = element?element->getValue() : NULL;
@@ -756,6 +761,25 @@ namespace DevRelief
         IValueAnimator* m_animate;
         PatternExtend m_extend;
     };
+    
+    void ScriptPatternElement::update(IScriptContext* ctx) {
+        if (m_repeatCount == NULL) {
+            m_pixelCount = 1;
+            return;
+        }
+        UnitValue uv = m_repeatCount->getUnitValue(ctx,1,POS_INHERIT);
+        PositionUnit unit = uv.getUnit();
+        if (unit == POS_INHERIT) {
+            unit = ctx->getCurrentElement()->getPosition()->getUnit();
+        }
+        if (unit == POS_PERCENT) {
+            int length = ctx->getAnimationPositionDomain()->getDistance();
+            int repeat = uv.getValue();
+            m_pixelCount = round(length * repeat/100.0);
+        } else {
+            m_pixelCount = uv.getValue();
+        }
+    }
 
     class PatternRange : public AnimationRange {
         public:
@@ -1189,42 +1213,27 @@ namespace DevRelief
         if (json == NULL) { return NULL;}
         ScriptPatternElement* element = NULL;
         IScriptValue * val=NULL;
-        int count = 0;
+        IScriptValue* count = NULL;
         PositionUnit unit = POS_PIXEL;
         if (json->isObject()) {
             JsonObject* obj = json->asObject();
             val = create(obj->getPropertyValue("value"));
             unit = getUnit(obj->getString("unit",NULL),POS_PIXEL);
-            IJsonElement* countProp = obj->getPropertyValue("count");
-            if (countProp && countProp->hasValue()) {
-                IJsonValueElement* countVal = countProp->asValue();
-                if (countProp->isString()){
-                    const char * countStr = countVal->getString();
-                }
-                count = obj->getInt("count",1);
-            }
+            count = create(obj->getPropertyValue("count"));
         } else if (json->isString()) {
             const char * str = json->asValue()->getString(NULL);
             if (str != NULL) { 
                 LinkedList<DRString> valCount;
                 Util::split(str,'x',valCount);
+                val = createFromString(valCount.get(0));
                 
-                if (valCount.size()==1) {
-                    val = createFromString(valCount.get(0));
-                    count = 1;
-                } else if (valCount.size()==2) {
+                if (valCount.size()==2) {
                     const char * countAndUnit = valCount.get(1).text();
-                    count = atoi(countAndUnit);
-                    unit = getUnit(countAndUnit,POS_PIXEL);
-                    val = createFromString(valCount.get(0).text());
+                    count = new ScriptStringValue(countAndUnit);
                 }
             }
-        } else if (json->isNull()) {
-            val = new ScriptNullValue();
-            count = 1;
         } else {
             val = create(json);
-            count = 1;
         }
         if (val == NULL) {
             val = new ScriptNullValue();
