@@ -59,13 +59,14 @@ namespace DevRelief
 
     class ScriptValue : public IScriptValue {
         public:
-            static IScriptValue* create(IJsonElement*json);
+            static IScriptValue* create(IJsonElement*json, JsonObject* parent=NULL);
             static IScriptValue* createFromString(const char * string);
-            static IScriptValue* createFromArray(JsonArray* json);
+            static IScriptValue* createFromArray(JsonArray* json, JsonObject* parent=NULL);
             static IScriptValue* createFromObject(JsonObject* json);
             static ScriptPatternElement* createPatternElement(IJsonElement*json);
             static IAnimationEase* createEase(JsonObject* json);
             static IAnimationDomain* createDomain(JsonObject* json, IAnimationRange* range);
+            static IScriptValue* createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json=NULL);
 
             ScriptValue() {
                 m_logger = &ScriptValueLogger;
@@ -666,54 +667,9 @@ namespace DevRelief
 
             void destroy() { delete this;}
 
-            UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int pixelCount, double defaultValue, PositionUnit defaultUnit){
-                m_logger->always("interpolate: %f %d",pct, pixelCount);
-                int startIndex = 0;
-                int endIndex = 0;
-                double startPct = 0;
-                double endPct = 0;
-                ScriptPatternElement* startElement = NULL;
-                ScriptPatternElement* endElement = elements.get(0);
-                double startCount = 0;
-                double endCount = endElement->getPixelCount();
-                while(endElement != NULL && pct > endPct) {
-                    startIndex = endIndex;
-                    startPct = endPct;
-                    endIndex += 1;
-                    endCount += endElement->getPixelCount();
-                    endPct = endCount/pixelCount;
-                    startElement = endElement;
-                    endElement = elements.get(endIndex);
-                    m_logger->always("\tskip: %d-%d %d (%f%%) %x %x",startIndex,endIndex,endCount,endPct,startElement,endElement);
-
-                }
-
-                if (startElement == NULL && endElement == NULL) {
-                    m_logger->always("\tno elements");
-                    return UnitValue(defaultValue,defaultUnit);
-                } else if (startElement == NULL || startPct == endPct || pct == 1) {
-                    m_logger->always("\tend element");
-                    IScriptValue* val = endElement->getValue();
-                    return val == NULL ? UnitValue(defaultValue,defaultUnit) : val->getUnitValue(ctx,defaultValue,defaultUnit);
-                } else if (endElement == NULL || pct == 0 || endPct == startPct) {
-                    m_logger->always("\tstart element");
-                    IScriptValue* val = startElement->getValue();
-                    return val == NULL ? UnitValue(defaultValue,defaultUnit) : val->getUnitValue(ctx,defaultValue,defaultUnit);
-                } else {
-                    IScriptValue* sval = startElement->getValue();
-                    IScriptValue* eval = endElement->getValue();
-                    double ipct = (pct-startPct)/(endPct-startPct);
-                    m_logger->always("\tboth elements %f  %f-%f-%f",ipct,startPct,pct,endPct);
-                    UnitValue uv = interpolate(ctx,sval,eval,ipct,defaultValue,defaultUnit);
-                    m_logger->always("\tresult=%f",uv.getValue());
-                    return uv;
-                }
-               
-               
-            }
+            virtual UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int pixelCount, double defaultValue, PositionUnit defaultUnit)=0;
 
         protected:
-            virtual UnitValue interpolate(IScriptContext*ctx, IScriptValue*start,IScriptValue*end, double pct, double defaultValue, PositionUnit defaultUnit)=0;
             Logger* m_logger;
             IAnimationEase* m_ease;
 
@@ -767,7 +723,7 @@ namespace DevRelief
 
             double pct = m_animator->getRangeValue(ctx);
             UnitValue value = m_interpolation->getValue(pct,ctx,m_elements,m_pixelCount,defaultValue,defaultUnit); 
-            m_logger->always("patternvalue: %f",value.getValue());
+            m_logger->never("patternvalue: %f",value.getValue());
             //UnitValue val = getValueAt(ctx,  value,defaultValue,POS_INHERIT);
             return value;
         }
@@ -825,6 +781,18 @@ namespace DevRelief
         }
     }
 
+    struct InterpolationSegment {
+        InterpolationSegment() {
+            startElementIndex=0;
+            endElementIndex=0;
+            startPercent=0;
+            endPercent=1;
+        }
+        int startElementIndex;
+        int endElementIndex;
+        double startPercent;
+        double endPercent;
+    };
 
 
     class SmoothInterpolation : public PatternInterpolation {
@@ -835,8 +803,26 @@ namespace DevRelief
 
             }
 
+            UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int pixelCount, double defaultValue, PositionUnit defaultUnit) {
+                if (m_stepWatcher.isChanged(ctx)) {
+                    setupSegments(elements,pixelCount);
+                }
+                InterpolationSegment* segment = findSegment(pct,elements);
+                return UnitValue(defaultValue,defaultUnit);
+               
+               
+            }
+
 
         protected:
+            void setupSegments(LinkedList<ScriptPatternElement*>& elements,int totalPixels) {
+
+            }
+
+            InterpolationSegment* findSegment(double pct,LinkedList<ScriptPatternElement*>& elements) {
+                return NULL;
+            }
+
             virtual UnitValue interpolate(IScriptContext*ctx, IScriptValue*start,IScriptValue*end, double pct, double defaultValue, PositionUnit defaultUnit){
                 UnitValue suv = start->getUnitValue(ctx,defaultValue,defaultUnit);
                 UnitValue euv = end->getUnitValue(ctx,defaultValue,defaultUnit);
@@ -844,9 +830,13 @@ namespace DevRelief
                 double eval = euv.getValue();
                 double diff = eval - sval;
                 double result = sval + diff*pct;
+                m_logger->always("smooth interpolated value %f-%.2f",start->getFloatValue(ctx,-1),end->getFloatValue(ctx,-1));
+
                 return UnitValue(result,suv.getUnit());
 
-            }        
+            }     
+
+            StepWatcher m_stepWatcher;   
     };
 
     class StepInterpolation : public PatternInterpolation {
@@ -857,11 +847,62 @@ namespace DevRelief
 
             }
 
+            UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int totalPixels, double defaultValue, PositionUnit defaultUnit) {
+                if (m_stepWatcher.isChanged(ctx)) {
+                    setupSegments(elements,totalPixels);
+                }
+                InterpolationSegment* segment = findSegment(pct,elements);
+                if (segment) {
+                    ScriptPatternElement*element = elements.get(segment->startElementIndex);
+                    IScriptValue* val = element ? element->getValue() : NULL;
+                    if (val) {
+                        return val->getUnitValue(ctx,defaultValue,defaultUnit);
+                    }
+                }
+                return UnitValue(defaultValue,defaultUnit);
+                
+            }
+
 
         protected:
-            virtual UnitValue interpolate(IScriptContext*ctx, IScriptValue*start,IScriptValue*end, double pct, double defaultValue, PositionUnit defaultUnit){
-                return start->getUnitValue(ctx,defaultValue,defaultUnit);
+            void setupSegments(LinkedList<ScriptPatternElement*>& elements,int totalPixels) {
+                if (elements.size() != m_segments.size()){
+                    m_segments.clear();
+                    for(int i=0;i<elements.size();i++) {
+                        m_segments.add(new InterpolationSegment());
+                    }
+                }
+                double pixelOffset = 0;
+                int index = 0;
+                int pct = 0;
+                elements.each([&](ScriptPatternElement* element){
+                    InterpolationSegment* segment = m_segments.get(index);
+                    segment->startElementIndex = index;
+                    segment->endElementIndex = index;
+                    segment->startPercent = pixelOffset/totalPixels;
+                    index++;
+                    pixelOffset += element->getPixelCount();
+                    segment->endPercent = pixelOffset/totalPixels;
+                });
             }
+
+            InterpolationSegment* findSegment(double pct,LinkedList<ScriptPatternElement*>& elements) {
+                if (pct <= 0) {
+                    return m_segments.get(0);
+                }
+                if (pct >= 1) {
+                    return m_segments.get(m_segments.size()-1);
+                }
+                for(int i=0;i<m_segments.size();i++) {
+                    InterpolationSegment* segment = m_segments.get(i);
+                    if (segment->startPercent<=pct && segment->endPercent > pct) {
+                        return segment;
+                    }
+                }
+                return NULL;
+            }
+            LinkedList<InterpolationSegment*> m_segments;        
+            StepWatcher m_stepWatcher;   
     };
 
     class PatternRange : public AnimationRange {
@@ -906,7 +947,8 @@ namespace DevRelief
                 if (count < 2) { return 0;}
 
                 double val = AnimationRange::getValue(position);
-                return val;
+                m_logger->always("animate stretch %.2f/%.2f=%.2f",val,count-1,(val/(count-1)));
+                return val/(count-1);
                 // int index = (val/(count-1))*count; // stretch
                 // m_logger->never("PatternRange %.2f-%.2f %.2f=>%.2f",getMinValue(),getMaxValue(),position,val);
                 // return index;
@@ -938,12 +980,17 @@ namespace DevRelief
                 double index = ((int)round(val)) % (count);
                 if (m_alternate) {
                     // mod the countx2.  first half runs pattern forward.  2nd have goes backward;
-                    double index = ((int)round(val)) % ((count-1)*2);
+                    index = ((int)round(val)) % ((count-1)*2);
+                    m_logger->never("alternate index=%f  val=%f count=%d",index,val,count);
                     if (index >= (count-1)) { 
                         index = (count-1)*2-index;
                     }
+                    m_logger->never("\tindex=%f",index);
+                } else {
+                    m_logger->never("\tno alternate %f %f %d",index, val, count);
                 }
-                return index/count;
+                m_logger->never("\tresult=%f",index/count);
+                return index/(count);
                 
                 // m_logger->never("RepeatPatternRange count=%d pos=%f val=%f index=%d",count,position,val,index);
                 // return index;
@@ -1155,7 +1202,7 @@ namespace DevRelief
         return new ScriptNumberValue(getFloatValue(ctx,defaultValue));
    }
 
-   IScriptValue* ScriptValue::create(IJsonElement*json){
+   IScriptValue* ScriptValue::create(IJsonElement*json,JsonObject* parent){
        if (json == NULL) { 
            return NULL;
        }
@@ -1173,7 +1220,7 @@ namespace DevRelief
                 result = new ScriptNullValue();
             }
        } else if (json->asArray()) {
-           result = createFromArray(json->asArray());
+           result = createFromArray(json->asArray(),parent);
        } else if (json->asObject()) {
            result = createFromObject(json->asObject());
        }
@@ -1211,34 +1258,63 @@ namespace DevRelief
        return result;
    }
 
-   IScriptValue* ScriptValue::createFromArray(JsonArray* json){
+   IScriptValue* ScriptValue::createFromArray(JsonArray* json,JsonObject* parent){
        if (json == NULL || json->getCount() == 0) { return NULL;}
        int count = json->getCount();
-       ScriptFunction* func = new ScriptFunction(json->getAt(0)->asValue()->getString());
-       for(int i=1;i<count;i++){
-           func->addArg(create(json->getAt(i)));
+       IJsonElement* first = json->getAt(0);
+       // if the first element is a string, that is the function name.  otherwise this is a range;
+       if (first && first->isString()) {
+            ScriptFunction* func = new ScriptFunction(json->getAt(0)->asValue()->getString());
+            for(int i=1;i<count;i++){
+                func->addArg(create(json->getAt(i),parent));
+            }
+            return func;
+       } else {
+           ScriptValueLogger.always("range shorthand %x",parent);
+            bool unfold = parent ? parent->getBool("unfold",false) : false;
+            bool repeat = parent ? parent->getBool("repeat",false) : false;
+            bool smooth = parent ? parent->getBool("smooth",true) : true;
+           IScriptValue* range = createPattern(json,smooth,repeat,unfold,parent);
+           return range;
        }
-       return func;
    }
 
    IScriptValue* ScriptValue::createFromObject(JsonObject* json){
        if (json == NULL) { return NULL;}
-        AnimatedValue* result = NULL;
+        IScriptValue* result = NULL;
         JsonArray* pattern = json->getArray("pattern");
-        IJsonElement* start = json->getPropertyValue("start");
-        IJsonElement* end = json->getPropertyValue("end");
+        JsonArray* range = json->getArray("range");
+        bool unfoldDefault = false;
+        bool repeatDefault = true;
+        bool smoothDefault = false;
+        if (pattern == NULL && range != NULL) {
+            pattern = range;
+            repeatDefault = false;
+            smoothDefault = true;
+        }
         if (pattern) {
             ScriptValueLogger.never("create PatternValue");
-            PatternValue* patternValue = new PatternValue();
-            patternValue->setSmooth(json->getBool("smooth",false));
+            bool unfold = json->getBool("unfold",unfoldDefault);
+            bool repeat = json->getBool("repeat",repeatDefault);
+            bool smooth = json->getBool("smooth",smoothDefault);
+            IScriptValue* patternValue = createPattern(pattern,smooth,repeat,unfold,json);
             result = patternValue;
+        } else {
+            ScriptValueLogger.never("unknown object type %s",json->toString().text());
+
+        }
+        ScriptValueLogger.never("return IScriptValue %x",result);
+        return result;
+   }
+
+    IScriptValue* ScriptValue::createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json){
+            PatternValue* patternValue = new PatternValue();
+            patternValue->setSmooth(smooth);
             pattern->each([&](IJsonElement*elemenValue){
                 patternValue->addElement(createPatternElement(elemenValue));
             });
-            IAnimationEase* ease = createEase(json);
-            bool unfold = json->getBool("unfold",false);
-            bool repeat = json->getBool("repeat",false);
-            bool smooth = json->getBool("smooth",false);
+            IAnimationEase* ease = json ? createEase(json) : NULL;
+
             PatternInterpolation* pi = NULL;
             if (smooth){
                 pi = new SmoothInterpolation();
@@ -1252,19 +1328,11 @@ namespace DevRelief
             } else {
                 range = new StretchPatternRange(patternValue,unfold);
             }
-            IAnimationDomain* domain = createDomain(json,range);
+            IAnimationDomain* domain = json ? createDomain(json,range) : new ContextPositionDomain();
             IValueAnimator* animator = new Animator(domain,range,ease);
             patternValue->setAnimator(animator);
-        } else if (start && end) {
-            ScriptValueLogger.never("range not implemented %s",json->toString().text());
-           // result = new ScriptRangeValue(create(start),create(end),json);
-        } else {
-            ScriptValueLogger.never("unknown object type %s",json->toString().text());
-
-        }
-        ScriptValueLogger.never("return IScriptValue %x",result);
-        return result;
-   }
+            return patternValue;
+    }
 
     IAnimationEase* ScriptValue::createEase(JsonObject* json){
         IAnimationEase* ease = NULL;
@@ -1351,7 +1419,7 @@ namespace DevRelief
         if (val == NULL) {
             val = new ScriptNullValue();
         }
-        ScriptValueLogger.never("PatternElement %d %d %s",count,unit,val->toString().text());
+        ScriptValueLogger.always("PatternElement %d %d %s",count,unit,val->toString().text());
         element = new ScriptPatternElement(count,unit, val);
         return element;
    }

@@ -1,4 +1,5 @@
 #ifndef DRSCRIPT_CONTEXT_H
+
 #define DRSCRIPT_CONTEXT_H
 
 #include "../lib/log/logger.h"
@@ -22,6 +23,7 @@ namespace DevRelief
                 m_startTimeMsecs = millis();
                 m_msecsSincePrev = m_startTimeMsecs-(prev ? prev->getStartMsecs(): 0);
                 m_stepNumber = prev ? prev->getNumber()+1:0;
+                ScriptLogger.never("Step # %d  %x",m_stepNumber,prev);
             }
 
             virtual ~ScriptStep() {
@@ -39,13 +41,15 @@ namespace DevRelief
             long m_stepNumber;
     };
 
+
+
     class ScriptContext: public IScriptContext
     {
         public:
             ScriptContext(const char * type) { 
                 m_type = type;
                 m_logger = &ScriptLogger;
-                m_logger->debug("Create ScriptContext type: %s",m_type);
+                m_logger->never("Create ScriptContext type: %s",m_type);
                 m_currentStep = NULL;
                 m_lastStep = NULL;
                 m_strip = NULL;
@@ -86,7 +90,7 @@ namespace DevRelief
             };
 
             IScriptStep* beginStep() override {
-                ScriptStep* step = new ScriptStep(m_currentStep);
+                ScriptStep* step = new ScriptStep(m_lastStep);
                 if (m_currentStep) {
                     m_currentStep->destroy();
                 };
@@ -166,7 +170,7 @@ namespace DevRelief
         public:
         RootContext(IHSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
         {
-            m_logger->debug("RootContext(%x,%x)",strip,params);
+            m_logger->never("RootContext(%x,%x)",strip,params);
             m_baseStrip = strip;
             if (params) {
                 m_logger->debug("\tcopy params %s",params->toString().text());
@@ -213,7 +217,15 @@ namespace DevRelief
     };
 
 
-
+    bool StepWatcher::isChanged(IScriptContext*ctx) { 
+        if (ctx == NULL) { return true;}
+        int number = ctx->getStep()->getNumber();
+        if (number != m_stepNumber) {
+            m_stepNumber = number;
+            return true;
+        }
+        return false;
+    }
    
 }
 #endif

@@ -84,7 +84,7 @@ namespace DevRelief {
                     m_logger->debug("\tnot found");
                     return NULL;
                 }
-                return ScriptValue::create(propertyValue);
+                return ScriptValue::create(propertyValue,json);
             }
 
             void destroy(IScriptValue* val) {
@@ -323,6 +323,81 @@ namespace DevRelief {
         private:
             CubicBezierEase m_map;
 
+    };
+
+    class RGBElement : public ScriptLEDElement {
+        public:
+            RGBElement(const char *type=S_RGB) : ScriptLEDElement(type) {
+                m_red = NULL;
+                m_green = NULL;
+                m_blue = NULL;
+            }
+
+            virtual ~RGBElement() {
+                destroy(m_red);
+                destroy(m_green);
+                destroy(m_blue);
+            }
+
+            void setRed(IScriptValue* val) {
+                if (m_red) { m_red->destroy();}
+                 m_red = val;
+            }
+            void setGreen(IScriptValue* val) { 
+                if (m_green) { m_green->destroy();}
+                m_green = val;
+            }
+            void setBlue(IScriptValue* val) { 
+                if (m_blue) { m_blue->destroy();}
+                m_blue = val;
+            }
+        protected:
+            void drawLED(IHSLStripLED& led) override {
+                int red = 0;
+                int green = 0;
+                int blue = 0;
+                if (m_red) {
+                    red = m_red->getIntValue(led.getContext(),-1);
+                }
+                
+                if (m_blue) {
+                    blue = m_blue->getIntValue(led.getContext(),-1);
+                }
+                if (m_green) {
+                    green = m_green->getIntValue(led.getContext(),-1);
+                }
+                CRGB rgb(red,green,blue);
+                led.setRGB(rgb);
+            }
+
+
+            void valuesToJson(JsonObject* json) const override{
+                ScriptLEDElement::valuesToJson(json);
+                m_logger->debug("RGBElement.valuesToJson");
+                if (m_red) { 
+                    m_logger->debug("\set red");
+                    json->set("red",m_red->toJson(json->getRoot()));
+                }
+                if (m_green) { 
+                    m_logger->debug("\set green");
+                    json->set("green",m_green->toJson(json->getRoot()));
+                }
+                if (m_blue) { 
+                    m_logger->debug("\set blue");
+                    json->set("blue",m_blue->toJson(json->getRoot()));
+                }
+                m_logger->debug("\tdone RGBElement.valuesToJson");
+            }
+            void valuesFromJson(JsonObject* json) override {
+                ScriptLEDElement::valuesFromJson(json);
+                m_logger->debug("valuesFromJson");
+                setRed(getJsonValue(json,"red"));
+                setGreen(getJsonValue(json,"green"));
+                setBlue(getJsonValue(json,"blue"));
+            }        
+            IScriptValue* m_red;
+            IScriptValue* m_green;
+            IScriptValue* m_blue;
     };
 
 }

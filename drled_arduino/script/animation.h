@@ -101,6 +101,7 @@ namespace DevRelief
             if (getMin() == getMax() || getMin()==getValue()) { return 0;}
             double distance = getMax()-getMin();
             double current = getValue()-getMin();
+            m_logger->never("AnimationDomain %f %f %f",current,distance,current/distance);
             return current/distance;
         }
 
@@ -184,20 +185,36 @@ namespace DevRelief
                 m_startMsecs = startMSecs > 0 ? startMSecs : millis();
                 m_durationMsecs = 0;
                 setPosition(startMSecs,startMSecs,startMSecs);
+                m_step = -1;
+                m_pos = millis();
             }
 
             void setDuration(int durationMsecs){
                 m_durationMsecs = durationMsecs;
                 m_min = m_startMsecs;
                 m_max = m_startMsecs + m_durationMsecs;
-                m_pos = millis();
                 while(m_max < m_pos) {
                     m_min += m_durationMsecs;
                     m_max += m_durationMsecs;
                 }
             }
 
+            void update(IScriptContext* ctx){
+                m_logger->never("TimeDomainUpdate %d %d",m_step,ctx->getStep()->getNumber());
+                if (m_step == ctx->getStep()->getNumber()) {
+                    return;
+                }
+                m_step = ctx->getStep()->getNumber();
+                m_pos = millis();
+                if (m_pos > m_max) {
+                    m_logger->never("repeat");
+                    m_min = m_max;
+                    m_max += m_durationMsecs;
+                }
+            }
+
         protected:
+            int m_step;
             unsigned long m_startMsecs;
             unsigned long m_durationMsecs;
 
@@ -237,7 +254,8 @@ namespace DevRelief
                     if (val > 0) {
                         setRange(m_range, val);
                     }                    
-                }                
+                }    
+                TimeDomain::update(ctx);            
             }
 
         private: 
@@ -267,6 +285,7 @@ namespace DevRelief
                     double val = m_durationValue->getFloatValue(ctx,0);
                     setDuration(val);
                 }                
+                TimeDomain::update(ctx);
             }     
         private:
             IScriptValue* m_durationValue;                   
