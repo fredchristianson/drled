@@ -190,6 +190,8 @@ namespace DevRelief
             element = new HSLElement();
         } else if (Util::equalAny(type,S_RHSL)) {
             element = new RainbowHSLElement();
+        } else if (Util::equalAny(type,S_RGB)) {
+            element = new RGBElement();
         } else if (Util::equalAny(type,S_SEGMENT)) {
             element = new ScriptSegmentContainer();
         }

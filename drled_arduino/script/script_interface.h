@@ -307,6 +307,19 @@ namespace DevRelief{
         STRETCH_PATTERN=1,
         NO_EXTEND=2
     };
+
+    class StepWatcher {
+        // this lets objects perform updates once for every step.  mainly useful for IScriptValue
+        // instances that may update every step but are accessed every LED.
+        public:
+            StepWatcher() { m_stepNumber=-1;}
+            bool isChanged(IScriptContext*ctx);
+
+        private: 
+            int m_stepNumber;
+
+
+    };
 };
 
 #endif
