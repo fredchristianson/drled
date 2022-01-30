@@ -602,58 +602,7 @@ namespace DevRelief
             IValueAnimator* m_animator;
     };
 
-    class ScriptRangeValue : public AnimatedValue
-    {
-    public:
-        ScriptRangeValue(IScriptValue *start, IScriptValue *end) : AnimatedValue()
-        {
-            m_start = start;
-            m_end = end;
-        }
-
-        virtual ~ScriptRangeValue()
-        {
-            if (m_start) {m_start->destroy();}
-            if (m_end) {m_end->destroy();}
-        }
-
-        UnitValue getUnitValue(IScriptContext*ctx, double defaultValue, PositionUnit defaultUnit) {
-            if (m_animator == NULL) {
-                return UnitValue(defaultValue,defaultUnit);
-            }
-            m_animator->update(ctx);
-
-            double value = m_animator->getRangeValue(ctx);
-            return value;
-  
-        }
-
-
-        virtual DRString toString()
-        {
-            m_logger->never("format range DRString");
-            DRString result("range:");
-            result.append(m_start ? m_start->toString() : "NULL")
-                .append("--")
-                .append(m_end ? m_end->toString() : "NULL");
-            return result;
-        }
-
-
-/*
-
-        IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
-            auto start = m_start ? m_start->eval(ctx,defaultValue) : NULL;
-            auto end = m_end ? m_end->eval(ctx,defaultValue) : NULL;
-            return new ScriptRangeValue(start,end,NULL);
-        }
-*/
-
-    protected:
-        IScriptValue *m_start;
-        IScriptValue *m_end;
-
-    };
+ 
 
     class PatternInterpolation {
         public:
@@ -798,6 +747,7 @@ namespace DevRelief
     class SmoothInterpolation : public PatternInterpolation {
         public:
             SmoothInterpolation() :PatternInterpolation() {
+                
             }
             virtual ~SmoothInterpolation() {
 
@@ -805,9 +755,32 @@ namespace DevRelief
 
             UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int pixelCount, double defaultValue, PositionUnit defaultUnit) {
                 if (m_stepWatcher.isChanged(ctx)) {
+                    m_logger->always("update SmoothInterpolation segments");
                     setupSegments(elements,pixelCount);
+                    m_segments.each([&](InterpolationSegment*seg){
+                        m_logger->always("segment %d-%d  %f-%f",seg->startElementIndex,seg->endElementIndex,seg->startPercent,seg->endPercent);
+                    });
                 }
                 InterpolationSegment* segment = findSegment(pct,elements);
+                if (segment != NULL) {
+                    ScriptPatternElement* start = elements.get(segment->startElementIndex);
+                    ScriptPatternElement* end = elements.get(segment->endElementIndex);
+                    if (start != NULL && start->getValue() != NULL && end == NULL){
+                        m_logger->always("no start.  return end value");
+                        return start->getValue()->getUnitValue(ctx,defaultValue,defaultUnit);
+                    } else if (end != NULL && end->getValue() != NULL && start == NULL){
+                        m_logger->always("no end.  return start value");
+                        return end->getValue()->getUnitValue(ctx,defaultValue,defaultUnit);
+                    } else {
+                        double segmentPct = (pct-segment->startPercent)/(segment->endPercent-segment->startPercent);
+                        UnitValue uv = interpolate(ctx,start->getValue(),end->getValue(),segmentPct,defaultValue,defaultUnit);
+                        m_logger->always("interpolate spct=%.2f  pct=%.2f  start=%.2f  end=%.2f   result=%.2f  (default=%.2f)",segmentPct,pct,segment->startPercent,segment->endPercent,uv.getValue(),defaultValue);
+                        return uv;
+                    }
+
+                }
+                m_logger->always("no segment found %f",defaultValue);
+
                 return UnitValue(defaultValue,defaultUnit);
                
                
@@ -816,27 +789,101 @@ namespace DevRelief
 
         protected:
             void setupSegments(LinkedList<ScriptPatternElement*>& elements,int totalPixels) {
+                int elementCount = elements.size();
+                if (elementCount<3) {
+                    m_segments.clear();
+                    if (elementCount==0) { return;}
+                    InterpolationSegment* seg = new InterpolationSegment();
+                    seg->startElementIndex = 0;
+                    seg->endElementIndex = -1;
+                    seg->startPercent = 0;
+                    seg->endPercent = 1;
+                    if (elementCount==2) {
+                        seg->endElementIndex=1;
+                    }
+                    m_segments.add(seg);
+                    return;
+
+                }
+               if (elements.size() != m_segments.size()+1){
+                    m_segments.clear();
+                    for(int i=0;i<elements.size()-1;i++) {
+                        m_segments.add(new InterpolationSegment());
+                    }
+                }
+                double pixelOffset = 0;
+                int startElementIndex = 0;
+                int endElementIndex = 0;
+                double startPct = 0;
+                double endPct = 0;
+                int segmentIndex = 0;
+
+                for(int elementIndex=0;elementIndex<elementCount-1;elementIndex++) {
+                    InterpolationSegment* segment = m_segments.get(elementIndex);
+                    ScriptPatternElement* start = elements.get(elementIndex);                    
+                    ScriptPatternElement* end = elements.get(elementIndex+1);
+                    segment->startElementIndex = elementIndex;
+                    segment->endElementIndex = elementIndex+1;
+
+                    segment->startPercent = startPct;
+
+                    double endPixelOffset =  pixelOffset + start->getPixelCount() + end->getPixelCount()/2.0;
+                    if (elementIndex+2>=elementCount) {
+                        endPixelOffset =  totalPixels;
+                        segment->endPercent = 1;
+                    } else {
+                        segment->endPercent = 1.0*endPixelOffset/totalPixels;
+                    }
+                    pixelOffset += start->getPixelCount();
+                    startPct = segment->endPercent;
+                }
 
             }
 
             InterpolationSegment* findSegment(double pct,LinkedList<ScriptPatternElement*>& elements) {
+                m_logger->never("find segment %.2f of %d",pct,m_segments.size());
+               if (pct == 0 || m_segments.size() <= 2) {
+                    return m_segments.get(0);
+                }
+                if (pct >= 1) {
+                    return m_segments.get(m_segments.size()-1);
+                }
+                for(int i=0;i<m_segments.size();i++) {
+                    InterpolationSegment* segment = m_segments.get(i);
+                    if (segment->startPercent<=pct && segment->endPercent > pct) {
+                        return segment;
+                    }
+                    m_logger->never("\tno match %.2f < %.2f < %.2f",segment->startPercent,pct,segment->endPercent);
+
+                }
                 return NULL;
             }
 
             virtual UnitValue interpolate(IScriptContext*ctx, IScriptValue*start,IScriptValue*end, double pct, double defaultValue, PositionUnit defaultUnit){
+                if (start == NULL && end == NULL) {
+                    m_logger->never("no value for start or end");
+                    return UnitValue(defaultValue,defaultUnit);
+                } else if (start == NULL){
+                    m_logger->never("no value for start");
+                    return end->getUnitValue(ctx,defaultValue,defaultUnit);
+                } else if (end == NULL){
+                    m_logger->never("no value for end");
+                    return start->getUnitValue(ctx,defaultValue,defaultUnit);
+                }
                 UnitValue suv = start->getUnitValue(ctx,defaultValue,defaultUnit);
                 UnitValue euv = end->getUnitValue(ctx,defaultValue,defaultUnit);
                 double sval = suv.getValue();
                 double eval = euv.getValue();
                 double diff = eval - sval;
                 double result = sval + diff*pct;
-                m_logger->always("smooth interpolated value %f-%.2f",start->getFloatValue(ctx,-1),end->getFloatValue(ctx,-1));
+                m_logger->never("smooth interpolated value %.2f-%.2f  %.2f  %.2f",start->getFloatValue(ctx,-1),end->getFloatValue(ctx,-1),pct,result);
 
                 return UnitValue(result,suv.getUnit());
 
             }     
 
-            StepWatcher m_stepWatcher;   
+            StepWatcher m_stepWatcher;  
+            LinkedList<InterpolationSegment*> m_segments;    
     };
 
     class StepInterpolation : public PatternInterpolation {
@@ -947,7 +994,7 @@ namespace DevRelief
                 if (count < 2) { return 0;}
 
                 double val = AnimationRange::getValue(position);
-                m_logger->always("animate stretch %.2f/%.2f=%.2f",val,count-1,(val/(count-1)));
+                m_logger->never("animate stretch %.2f/%.2f=%.2f",val,count-1,(val/(count-1)));
                 return val/(count-1);
                 // int index = (val/(count-1))*count; // stretch
                 // m_logger->never("PatternRange %.2f-%.2f %.2f=>%.2f",getMinValue(),getMaxValue(),position,val);
@@ -1262,8 +1309,16 @@ namespace DevRelief
        if (json == NULL || json->getCount() == 0) { return NULL;}
        int count = json->getCount();
        IJsonElement* first = json->getAt(0);
+       if (first == NULL) { return new ScriptNullValue();}
        // if the first element is a string, that is the function name.  otherwise this is a range;
-       if (first && first->isString()) {
+       IJsonValueElement* val = first->asValue();
+       bool num = first->isNumber();
+       if (!num) {
+            const char * str = val->getString();
+            if (str == NULL || str[0] == 0) { return new ScriptNullValue();}
+            num = isdigit(str[0]);
+       }
+       if (!num) {
             ScriptFunction* func = new ScriptFunction(json->getAt(0)->asValue()->getString());
             for(int i=1;i<count;i++){
                 func->addArg(create(json->getAt(i),parent));

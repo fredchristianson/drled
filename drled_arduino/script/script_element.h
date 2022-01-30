@@ -257,17 +257,23 @@ namespace DevRelief {
             void drawLED(IHSLStripLED& led) override {
                 if (m_hue) {
                     int hue = m_hue->getIntValue(led.getContext(),-1);
-                    m_logger->never("drawLED %d %d",led.getIndex(),hue);
-                    led.setHue(adjustHue(hue));
+                    if (hue != -1) {
+                        m_logger->never("drawLED %d %d",led.getIndex(),hue);
+                        led.setHue(adjustHue(hue));
+                    }
                 }
                 
                 if (m_lightness) {
                     int lightness = m_lightness->getIntValue(led.getContext(),-1);
-                    led.setLightness(adjustLightness( lightness));
+                    if (lightness != -1) {
+                        led.setLightness(adjustLightness( lightness));
+                    }
                 }
                 if (m_saturation) {
                     int saturation = m_saturation->getIntValue(led.getContext(),-1);
-                    led.setSaturation(adjustSaturation( saturation));
+                    if (saturation != -1) {
+                        led.setSaturation(adjustSaturation( saturation));
+                    }
                 }
             }
 
@@ -357,17 +363,19 @@ namespace DevRelief {
                 int green = 0;
                 int blue = 0;
                 if (m_red) {
-                    red = m_red->getIntValue(led.getContext(),-1);
+                    red = m_red->getIntValue(led.getContext(),0);
                 }
                 
                 if (m_blue) {
-                    blue = m_blue->getIntValue(led.getContext(),-1);
+                    blue = m_blue->getIntValue(led.getContext(),0);
                 }
                 if (m_green) {
-                    green = m_green->getIntValue(led.getContext(),-1);
+                    green = m_green->getIntValue(led.getContext(),0);
                 }
-                CRGB rgb(red,green,blue);
-                led.setRGB(rgb);
+                if (red != 0 || blue != 0 || green != 0) {
+                    CRGB rgb(red,green,blue);
+                    led.setRGB(rgb);
+                }
             }
 
 
