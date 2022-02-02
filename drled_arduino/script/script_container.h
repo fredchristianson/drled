@@ -77,7 +77,7 @@ namespace DevRelief
             m_logger->debug("update strip %x",m_strip);
             m_strip->update(pos,context);
             context->setStrip(m_strip);
-            m_logger->debug("draw container %s %d",m_type,m_position->getOverflow());
+            m_logger->debug("draw container %s %d",m_type,m_position->isReverse());
 
             m_children.each([&](IScriptElement* child) {
                 m_logger->debug("set current element  %x %s",child, child->getType());
@@ -97,12 +97,15 @@ namespace DevRelief
         bool isPositionable()  const override { return true;}
     
         void valuesFromJson(JsonObject* json) override {
+            PositionableElement::valuesFromJson(json);
             m_logger->never("Load container json %s %s",getType(),json->toString().text());
+            m_logger->always("Containter %s reverse %d",getType(),m_position->isReverse());
             JsonArray* elements = json->getArray("elements");
             elementsFromJson(elements);    
         }    
 
         void valuesToJson(JsonObject* json) const override {
+            PositionableElement::valuesToJson(json);
             m_logger->never("ScriptContainer.valuesToJson %s",getType());
 
             JsonArray* elements = json->createArray("elements");

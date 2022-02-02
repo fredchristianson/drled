@@ -19,6 +19,7 @@ namespace DevRelief{
                 m_flowIndex = 0;
                 m_position = NULL;
                 m_reverse = false;
+
             }
 
             virtual ~ScriptHSLStrip() {
@@ -91,7 +92,7 @@ namespace DevRelief{
             void update(IElementPosition * pos, IScriptContext* context) override  {
                 m_logger->never("ScriptHSLStrip.update %x %x",pos,context);
                 m_reverse = pos->isReverse();
-                m_logger->never("\treverse %d",m_reverse);
+                m_logger->always("\treverse %d",m_reverse);
                 
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
@@ -142,9 +143,7 @@ namespace DevRelief{
             }
 
             virtual int translateIndex(int index){
-                if (m_reverse) {
-                    index = m_length - index-1;
-                }                
+               
                 int tidx = index+m_offset;
                 if (m_overflow == OVERFLOW_WRAP) {
                     if (index<0) { tidx = m_length- (index%m_length);}
@@ -155,7 +154,9 @@ namespace DevRelief{
                     if (tidx >= m_offset+m_length) {tidx = m_offset+m_length-1;}
                 }
                 m_logger->never("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
-
+                if (m_reverse) {
+                    tidx = m_length - tidx -1;
+                } 
                 return tidx;
             }
             
@@ -167,6 +168,7 @@ namespace DevRelief{
             int m_offset;
             int m_flowIndex;
             bool m_reverse;
+
             PositionUnit m_unit;
             PositionOverflow m_overflow;
             Logger* m_logger;
@@ -189,17 +191,27 @@ namespace DevRelief{
             void update(IElementPosition * pos, IScriptContext* context) override  {
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
+                m_parentLength = m_base->getCount();
 
                 m_logger->debug("RootHSLStrip.update %x %x",pos,context);
                 m_logger->debug("\tplen %d",m_parentLength);
                 m_unit = pos->getUnit();
-                m_length = unitToPixel(pos->getLength());
+                if (pos->hasLength()) {
+                    m_length = unitToPixel(pos->getLength());
+                } else {
+                    m_length = m_parentLength;
+                }
                 m_logger->debug("\len %d",m_length);
-                m_offset = unitToPixel(pos->getOffset());
+                if (pos->hasOffset()) {
+                    m_offset = unitToPixel(pos->getOffset());
+                } else {
+                    m_offset = 0;
+                }
+                m_reverse = pos->isReverse();
+
                 m_logger->debug("\toffset %d",m_offset);
                 m_overflow = pos->getOverflow();
                 m_logger->debug("\toverflow %d",m_overflow);
-                m_parentLength = m_length;
                 m_logger->debug("\toverflow=%d offset=%d length=%d unit=%d",m_overflow,m_offset,m_length,m_unit);
             }
 
