@@ -137,6 +137,7 @@ namespace DevRelief {
                 }
             }
             virtual void positionFromJson(JsonObject* json){
+                m_logger->debug("positionFromJson %s",getType());
                 if (isPositionable()) {
                     IElementPosition*pos = getPosition();
                     if (pos == NULL) {
@@ -144,7 +145,10 @@ namespace DevRelief {
                     } else {
                         pos->fromJson(json);
                     }
+                } else {
+                    m_logger->debug("\tnot positionable");
                 }
+                m_logger->debug("\treverse %d",m_position->isReverse());
             }
             IElementPosition* m_position;
     };

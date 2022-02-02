@@ -755,10 +755,10 @@ namespace DevRelief
 
             UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int pixelCount, double defaultValue, PositionUnit defaultUnit) {
                 if (m_stepWatcher.isChanged(ctx)) {
-                    m_logger->always("update SmoothInterpolation segments");
+                    m_logger->never("update SmoothInterpolation segments");
                     setupSegments(elements,pixelCount);
                     m_segments.each([&](InterpolationSegment*seg){
-                        m_logger->always("segment %d-%d  %f-%f",seg->startElementIndex,seg->endElementIndex,seg->startPercent,seg->endPercent);
+                        m_logger->never("segment %d-%d  %f-%f",seg->startElementIndex,seg->endElementIndex,seg->startPercent,seg->endPercent);
                     });
                 }
                 InterpolationSegment* segment = findSegment(pct,elements);
@@ -766,20 +766,20 @@ namespace DevRelief
                     ScriptPatternElement* start = elements.get(segment->startElementIndex);
                     ScriptPatternElement* end = elements.get(segment->endElementIndex);
                     if (start != NULL && start->getValue() != NULL && end == NULL){
-                        m_logger->always("no start.  return end value");
+                        m_logger->never("no start.  return end value");
                         return start->getValue()->getUnitValue(ctx,defaultValue,defaultUnit);
                     } else if (end != NULL && end->getValue() != NULL && start == NULL){
-                        m_logger->always("no end.  return start value");
+                        m_logger->never("no end.  return start value");
                         return end->getValue()->getUnitValue(ctx,defaultValue,defaultUnit);
                     } else {
                         double segmentPct = (pct-segment->startPercent)/(segment->endPercent-segment->startPercent);
                         UnitValue uv = interpolate(ctx,start->getValue(),end->getValue(),segmentPct,defaultValue,defaultUnit);
-                        m_logger->always("interpolate spct=%.2f  pct=%.2f  start=%.2f  end=%.2f   result=%.2f  (default=%.2f)",segmentPct,pct,segment->startPercent,segment->endPercent,uv.getValue(),defaultValue);
+                        m_logger->never("interpolate spct=%.2f  pct=%.2f  start=%.2f  end=%.2f   result=%.2f  (default=%.2f)",segmentPct,pct,segment->startPercent,segment->endPercent,uv.getValue(),defaultValue);
                         return uv;
                     }
 
                 }
-                m_logger->always("no segment found %f",defaultValue);
+                m_logger->never("no segment found %f",defaultValue);
 
                 return UnitValue(defaultValue,defaultUnit);
                
@@ -1325,7 +1325,7 @@ namespace DevRelief
             }
             return func;
        } else {
-           ScriptValueLogger.always("range shorthand %x",parent);
+           ScriptValueLogger.never("range shorthand %x",parent);
             bool unfold = parent ? parent->getBool("unfold",false) : false;
             bool repeat = parent ? parent->getBool("repeat",false) : false;
             bool smooth = parent ? parent->getBool("smooth",true) : true;
@@ -1474,7 +1474,7 @@ namespace DevRelief
         if (val == NULL) {
             val = new ScriptNullValue();
         }
-        ScriptValueLogger.always("PatternElement %d %d %s",count,unit,val->toString().text());
+        ScriptValueLogger.never("PatternElement %d %d %s",count,unit,val->toString().text());
         element = new ScriptPatternElement(count,unit, val);
         return element;
    }
