@@ -202,16 +202,23 @@ namespace DevRelief {
             }
 
             virtual void draw(IScriptContext*context) override {
+                m_logger->never("ScriptLEDElement.draw");
+                m_logger->showMemory();
+                
                 IScriptHSLStrip* parentStrip = context->getStrip();
+                
                 m_elementPosition.evaluateValues(context);
+               
                 m_logger->debug("ScriptLEDElement.draw()");
                 DrawStrip strip(context,parentStrip,&m_elementPosition);
                 strip.eachLED([&](IHSLStripLED& led) {
                     DrawLED* dl = (DrawLED*)&led;
-                    m_logger->never("\tdraw child LED %d",dl->index());
+                    m_logger->never("\tdraw child LED %d",dl->index()); 
                     drawLED(led);
                 });
-                m_logger->debug("\t done ScriptLEDElement.draw()");
+                
+                m_logger->never("\t done ScriptLEDElement.draw()");
+                m_logger->showMemory();
 
             }
 

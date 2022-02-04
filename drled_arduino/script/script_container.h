@@ -64,34 +64,37 @@ namespace DevRelief
         }
 
         void draw(IScriptContext* context) override {
-            m_logger->debug("setCurrentElement %s %x",getType(),context);
+            m_logger->never("setCurrentElement %s %x",getType(),context);
             context->enterScope();
+            
             auto previousElement = context->setCurrentElement(this);
-            m_logger->debug("getPosition");
+/**/            
+            m_logger->never("getPosition");
             IElementPosition*pos = getPosition();
-            JsonRoot root;
-            JsonObject*obj = root.getTopObject();
-            pos->toJson(obj);
-            m_logger->debug("evaluateValues %x %s",pos,obj->toString().text());
+
             pos->evaluateValues(context);
-            m_logger->debug("update strip %x",m_strip);
+            m_logger->never("update strip %x",m_strip);
+/*   */         
             m_strip->update(pos,context);
             context->setStrip(m_strip);
-            m_logger->debug("draw container %s %d",m_type,m_position->isReverse());
-
+            m_logger->never("draw container %s %d",m_type,m_position->isReverse());
+/**/
             m_children.each([&](IScriptElement* child) {
-                m_logger->debug("set current element  %x %s",child, child->getType());
+                m_logger->never("set current element  %x %s",child, child->getType());
                 context->setCurrentElement(child);
-                m_logger->debug("drawChild  %x",child);
-                child->draw(context);
-                m_logger->debug("\tdone draw() child");
+                m_logger->never("drawChild  %x",child);
+                /**/child->draw(context);
+
+                m_logger->never("\tdone draw() child");
             });
-            m_logger->debug("restore strip");
+/**/            
+            m_logger->never("restore strip");
             context->setStrip(m_strip->getParent());
-            m_logger->debug("restore element");
+            m_logger->never("restore element");
             context->setCurrentElement(previousElement);
+/**/            
             context->leaveScope();
-            m_logger->debug("finished draw %s",getType());
+            m_logger->never("finished draw %s",getType());
         };
 
         bool isPositionable()  const override { return true;}
@@ -99,7 +102,7 @@ namespace DevRelief
         void valuesFromJson(JsonObject* json) override {
             PositionableElement::valuesFromJson(json);
             m_logger->never("Load container json %s %s",getType(),json->toString().text());
-            m_logger->always("Containter %s reverse %d",getType(),m_position->isReverse());
+            m_logger->never("Containter %s reverse %d",getType(),m_position->isReverse());
             JsonArray* elements = json->getArray("elements");
             elementsFromJson(elements);    
         }    

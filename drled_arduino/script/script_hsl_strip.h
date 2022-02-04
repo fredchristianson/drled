@@ -92,7 +92,7 @@ namespace DevRelief{
             void update(IElementPosition * pos, IScriptContext* context) override  {
                 m_logger->never("ScriptHSLStrip.update %x %x",pos,context);
                 m_reverse = pos->isReverse();
-                m_logger->always("\treverse %d",m_reverse);
+                m_logger->never("\treverse %d",m_reverse);
                 
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
@@ -130,7 +130,9 @@ namespace DevRelief{
                     }
                 }
                 m_overflow = pos->getOverflow();
-                m_parent->setFlowIndex(m_offset+m_length);
+                if (pos->isFlow()) {
+                    m_parent->setFlowIndex(m_offset+m_length);
+                }
                 m_logger->never("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
 
             }
@@ -211,7 +213,7 @@ namespace DevRelief{
 
                 m_logger->debug("\toffset %d",m_offset);
                 m_overflow = pos->getOverflow();
-                m_logger->debug("\toverflow %d",m_overflow);
+                m_logger->never("\toverflow %d",m_overflow);
                 m_logger->debug("\toverflow=%d offset=%d length=%d unit=%d",m_overflow,m_offset,m_length,m_unit);
             }
 

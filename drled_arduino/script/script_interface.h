@@ -26,6 +26,12 @@ namespace DevRelief{
         SCRIPT_PAUSED
     };
 
+    typedef enum RunState {
+        STATE_RUNNING,
+        STATE_PAUSED,
+        STATE_COMPLETE
+    };
+
     class IScriptContext;
     class IScriptValue;
     class IScriptHSLStrip;
@@ -93,6 +99,8 @@ namespace DevRelief{
             virtual double getValue() const= 0;
             virtual double getDistance()const =0; // distance from min to max (max-min+1)
             virtual void update(IScriptContext* ctx)=0;
+            virtual bool isTime() const = 0;
+            virtual RunState getState() const =0;
     };
     
     class IAnimationRange {
@@ -105,6 +113,8 @@ namespace DevRelief{
             virtual double getDistance()=0; // distance from min to max (max-min+1)
             virtual bool unfold()=0;
             virtual void update(IScriptContext* ctx)=0;
+            virtual double getDelayValue(IScriptContext* ctx)=0;
+            virtual double getCompleteValue(IScriptContext* ctx)=0;
     };
 
     class IAnimationEase {

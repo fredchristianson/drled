@@ -15,7 +15,7 @@ namespace DevRelief
             m_low = 0;
             m_high = 0;
             m_unfold = unfold;
-
+            m_lastValue = 0;
         }
         AnimationRange(double low, double high, bool unfold=false)
         {
@@ -65,6 +65,9 @@ namespace DevRelief
         double getMinValue() override { return m_low; }
         double getMaxValue() override { return m_high; }
         double getDistance() { return (abs(m_high-m_low)+1);}
+
+        double getDelayValue(IScriptContext* ctx) override { return m_lastValue;}
+        double getCompleteValue(IScriptContext* ctx) override { return getDelayValue(ctx);}
        
     protected:
         double m_lastPosition;
@@ -72,6 +75,7 @@ namespace DevRelief
         double m_low;
         double m_high;
         bool m_unfold;
+
         Logger* m_logger;
     };
 
@@ -150,16 +154,19 @@ namespace DevRelief
 
         }
 
+        RunState getState() const { return STATE_RUNNING;}
 
         void update(IScriptContext* ctx) override { 
 
         }
 
+        bool isTime() const  override { return false;}     
+
     private:
 
     };
 
-    class ContextPositionDomain : public AnimationDomain
+    class ContextPositionDomain : public PositionDomain
     {
     public:
         ContextPositionDomain()
@@ -186,37 +193,108 @@ namespace DevRelief
                 m_durationMsecs = 0;
                 setPosition(startMSecs,startMSecs,startMSecs);
                 m_step = -1;
+                m_repeatLimitValue = NULL;
+                m_delayValue = NULL;
                 m_pos = millis();
+                m_delayMsecs = 0;
+                m_repeatLimit=-1;
+               m_state = STATE_RUNNING;
+                m_repeatCount = 0;
             }
 
+            virtual ~TimeDomain() {
+                if (m_repeatLimitValue) { m_repeatLimitValue->destroy();}
+                if (m_delayValue) { m_delayValue->destroy();}
+            }
+
+            void destroy() { delete this;}
+
+            bool isTime() const override { return true;}
             void setDuration(int durationMsecs){
                 m_durationMsecs = durationMsecs;
-                m_min = m_startMsecs;
-                m_max = m_startMsecs + m_durationMsecs;
-                while(m_max < m_pos) {
-                    m_min += m_durationMsecs;
-                    m_max += m_durationMsecs;
+                if (m_min == 0) {
+                    m_min = m_startMsecs;
+                    m_max = m_startMsecs + m_durationMsecs;
+                    while(m_max < m_pos) {
+                        m_min += m_durationMsecs;
+                        m_max += m_durationMsecs;
+                    }
                 }
             }
 
             void update(IScriptContext* ctx){
-                m_logger->never("TimeDomainUpdate %d %d",m_step,ctx->getStep()->getNumber());
+
+                m_pos = millis();
+                if (m_state == STATE_COMPLETE) { return;}
+
                 if (m_step == ctx->getStep()->getNumber()) {
                     return;
                 }
+                m_logger->never("TimeDomain.update %f %f %f",m_min,m_pos,m_max);
+
                 m_step = ctx->getStep()->getNumber();
-                m_pos = millis();
-                if (m_pos > m_max) {
-                    m_logger->never("repeat");
-                    m_min = m_max;
-                    m_max += m_durationMsecs;
+                m_logger->never("\tget values");
+                if (m_repeatLimitValue){
+                    m_logger->never("\trepeat");
+                    m_repeatLimit = m_repeatLimitValue->getIntValue(ctx,-1);
+                    m_logger->never("\trepeat limit=%d",m_repeatLimit);
                 }
+                if (m_delayValue) {
+                    m_delayMsecs = m_delayValue->getMsecValue(ctx,0);
+                    m_logger->never("\tdelay msecs=%d",m_delayMsecs);
+                }
+                m_logger->never("TimeDomainUpdate %d %d",m_step,ctx->getStep()->getNumber());
+
+                if (m_state == STATE_PAUSED) { 
+                    if (m_pos >= m_min) {
+                        m_logger->never("resume %f %f",m_pos,m_min);
+                        m_state = STATE_RUNNING;
+                        m_logger->never("\t%f < %f < %f",m_min,m_pos,m_max);
+                    } else {
+                        m_logger->never("\tpaused %f < %f < %f",m_min,m_pos,m_max);
+                        return;
+                    }
+                }
+                if (m_pos > m_max) {
+                    m_repeatCount += 1;
+                    if (m_repeatLimit>0 && m_repeatCount>=m_repeatLimit) {
+                        m_logger->never("complete %d %d",m_repeatCount,m_repeatLimit);
+                        m_state = STATE_COMPLETE;
+                        return;
+                    }
+
+                    m_logger->never("repeat");
+                    m_min = m_pos + m_delayMsecs;
+                    m_max = m_min+m_durationMsecs;
+                    m_logger->never("repeat %f %f %d",m_pos,m_min,m_delayMsecs);
+                    if (m_pos < m_min) {
+                        m_logger->never("pause");
+                        m_state = STATE_PAUSED;
+                    }
+                }
+                
             }
+
+            RunState getState() const { return m_state;}
+
+            void setRepeat(IScriptValue* value) {
+                m_logger->never("Repeat limit %x",value);
+                 m_repeatLimitValue = value;}
+            void setDelay(IScriptValue* value) { 
+                m_logger->never("Repeat delay %x",value);
+                m_delayValue = value;}
 
         protected:
             int m_step;
             unsigned long m_startMsecs;
             unsigned long m_durationMsecs;
+            long m_delayMsecs;
+            long m_repeatLimit;
+            long m_repeatCount;
+            RunState m_state;
+
+            IScriptValue* m_repeatLimitValue;
+            IScriptValue* m_delayValue;
 
     };
 
@@ -283,6 +361,7 @@ namespace DevRelief
             void update(IScriptContext* ctx){
                 if (m_durationValue) {
                     double val = m_durationValue->getFloatValue(ctx,0);
+                    m_logger->debug("set duration %f",val);
                     setDuration(val);
                 }                
                 TimeDomain::update(ctx);
@@ -422,13 +501,21 @@ namespace DevRelief
             if (m_ease) { m_ease->update(ctx);}
         }
 
+        RunState getState() { return m_domain->getState();}
 
         double getRangeValue(IScriptContext* ctx)
         {
-
             if (m_domain == NULL || m_range==NULL) {
                 m_logger->error("Animator missing domain (%x) or range(%x)",m_domain,m_range);
                 return 0;
+            }
+            m_logger->debug("Animator.getRangeValue()");
+            if (m_domain->getState() == STATE_PAUSED) {
+                m_logger->never("\tpaused");
+                return m_range->getDelayValue(ctx);
+            } else if (m_domain->getState() == STATE_COMPLETE) {
+                m_logger->never("\tcomplete");
+                return m_range->getCompleteValue(ctx);
             }
             double percent = m_domain->getPercent();
             m_logger->never("Animator percent %f",percent);

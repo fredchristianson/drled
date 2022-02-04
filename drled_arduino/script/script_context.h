@@ -23,10 +23,11 @@ namespace DevRelief
                 m_startTimeMsecs = millis();
                 m_msecsSincePrev = m_startTimeMsecs-(prev ? prev->getStartMsecs(): 0);
                 m_stepNumber = prev ? prev->getNumber()+1:0;
-                ScriptLogger.never("Step # %d  %x",m_stepNumber,prev);
+                ScriptLogger.never("ScriptStep # %d  %x",m_stepNumber,prev);
             }
 
             virtual ~ScriptStep() {
+                ScriptLogger.never("~ScriptStep # %d  %x",m_stepNumber);
 
             }
 
@@ -53,6 +54,8 @@ namespace DevRelief
                 m_currentStep = NULL;
                 m_lastStep = NULL;
                 m_strip = NULL;
+                m_position = NULL;
+
                 m_valueList = new ScriptValueList(NULL);
             }
 
@@ -60,10 +63,15 @@ namespace DevRelief
                 m_logger->debug("delete ScriptContext type: %s",m_type);
                 if (m_currentStep) { m_currentStep->destroy();}
                 if (m_lastStep) { m_lastStep->destroy();}
+                if (m_valueList) { m_valueList->destroy();}
             }
+
 
             void destroy() override { delete this;}
 
+            void setPosition(ElementPositionBase* position) { m_position = position;}
+            ElementPositionBase* getPosition() { return m_position;}
+            
             void setStrip(IScriptHSLStrip*strip) {
                 m_strip = strip;
                 if (strip) {
@@ -164,6 +172,7 @@ namespace DevRelief
             IScriptElement* m_currentElement; 
             IScriptValueProvider * m_valueList;
             PositionDomain m_positionDomain;
+            ElementPositionBase* m_position;
     };
 
     class RootContext : public ScriptContext {
