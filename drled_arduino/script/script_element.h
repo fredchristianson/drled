@@ -208,7 +208,7 @@ namespace DevRelief {
                 IScriptHSLStrip* parentStrip = context->getStrip();
                 
                 m_elementPosition.evaluateValues(context);
-               
+                context->setPosition(&m_elementPosition);
                 m_logger->debug("ScriptLEDElement.draw()");
                 DrawStrip strip(context,parentStrip,&m_elementPosition);
                 strip.eachLED([&](IHSLStripLED& led) {

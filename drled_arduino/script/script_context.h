@@ -69,9 +69,9 @@ namespace DevRelief
 
             void destroy() override { delete this;}
 
-            void setPosition(ElementPositionBase* position) { m_position = position;}
-            ElementPositionBase* getPosition() { return m_position;}
-            
+            void setPosition(IElementPosition* position) override  { m_position = position;}
+            IElementPosition* getPosition() const override { return m_position;}
+
             void setStrip(IScriptHSLStrip*strip) {
                 m_strip = strip;
                 if (strip) {
@@ -172,7 +172,7 @@ namespace DevRelief
             IScriptElement* m_currentElement; 
             IScriptValueProvider * m_valueList;
             PositionDomain m_positionDomain;
-            ElementPositionBase* m_position;
+            IElementPosition* m_position;
     };
 
     class RootContext : public ScriptContext {

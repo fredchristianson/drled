@@ -1081,7 +1081,28 @@ namespace DevRelief
                 m_logger->never("variable getFloatValue() recurse");
                 return m_defaultValue ? m_defaultValue->getFloatValue(ctx,defaultValue) : defaultValue;
             }
+            if (m_isSysValue && Util::equal("offset",m_name.text())){
+                IElementPosition*pos = ctx->getPosition();
+                if (pos && pos->hasLength()) {
+                    return pos->getOffset().getValue();
+                } else {
+                    return 0;
+                }
+            }
+            if (m_isSysValue && Util::equal("length",m_name.text())){
+                IElementPosition*pos = ctx->getPosition();
+                if (pos && pos->hasLength()) {
+                    return pos->getLength().getValue();
+                } else {
+                    return ctx->getStrip()->getLength();
+                }
+            }
+            if (m_isSysValue && Util::equal("led",m_name.text())){
+                return ctx->getAnimationPositionDomain()->getValue();
+            }
+
             m_recurse = true;
+
             IScriptValue * val = getScriptValue(ctx);
             double result = val->getFloatValue(ctx,defaultValue);
             m_recurse = false;

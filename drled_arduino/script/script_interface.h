@@ -193,6 +193,9 @@ namespace DevRelief{
             // set the current element and return previous one
             virtual IScriptElement* setCurrentElement(IScriptElement*element) = 0;
 
+            virtual void setPosition(IElementPosition* position)=0;
+            virtual IElementPosition* getPosition()const=0;
+            
             virtual void enterScope()=0;
             virtual void leaveScope();
 
