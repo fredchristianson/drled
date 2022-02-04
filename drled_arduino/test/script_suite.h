@@ -52,12 +52,30 @@ class ScriptTestSuite : public TestSuite{
 
 
 void ScriptTestSuite::destroyScript(TestResult& result) {
+    m_logger->debug("ScriptTestScript::destroyScript");
+    m_logger->showMemory();
     ScriptDataLoader loader;
+    m_logger->debug("\tcreated loader");
+    m_logger->showMemory();
     Script* script = loader.parse(HSL_SIMPLE_SCRIPT);
+    m_logger->debug("\tparsed script %x",script);
+    m_logger->showMemory();
 
     HSLStrip strip(new DummyStrip());
+    m_logger->debug("\tcreated strip");
+    m_logger->showMemory();
     script->begin(&strip,NULL);
+    m_logger->debug("\tbegin");
+    m_logger->showMemory();
+    script->step();
+    m_logger->debug("\tstep");
+    m_logger->showMemory();
+    script->step();
+    m_logger->debug("\tstep");
+    m_logger->showMemory();
     script->destroy();
+    m_logger->debug("\tdestroyed");
+    m_logger->showMemory();
 }
 
 

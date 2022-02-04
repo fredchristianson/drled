@@ -2,7 +2,6 @@
 #define APP_STATE_SUITE_TEST_H
 
 #include "../lib/test/test_suite.h"
-#include "../lib/data/api_result.h"
 #include "../app_state.h"
 #include "../app_state_data_loader.h"
 
@@ -25,7 +24,7 @@ class AppStateTestSuite : public TestSuite{
 
         void run() {
             runTest("testStateLoader",[&](TestResult&r){testStateLoader(r);});
-            runTest("testParameters",[&](TestResult&r){testParameters(r);});
+           // runTest("testParameters",[&](TestResult&r){testParameters(r);});
         }
 
         AppStateTestSuite(Logger* logger) : TestSuite("Api Tests",logger){
@@ -36,7 +35,7 @@ class AppStateTestSuite : public TestSuite{
 
 
     void testStateLoader(TestResult& result);
-    void testParameters(TestResult& result);
+   // void testParameters(TestResult& result);
 };
 
 void AppStateTestSuite::testStateLoader(TestResult& result) {

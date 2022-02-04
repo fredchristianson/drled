@@ -730,13 +730,16 @@ namespace DevRelief
         }
     }
 
-    struct InterpolationSegment {
+    class InterpolationSegment {
+        public:
         InterpolationSegment() {
             startElementIndex=0;
             endElementIndex=0;
             startPercent=0;
             endPercent=1;
         }
+        ~InterpolationSegment() {}
+        void destroy() { delete this;}
         int startElementIndex;
         int endElementIndex;
         double startPercent;
@@ -883,7 +886,7 @@ namespace DevRelief
             }     
 
             StepWatcher m_stepWatcher;  
-            LinkedList<InterpolationSegment*> m_segments;    
+            PtrList<InterpolationSegment*> m_segments;    
     };
 
     class StepInterpolation : public PatternInterpolation {
@@ -948,7 +951,7 @@ namespace DevRelief
                 }
                 return NULL;
             }
-            LinkedList<InterpolationSegment*> m_segments;        
+            PtrList<InterpolationSegment*> m_segments;        
             StepWatcher m_stepWatcher;   
     };
 
@@ -1426,19 +1429,29 @@ namespace DevRelief
         IAnimationDomain* domain = NULL;
         IJsonElement* speedJson = json->getPropertyValue("speed");
         IJsonElement* durationJson = json->getPropertyValue("duration");
+        IJsonElement* repeatJson = json->getPropertyValue("repeat");
+        IJsonElement* delayJson = json->getPropertyValue("delay");
         if (speedJson) {
             IScriptValue* speedValue = create(speedJson);
             if (speedValue) {
-                domain = new SpeedDomain(speedValue,range);
+                SpeedDomain* speedDomain = new SpeedDomain(speedValue,range);
+                domain = speedDomain;
+                speedDomain->setRepeat(create(repeatJson));
+                speedDomain->setDelay(create(repeatJson));
+
             }
         } else if (durationJson) {
             IScriptValue* durationValue = create(durationJson);
             if (durationJson) {
-                domain = new DurationDomain(durationValue);
+                DurationDomain* durationDomain = new DurationDomain(durationValue);
+                durationDomain->setRepeat(create(repeatJson));
+                durationDomain->setDelay(create(delayJson));
+                domain = durationDomain;
             }
         } else {
             domain = new ContextPositionDomain();
         }
+        
         return domain;
     }
 
