@@ -7,6 +7,7 @@
 #include "../lib/json/json.h"
 #include "./script_interface.h"
 #include "./script_element.h"
+#include "./strip_element.h"
 #include "../loggers.h"
 
 namespace DevRelief
@@ -200,6 +201,8 @@ namespace DevRelief
             element = new RGBElement();
         } else if (Util::equalAny(type,S_SEGMENT)) {
             element = new ScriptSegmentContainer();
+        } else if (Util::equalAny(type,S_MIRROR)) {
+            element = new MirrorElement();
         }
         if (element) {
             element->fromJson(obj);

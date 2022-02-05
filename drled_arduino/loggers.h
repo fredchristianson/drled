@@ -40,6 +40,7 @@ Logger ScriptLoaderLogger("ScriptLoader",SCRIPT_LOADER_LOGGER_LEVEL);
 Logger ScriptPositionLogger("ScriptPosition",SCRIPT_POSITIONLOGGER_LEVEL);
 Logger ScriptValueLogger("ScriptValue",SCRIPT_VALUE_LOGGER_LEVEL);
 Logger ScriptExecutorLogger("ScriptExecutor",SCRIPT_EXECUTOR_LOGGER_LEVEL);
+Logger StripElementLogger("StripElement",STRIP_ELEMENT_LOGGER_LEVEL);
 Logger SharedPtrLogger("SharedPtr",SHARED_PTR_LOGGER_LEVEL);
 Logger StringLogger("DRString",DRSTRING_LOGGER_LEVEL);
 Logger TestLogger("Tests",TEST_LOGGER_LEVEL);
