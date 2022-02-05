@@ -50,6 +50,7 @@ const char * S_VARIABLE = "variable";
 const char * S_UPDATE = "update";
 const char * S_PATTERN = "pattern";
 const char * S_SEGMENT = "segment";
+const char * S_MAKER = "maker";
 const char * S_CREATE = "create";
 const char * S_STRIP = "strip";
 const char * S_MIRROR = "mirror";

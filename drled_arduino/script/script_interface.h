@@ -37,6 +37,7 @@ namespace DevRelief{
     class IScriptHSLStrip;
     class IScriptElement;
     class PositionDomain;
+    class ScriptValueList;
 
     class UnitValue {
         public:
@@ -177,9 +178,6 @@ namespace DevRelief{
             virtual IScriptStep* getStep()=0;
             virtual IScriptStep* getLastStep()=0;
 
-            virtual IScriptStep* beginStep();
-            virtual void endStep();
-
             virtual PositionDomain* getAnimationPositionDomain()=0;
 
             virtual void setValue(const char* name, IScriptValue* value)=0;
@@ -196,9 +194,9 @@ namespace DevRelief{
 
             virtual void setPosition(IElementPosition* position)=0;
             virtual IElementPosition* getPosition()const=0;
-            
-            virtual void enterScope()=0;
-            virtual void leaveScope();
+
+            virtual void setParentContext(IScriptContext* parent)=0;
+
 
     };
 
@@ -226,7 +224,8 @@ namespace DevRelief{
         // evaluate this IScriptValue with the given command and return a new
         // IScriptValue.  
         // mainly useful to get a random number one time and copy to new value
-        virtual IScriptValue* eval(IScriptContext*cmd, double defaultValue)=0; 
+        // functions calculate the value at the time eval is called.  other types return a copy
+        virtual IScriptValue* eval(IScriptContext*cmd, double defaultValue=0)=0; 
 
 
         virtual bool isRecursing() = 0; // mainly for evaluating variable values
@@ -249,7 +248,8 @@ namespace DevRelief{
         virtual bool hasValue(const char *name) = 0;
         virtual IScriptValue *getValue(const char *name) = 0;
         virtual void setValue(const char *name, IScriptValue*val)=0;
-        virtual IScriptValueProvider* getParentScope()=0;
+        virtual void initialize(ScriptValueList* source, IScriptContext* context)=0;
+        
     };
 
 

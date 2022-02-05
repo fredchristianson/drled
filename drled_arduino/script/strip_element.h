@@ -45,7 +45,8 @@ namespace DevRelief
             bool isPositionValid(int index) override { return true;}
             int translateIndex(int index) override {
                 int translated = ScriptHSLStrip::translateIndex(index);
-                int length = m_parent->getLength();
+                //int length = m_parent->getLength();
+                int length = getLength();
                 return length - translated-1;
                 m_logger->never("MirrorStrip.setHue index %d --> %d",index, -translated);
                 return -translated;

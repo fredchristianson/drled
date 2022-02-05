@@ -101,13 +101,15 @@ namespace DevRelief
 
             bool equals(IScriptContext*ctx,const char * match) override { return false;}
 
-            IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override;
+            //IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override;
             
             IJsonElement* toJson(JsonRoot* jsonRoot) override {
                 JsonObject* obj = new JsonObject(*jsonRoot);
                 obj->setString("toJson","not implemented");
                 return obj;
             }
+
+            IScriptValue* eval(IScriptContext * ctx, double defaultValue) override;
 
             DRString stringify() override { return "";}
 
@@ -690,8 +692,8 @@ namespace DevRelief
         return m_pixelCount > 0;
         }
 
-        IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
-            return NULL;
+        IScriptValue* eval(IScriptContext * ctx, double defaultValue) override{
+            return new ScriptNullValue();//todo: implement
 
         }
 
@@ -1164,7 +1166,7 @@ namespace DevRelief
             return val->isUnitValue(ctx);
          }
 
-        IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override{
+        IScriptValue* eval(IScriptContext * ctx, double defaultValue) override{
             return new ScriptNumberValue(getFloatValue(ctx,defaultValue));
 
         }
@@ -1209,10 +1211,9 @@ namespace DevRelief
 
     class ScriptValueList : public IScriptValueProvider {
         public:
-            ScriptValueList(IScriptValueProvider* parentScope=NULL) {
+            ScriptValueList() {
                 m_logger = &ScriptValueLogger;
                 m_logger->never("create ScriptValueList()");
-                m_parentScope = parentScope;
             }
 
 
@@ -1221,7 +1222,6 @@ namespace DevRelief
                 m_logger->never("delete ~ScriptValueList()");
             }
 
-            IScriptValueProvider* getParentScope() { return m_parentScope;}
             bool hasValue(const char *name) override  {
                 return getValue(name) != NULL;
             }
@@ -1239,10 +1239,7 @@ namespace DevRelief
                         return found;
                     }
                 }
-                if (m_parentScope) {
-                    m_logger->never("\tuse parent scope");
-                    return m_parentScope->getValue(name);
-                }
+
                 m_logger->never("\tnot found");
                 return NULL;
             }
@@ -1263,9 +1260,21 @@ namespace DevRelief
             void destroy() { delete this;}
 
             int count() { return m_values.size();}
+
+            void initialize(ScriptValueList* source,IScriptContext*ctx) override {
+                m_values.clear();
+                if(source == NULL) { return;}
+                source->each([&](NameValue* nv) {
+                    IScriptValue* val = nv->getValue();
+                    if (val != NULL) {
+                        NameValue*newNV = new NameValue(nv->getName(),val->eval(ctx));
+                        m_values.add(newNV);
+                    }
+                });
+            }
+
         private:
             PtrList<NameValue*> m_values;
-            IScriptValueProvider* m_parentScope;
             Logger* m_logger;
    };
 
