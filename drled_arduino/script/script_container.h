@@ -203,6 +203,8 @@ namespace DevRelief
             element = new ScriptSegmentContainer();
         } else if (Util::equalAny(type,S_MIRROR)) {
             element = new MirrorElement();
+        } else if (Util::equalAny(type,S_COPY)) {
+            element = new CopyElement();
         }
         if (element) {
             element->fromJson(obj);

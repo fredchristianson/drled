@@ -26,6 +26,8 @@ namespace DevRelief{
 
             }
 
+            void destroy() { delete this;}
+
             int getOffset() override { return m_offset;}
             int getLength() override { return m_length;}
 

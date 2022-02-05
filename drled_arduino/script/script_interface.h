@@ -147,6 +147,7 @@ namespace DevRelief{
     
     class IScriptHSLStrip {
         public:
+            virtual void destroy();
             virtual int getOffset()=0;
             virtual int getLength()=0;
 
