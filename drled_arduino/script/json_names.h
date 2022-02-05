@@ -53,6 +53,7 @@ const char * S_SEGMENT = "segment";
 const char * S_CREATE = "create";
 const char * S_STRIP = "strip";
 const char * S_MIRROR = "mirror";
+const char * S_COPY = "copy";
 
 const char * S_ROOT_CONTAINER = "root";
 
