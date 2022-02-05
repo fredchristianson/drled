@@ -19,11 +19,11 @@ namespace DevRelief
     
     class ScriptStep : public IScriptStep {
         public:
-            ScriptStep(ScriptStep* prev) {
-                m_startTimeMsecs = millis();
-                m_msecsSincePrev = m_startTimeMsecs-(prev ? prev->getStartMsecs(): 0);
-                m_stepNumber = prev ? prev->getNumber()+1:0;
-                ScriptLogger.never("ScriptStep # %d  %x",m_stepNumber,prev);
+            ScriptStep() {
+                m_startTimeMsecs = 0;
+                m_msecsSincePrev = m_startTimeMsecs;
+                m_stepNumber = 0;
+                ScriptLogger.never("ScriptStep # %d",m_stepNumber);
             }
 
             virtual ~ScriptStep() {
@@ -32,6 +32,28 @@ namespace DevRelief
             }
 
             void destroy() override { delete this;}
+
+            void begin(ScriptStep* prevHolder) {
+                if (prevHolder) {
+                    prevHolder->copy(this);
+                }
+                long now = millis();
+                m_msecsSincePrev = now-m_startTimeMsecs;
+                m_startTimeMsecs = now;
+                m_stepNumber += 1;
+            }
+
+            void end(ScriptStep* prevHolder) {
+                if (prevHolder) {
+                    prevHolder->copy(this);
+                }
+            }
+
+            void copy(ScriptStep* other) {
+                m_startTimeMsecs = other->m_startTimeMsecs;
+                m_msecsSincePrev = other->m_msecsSincePrev;
+                m_stepNumber = other->m_stepNumber;
+            }
 
             long getStartMsecs() override { return m_startTimeMsecs;}
             long getMsecsSincePrev() override { return m_msecsSincePrev;}
@@ -51,18 +73,15 @@ namespace DevRelief
                 m_type = type;
                 m_logger = &ScriptLogger;
                 m_logger->never("Create ScriptContext type: %s",m_type);
-                m_currentStep = NULL;
-                m_lastStep = NULL;
                 m_strip = NULL;
                 m_position = NULL;
+                m_parentContext = NULL;
 
-                m_valueList = new ScriptValueList(NULL);
+                m_valueList = new ScriptValueList();
             }
 
             virtual ~ScriptContext() {
                 m_logger->debug("delete ScriptContext type: %s",m_type);
-                if (m_currentStep) { m_currentStep->destroy();}
-                if (m_lastStep) { m_lastStep->destroy();}
                 if (m_valueList) { m_valueList->destroy();}
             }
 
@@ -89,30 +108,6 @@ namespace DevRelief
                 return root;
             }
 
-            IScriptStep* getStep() override {
-                return m_currentStep;
-            };
-
-            IScriptStep* getLastStep() override {
-                return m_lastStep;
-            };
-
-            IScriptStep* beginStep() override {
-                ScriptStep* step = new ScriptStep(m_lastStep);
-                if (m_currentStep) {
-                    m_currentStep->destroy();
-                };
-                m_currentStep = step;
-                initializeStep();
-                return m_currentStep;
-            }
-
-            void endStep() override {
-                finalizeStep();
-                if (m_lastStep) { m_lastStep->destroy();}
-                m_lastStep = m_currentStep;
-                m_currentStep = NULL;
-            }
 
             
             PositionDomain* getAnimationPositionDomain() {
@@ -125,13 +120,18 @@ namespace DevRelief
 
             IScriptValue* getValue(const char * name)override  {
                 if (m_valueList == NULL) { return NULL; }
-                return m_valueList->getValue(name);
+                IScriptValue* val = m_valueList->getValue(name);
+                if (val == NULL && m_parentContext != NULL) {
+                    val = m_parentContext->getValue(name);
+                }
+                return val;
             };
 
             IScriptValue* getSysValue(const char * name)override  {
                 if (m_valueList == NULL) { return NULL; }
                 DRFormattedString fullName("sys:%s",name);
-                return m_valueList->getValue(fullName);
+                return getValue(fullName.text());
+                //return m_valueList->getValue(fullName);
             };
 
             void setSysValue(const char * name, IScriptValue* value)  {
@@ -148,27 +148,20 @@ namespace DevRelief
                 return prev;
             }
 
-            void enterScope() override {
-                m_valueList = new ScriptValueList(m_valueList);
-            }
-
-            void leaveScope() override {
-                if (m_valueList) {
-                    auto prev = m_valueList;
-                    m_valueList = prev->getParentScope();
-                    prev->destroy();
+            void setParentContext(IScriptContext* parent) { 
+                m_parentContext = parent;
+                if (parent) {
+                    m_strip = parent->getStrip();
                 }
             }
-
+          
         protected:
-            virtual void initializeStep()=0;
-            virtual void finalizeStep()=0;
 
+            IScriptContext* m_parentContext;
             IScriptHSLStrip* m_strip;
             const char * m_type;
             Logger* m_logger;    
-            ScriptStep * m_currentStep;
-            ScriptStep * m_lastStep;
+
             IScriptElement* m_currentElement; 
             IScriptValueProvider * m_valueList;
             PositionDomain m_positionDomain;
@@ -201,30 +194,61 @@ namespace DevRelief
 
         }
 
+        IScriptStep* getStep() override {
+            return &m_currentStep;
+        };
 
+        IScriptStep* getLastStep() override {
+            return &m_lastStep;
+        };
 
-        void initializeStep() {
-
+        IScriptStep* beginStep()  {
+            m_currentStep.begin(&m_lastStep);
+            return &m_currentStep;
         }
 
-        void finalizeStep() {
+        void endStep()  {
+           m_currentStep.end(&m_lastStep);
         }
+
+
+       
 
         protected:
-        void createSystemValues() {
-            setSysValue("red",new ScriptNumberValue(HUE::RED));
-            setSysValue("orange",new ScriptNumberValue(HUE::ORANGE));
-            setSysValue("yellow",new ScriptNumberValue(HUE::YELLOW));
-            setSysValue("green",new ScriptNumberValue(HUE::GREEN));
-            setSysValue("cyan",new ScriptNumberValue(HUE::CYAN));
-            setSysValue("blue",new ScriptNumberValue(HUE::BLUE));
-            setSysValue("magenta",new ScriptNumberValue(HUE::MAGENTA));
-            setSysValue("purple",new ScriptNumberValue(HUE::PURPLE));
-            
-        }
-        IHSLStrip* m_baseStrip;
+            void createSystemValues() {
+                setSysValue("red",new ScriptNumberValue(HUE::RED));
+                setSysValue("orange",new ScriptNumberValue(HUE::ORANGE));
+                setSysValue("yellow",new ScriptNumberValue(HUE::YELLOW));
+                setSysValue("green",new ScriptNumberValue(HUE::GREEN));
+                setSysValue("cyan",new ScriptNumberValue(HUE::CYAN));
+                setSysValue("blue",new ScriptNumberValue(HUE::BLUE));
+                setSysValue("magenta",new ScriptNumberValue(HUE::MAGENTA));
+                setSysValue("purple",new ScriptNumberValue(HUE::PURPLE));
+                
+            }
+            IHSLStrip* m_baseStrip;
+            ScriptStep  m_currentStep;
+            ScriptStep  m_lastStep;
     };
 
+    class ChildContext : public ScriptContext {
+        public:
+            ChildContext(const char * type="child") : ScriptContext(type) {
+                
+            }
+
+
+            IScriptStep* getStep() override {
+                return m_parentContext ? m_parentContext->getStep() : NULL;
+            };
+
+            IScriptStep* getLastStep() override {
+                return m_parentContext ? m_parentContext->getLastStep() : NULL;
+            };
+
+        protected:
+
+    };
 
     bool StepWatcher::isChanged(IScriptContext*ctx) { 
         if (ctx == NULL) { return true;}

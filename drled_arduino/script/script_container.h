@@ -8,6 +8,7 @@
 #include "./script_interface.h"
 #include "./script_element.h"
 #include "./strip_element.h"
+#include "./script_context.h"
 #include "../loggers.h"
 
 namespace DevRelief
@@ -64,37 +65,31 @@ namespace DevRelief
             });
         }
 
-        void draw(IScriptContext* context) override {
-            m_logger->never("setCurrentElement %s %x",getType(),context);
-            context->enterScope();
+        void draw(IScriptContext* parentContext) override {
+            m_logger->never("setCurrentElement %s %x",getType(),parentContext);
+            ChildContext scope;
+            scope.setParentContext(parentContext);
+            auto previousElement = scope.setCurrentElement(this);
             
-            auto previousElement = context->setCurrentElement(this);
-/**/            
             m_logger->never("getPosition");
             IElementPosition*pos = getPosition();
 
-            pos->evaluateValues(context);
+            pos->evaluateValues(&scope);
             m_logger->never("update strip %x",m_strip);
-/*   */         
-            m_strip->update(pos,context);
-            context->setStrip(m_strip);
+         
+            m_strip->update(pos,&scope);
+            scope.setStrip(m_strip);
             m_logger->never("draw container %s %d",m_type,m_position->isReverse());
-/**/
+
             m_children.each([&](IScriptElement* child) {
                 m_logger->never("set current element  %x %s",child, child->getType());
-                context->setCurrentElement(child);
+                scope.setCurrentElement(child);
                 m_logger->never("drawChild  %x",child);
-                /**/child->draw(context);
+                child->draw(&scope);
 
                 m_logger->never("\tdone draw() child");
             });
-/**/            
-            m_logger->never("restore strip");
-            context->setStrip(m_strip->getParent());
-            m_logger->never("restore element");
-            context->setCurrentElement(previousElement);
-/**/            
-            context->leaveScope();
+            
             m_logger->never("finished draw %s",getType());
         };
 
@@ -170,6 +165,49 @@ namespace DevRelief
             ScriptElementPosition m_segmentPosition;
     };
 
+    class MakerContext : public ScriptContext {
+        public:
+            MakerContext(IScriptContext* ownerContext, ScriptValueList* values) : ScriptContext("maker") {
+               m_valueList->initialize(values,ownerContext);
+            }
+
+            virtual ~MakerContext() {
+
+            }
+    };
+
+    class MakerContainer : public ScriptContainer {
+        public:
+            MakerContainer() : ScriptContainer(S_SEGMENT,&m_segmentStrip,&m_segmentPosition) {
+                m_logger->info("create MakerContainer");
+
+            }
+
+            virtual ~MakerContainer() {
+                m_logger->info("~MakerContainer");
+            }
+
+            void valuesFromJson(JsonObject* json) override {
+                ScriptContainer::valuesFromJson(json);
+                m_countValue = ScriptValue::create(json->getPropertyValue("count"));
+            }    
+
+            void valuesToJson(JsonObject* json) const override {
+                ScriptContainer::valuesToJson(json);
+                if (m_countValue) {
+                    json->set("count",m_countValue->toJson(json->getRoot()));
+                }
+            }
+
+        private:
+            IScriptValue* m_countValue;
+            ContainerElementHSLStrip m_segmentStrip;
+            ScriptElementPosition m_segmentPosition;
+            PtrList<MakerContext*> m_contextList;
+    };
+
+
+
     ScriptElementCreator::ScriptElementCreator(IScriptContainer* container) {
         m_container = container;
         m_logger = &ScriptElementLogger;
@@ -201,6 +239,8 @@ namespace DevRelief
             element = new RGBElement();
         } else if (Util::equalAny(type,S_SEGMENT)) {
             element = new ScriptSegmentContainer();
+        }  else if (Util::equalAny(type,S_MAKER)) {
+            element = new MakerContainer();
         } else if (Util::equalAny(type,S_MIRROR)) {
             element = new MirrorElement();
         } else if (Util::equalAny(type,S_COPY)) {
@@ -216,7 +256,7 @@ namespace DevRelief
     const char * ScriptElementCreator::guessType(JsonObject* json){
         if (json->getPropertyValue("hue")||json->getPropertyValue("lightness")||json->getPropertyValue("saturation")){
             return S_RHSL;
-        } else if (json->getPropertyValue("red")||json->getPropertyValue("green")||json->getPropertyValue("green")){
+        } else if (json->getPropertyValue("red")||json->getPropertyValue("blue")||json->getPropertyValue("green")){
             return S_RGB;
         } else if (json->getPropertyValue("elements")){
             return S_SEGMENT;
