@@ -70,7 +70,7 @@ namespace DevRelief
             bool isPositionValid(int index) override { return true;}
             int translateIndex(int index) override {
                 int translated = ScriptHSLStrip::translateIndex(index);
-                m_logger->always("copy %d -> %d + %d",index,translated,m_offset);
+                m_logger->never("copy %d -> %d + %d",index,translated,m_offset);
                 return translated + m_offset;
             }
         
