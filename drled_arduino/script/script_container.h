@@ -165,9 +165,9 @@ namespace DevRelief
             ScriptElementPosition m_segmentPosition;
     };
 
-    class MakerContext : public ScriptContext {
+    class MakerContext : public ChildContext {
         public:
-            MakerContext(IScriptContext* ownerContext, ScriptValueList* values) : ScriptContext("maker") {
+            MakerContext(IScriptContext* ownerContext, ScriptValueList* values) : ChildContext("maker") {
                m_valueList->initialize(values,ownerContext);
             }
 
@@ -190,6 +190,17 @@ namespace DevRelief
             void valuesFromJson(JsonObject* json) override {
                 ScriptContainer::valuesFromJson(json);
                 m_countValue = ScriptValue::create(json->getPropertyValue("count"));
+                JsonObject* obj = json->getChild("init");
+                m_initValues.clear();
+            
+                if (obj) {
+                    obj->eachProperty([&](const char * name, IJsonElement* jsonVal){
+                        IScriptValue* val = ScriptValue::create(jsonVal);
+                        if (val) {
+                            m_initValues.setValue(name,val);
+                        }
+                    });
+                }
             }    
 
             void valuesToJson(JsonObject* json) const override {
@@ -199,11 +210,32 @@ namespace DevRelief
                 }
             }
 
+            void draw(IScriptContext* parentContext) override {
+                checkContextList(parentContext);
+                m_contextList.each([&](MakerContext* ctx) {
+                    ctx->setParentContext(parentContext);
+                    ScriptContainer::draw(ctx);
+                });
+            }
+
+        protected:
+            void checkContextList(IScriptContext* parentContext) {
+                int count = 1;
+                if (m_countValue != NULL) {
+                    count = m_countValue->getIntValue(parentContext,1);
+                }
+                while(count > m_contextList.size()) {
+                    MakerContext* mc = new MakerContext(parentContext,&m_initValues);
+                    m_contextList.add(mc);
+                }
+            }
+
         private:
             IScriptValue* m_countValue;
             ContainerElementHSLStrip m_segmentStrip;
             ScriptElementPosition m_segmentPosition;
             PtrList<MakerContext*> m_contextList;
+            ScriptValueList m_initValues;
     };
 
 

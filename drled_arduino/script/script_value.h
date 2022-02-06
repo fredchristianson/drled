@@ -104,6 +104,7 @@ namespace DevRelief
             //IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override;
             
             IJsonElement* toJson(JsonRoot* jsonRoot) override {
+                m_logger->error("toJson() not implemented");
                 JsonObject* obj = new JsonObject(*jsonRoot);
                 obj->setString("toJson","not implemented");
                 return obj;
@@ -162,7 +163,7 @@ namespace DevRelief
             void add(IScriptValue* val) { args.add(val);}
             IScriptValue* get(int index) { return args.get(index);}
             size_t length() { return args.size();}
-        PtrList<IScriptValue*> args;
+            PtrList<IScriptValue*> args;
     };
 
     int randTotal = millis();
@@ -214,6 +215,14 @@ namespace DevRelief
         }
         bool isNumber(IScriptContext* ctx) override { return true;}
         
+        IJsonElement* toJson(JsonRoot* root) override {
+            JsonArray* json = root->createArray();
+            json->addString(m_name.text());
+            m_args->args.each([&](IScriptValue*arg) {
+                json->addItem(arg->toJson(root));
+            });
+            return json;
+        }
     protected:
         double invoke(IScriptContext * ctx,double defaultValue) {
             double result = 0;
@@ -610,10 +619,8 @@ namespace DevRelief
         public:
             PatternInterpolation() {
                 m_logger = &ScriptValueLogger;
-                m_ease = NULL;
             }
             virtual ~PatternInterpolation() {
-                if (m_ease) { m_ease->destroy();}
             }
 
             void destroy() { delete this;}
@@ -622,7 +629,6 @@ namespace DevRelief
 
         protected:
             Logger* m_logger;
-            IAnimationEase* m_ease;
 
     };
 
@@ -634,7 +640,6 @@ namespace DevRelief
             m_animate = NULL;
             m_extend = REPEAT_PATTERN;
             m_pixelCount = 0;
-            m_smooth = false;
             m_interpolation = NULL;
 
         }
@@ -699,16 +704,13 @@ namespace DevRelief
 
         size_t getCount() { return m_pixelCount;}
 
-        bool getSmooth() const { return m_smooth;}
-        void setSmooth(bool smooth) { m_smooth = smooth;}
         
         void setInterpolation(PatternInterpolation*interpolation) { m_interpolation = interpolation;}
     protected:
         PatternInterpolation* m_interpolation;
         PtrList<ScriptPatternElement*> m_elements;
         size_t m_pixelCount;
-        bool m_smooth;
-
+       
         IValueAnimator* m_animate;
         PatternExtend m_extend;
     };
@@ -1248,7 +1250,7 @@ namespace DevRelief
                 if (Util::isEmpty(name) || value == NULL) {
                     return;
                 }
-                m_logger->never("add NameValue %s  0x%04X",name,value);
+                m_logger->always("add NameValue %s  0x%04X",name,value);
                 NameValue* nv = new NameValue(name,value);
                 m_values.add(nv);
             }
@@ -1273,6 +1275,7 @@ namespace DevRelief
                 });
             }
 
+            void clear() { m_values.clear();}
         private:
             PtrList<NameValue*> m_values;
             Logger* m_logger;
@@ -1397,28 +1400,39 @@ namespace DevRelief
 
     IScriptValue* ScriptValue::createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json){
             PatternValue* patternValue = new PatternValue();
-            patternValue->setSmooth(smooth);
             pattern->each([&](IJsonElement*elemenValue){
                 patternValue->addElement(createPatternElement(elemenValue));
             });
             IAnimationEase* ease = json ? createEase(json) : NULL;
 
             PatternInterpolation* pi = NULL;
+            ScriptValueLogger.always("pattern smooth %d",smooth);
             if (smooth){
                 pi = new SmoothInterpolation();
+                ScriptValueLogger.always("\tcreated SmoothInterpolation");
              } else {
                  pi = new StepInterpolation();
+                ScriptValueLogger.always("\tcreated StepInterpolation");
              }
+             ScriptValueLogger.always("\tset Interpolation");
             patternValue->setInterpolation(pi);
             IAnimationRange* range = NULL;
-            if (repeat) {
+            ScriptValueLogger.always("\tcheck domain type");
+            bool isTime = (json && (json->getPropertyValue("duration") || json->getPropertyValue("speed")));
+            if (repeat &&  !isTime) {
+                ScriptValueLogger.always("\tcreate Repeat range");
                 range = new RepeatPatternRange(patternValue,unfold);
             } else {
+                ScriptValueLogger.always("\tcreate stretch range");
                 range = new StretchPatternRange(patternValue,unfold);
             }
+            ScriptValueLogger.always("\tcreate domain");
             IAnimationDomain* domain = json ? createDomain(json,range) : new ContextPositionDomain();
+            ScriptValueLogger.always("\tcreate animator");
             IValueAnimator* animator = new Animator(domain,range,ease);
+            ScriptValueLogger.always("\tset animator");
             patternValue->setAnimator(animator);
+            ScriptValueLogger.always("\tcreated patternValue");
             return patternValue;
     }
 

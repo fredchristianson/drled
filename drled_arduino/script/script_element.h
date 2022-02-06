@@ -71,10 +71,10 @@ namespace DevRelief {
 
 
             virtual void valuesToJson(JsonObject* json) const{
-                m_logger->warn("ScriptElement type %s does not implement valuesToJson",getType());
+                m_logger->never("ScriptElement type %s does not implement valuesToJson",getType());
             }
             virtual void valuesFromJson(JsonObject* json){
-                m_logger->warn("ScriptElement type %s does not implement valuesFromJson",getType());
+                m_logger->never("ScriptElement type %s does not implement valuesFromJson",getType());
             }
 
             IScriptValue* getJsonValue(JsonObject*json, const char * name) {
