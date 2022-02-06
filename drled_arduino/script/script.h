@@ -64,7 +64,7 @@ namespace DevRelief
 
         void step() {
             auto lastStep = m_rootContext->getLastStep();
-            if (m_startMsecs>0 && m_startMsecs+m_durationMsecs<millis()) {
+            if (m_durationMsecs > 0 && (m_startMsecs>0 && m_startMsecs+m_durationMsecs<millis())) {
                 return; // past duration
             }
             if (lastStep && m_frequencyMsecs>0 && lastStep->getStartMsecs() + m_frequencyMsecs > millis()) {
