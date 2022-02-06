@@ -69,6 +69,11 @@ namespace DevRelief
         double getDelayValue(IScriptContext* ctx) override { return m_lastValue;}
         double getCompleteValue(IScriptContext* ctx) override { return getDelayValue(ctx);}
        
+       bool toJson(JsonObject* json) const override {
+           json->setBool("unfold",m_unfold);
+           return true;
+       }
+
     protected:
         double m_lastPosition;
         double m_lastValue;
@@ -133,6 +138,9 @@ namespace DevRelief
 
         double getDistance() const override { return abs(m_max-m_min)+1;}
 
+        bool toJson(JsonObject* json) const override {
+           return true;
+       }
     protected:
         Logger *m_logger;
 
@@ -162,6 +170,7 @@ namespace DevRelief
 
         bool isTime() const  override { return false;}     
 
+       
     private:
 
     };
@@ -181,6 +190,11 @@ namespace DevRelief
             setMax(ctxpos->getMax());
             setPos(ctxpos->getValue());
         }
+
+        bool toJson(JsonObject* json) const override {
+           return true;
+        }
+       
 
     private:
 
@@ -284,6 +298,16 @@ namespace DevRelief
                 m_logger->never("Repeat delay %x",value);
                 m_delayValue = value;}
 
+            bool toJson(JsonObject* json) const override {
+                if (m_repeatLimitValue) {
+                    json->set("repeat",m_repeatLimitValue->toJson(json->getRoot()));
+                }
+                if (m_delayValue) {
+                    json->set("repeat",m_delayValue->toJson(json->getRoot()));
+                }
+                return true;
+            }
+            
         protected:
             int m_step;
             unsigned long m_startMsecs;
@@ -336,6 +360,14 @@ namespace DevRelief
                 TimeDomain::update(ctx);            
             }
 
+            bool toJson(JsonObject* json) const override {
+                TimeDomain::toJson(json);
+                if (m_speedValue) {
+                    json->set("speed",m_speedValue->toJson(json->getRoot()));
+                }
+                return true;
+            }
+
         private: 
             IScriptValue* m_speedValue;
             double m_speedStepsPerSecond;
@@ -366,6 +398,15 @@ namespace DevRelief
                 }                
                 TimeDomain::update(ctx);
             }     
+
+            bool toJson(JsonObject* json) const override {
+                TimeDomain::toJson(json);
+                if (m_durationValue) {
+                    json->set("duration",m_durationValue->toJson(json->getRoot()));
+                }
+                return true;
+            }
+
         private:
             IScriptValue* m_durationValue;                   
     };
@@ -395,6 +436,12 @@ namespace DevRelief
         {
             m_logger->never("Linear ease %f",position);
             return position;
+        }
+
+        
+        bool toJson(JsonObject* json) const override {
+            json->setString("ease","linear");
+            return true;
         }
     };
 
@@ -463,6 +510,20 @@ namespace DevRelief
                             pow(position, 3);
             AnimationLogger.never("ease: %f==>%f  %f  %f",position,val,in,out);
             return val;
+        }
+        
+        bool toJson(JsonObject* json) const override {
+            if (m_inValue) {
+                json->set("ease-in",m_inValue->toJson(json->getRoot()));
+            } else {
+                json->setInt("ease-in",m_in);
+            }
+            if (m_outValue) {
+                json->set("ease-out",m_outValue->toJson(json->getRoot()));
+            } else {
+                json->setInt("ease-out",m_out);
+            }
+            return true;
         }
     private:
         double m_in;
@@ -562,6 +623,20 @@ namespace DevRelief
             m_logger->debug("not implemented Animator::clone");
             return this;
         }
+
+        bool toJson(JsonObject* json) const override {
+            if (m_domain) {
+                m_domain->toJson(json);
+            }
+            if (m_range) {
+                m_range->toJson(json);
+            }
+            if (m_ease) {
+                m_ease->toJson(json);
+            }
+            return true;
+        }
+
     private:
         IAnimationDomain* m_domain;
         IAnimationRange*  m_range;

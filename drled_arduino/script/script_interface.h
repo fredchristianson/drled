@@ -102,6 +102,7 @@ namespace DevRelief{
             virtual void update(IScriptContext* ctx)=0;
             virtual bool isTime() const = 0;
             virtual RunState getState() const =0;
+            virtual bool toJson(JsonObject* json) const=0;
     };
     
     class IAnimationRange {
@@ -116,6 +117,7 @@ namespace DevRelief{
             virtual void update(IScriptContext* ctx)=0;
             virtual double getDelayValue(IScriptContext* ctx)=0;
             virtual double getCompleteValue(IScriptContext* ctx)=0;
+            virtual bool toJson(JsonObject* json) const=0;
     };
 
     class IAnimationEase {
@@ -123,6 +125,7 @@ namespace DevRelief{
             virtual void destroy()=0;
             virtual double calculate(double position) = 0;
             virtual void update(IScriptContext* ctx)=0;
+            virtual bool toJson(JsonObject* json) const=0;
     };
 
     class IValueAnimator {
@@ -131,6 +134,7 @@ namespace DevRelief{
         virtual double getRangeValue(IScriptContext* ctx)=0;
         virtual IValueAnimator* clone(IScriptContext* ctx)=0;
         virtual void update(IScriptContext* ctx)=0;
+        virtual bool toJson(JsonObject* json) const=0;
     };
 
     class IHSLStripLED {
@@ -310,6 +314,14 @@ namespace DevRelief{
         IScriptValue* getValue() const { return m_value;}
         virtual void destroy() { delete this;}
 
+        IJsonElement* toJson(JsonRoot* jsonRoot) { 
+            JsonObject*obj = jsonRoot->createObject();
+            if (m_repeatCount) {
+                obj->set("count",m_repeatCount->toJson(jsonRoot));
+            }
+            obj->set("value",m_value ? m_value->toJson(jsonRoot) : new JsonNull(*jsonRoot));
+            return obj;
+        }
     private:
         IScriptValue *m_value;
         IScriptValue* m_repeatCount;

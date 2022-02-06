@@ -627,6 +627,7 @@ namespace DevRelief
 
             virtual UnitValue getValue(double pct, IScriptContext* ctx, LinkedList<ScriptPatternElement*>& elements,int pixelCount, double defaultValue, PositionUnit defaultUnit)=0;
 
+            virtual bool toJson(JsonObject* json)const =0;
         protected:
             Logger* m_logger;
 
@@ -637,8 +638,7 @@ namespace DevRelief
     public:
         PatternValue() : AnimatedValue()
         {
-            m_animate = NULL;
-            m_extend = REPEAT_PATTERN;
+
             m_pixelCount = 0;
             m_interpolation = NULL;
 
@@ -646,14 +646,10 @@ namespace DevRelief
 
         virtual ~PatternValue()
         {
-            if (m_animate) {m_animate->destroy();}
-            if (m_interpolation) { m_interpolation->destroy();}
+           if (m_interpolation) { m_interpolation->destroy();}
         }
 
 
-        void setExtend(PatternExtend val) {
-            m_extend = val;
-        }
 
         void addElement(ScriptPatternElement* element) {
             if (element == NULL) {
@@ -684,7 +680,27 @@ namespace DevRelief
             return value;
         }
    
-
+        IJsonElement* toJson(JsonRoot* jsonRoot) { 
+            m_logger->never("PatternValue.toJson");
+            JsonObject* json = jsonRoot->getTopObject();
+            m_logger->never("\tcreate array");
+            JsonArray* pattern = json->createArray("pattern");
+            m_logger->never("\tpopulate array");
+            m_elements.each([&](ScriptPatternElement* element){
+                m_logger->never("\taddItem %x",element);
+                pattern->addItem(element->toJson(jsonRoot));
+            });
+            m_logger->always("\tm_animate->toJson %x",m_animator);
+            if (m_animator) {
+                m_animator->toJson(json);
+            }
+            if (m_interpolation) {
+                m_interpolation->toJson(json);
+            }
+            return json;
+        }
+        
+        // for debugging
         virtual DRString toString()
         {
             DRString result("pattern:");
@@ -698,7 +714,11 @@ namespace DevRelief
         }
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue) override{
-            return new ScriptNullValue();//todo: implement
+            JsonRoot root;
+            IJsonElement* json = toJson(&root);
+            m_logger->always("PaternValue.eval json=%s",JsonElement::toJsonString(json).text());
+            IScriptValue* copy = ScriptValue::create(json);
+            return copy;
 
         }
 
@@ -711,8 +731,6 @@ namespace DevRelief
         PtrList<ScriptPatternElement*> m_elements;
         size_t m_pixelCount;
        
-        IValueAnimator* m_animate;
-        PatternExtend m_extend;
     };
     
     void ScriptPatternElement::update(IScriptContext* ctx) {
@@ -793,7 +811,10 @@ namespace DevRelief
                
             }
 
-
+            bool toJson(JsonObject* json)const override {
+                json->setBool("smooth",true);
+                return true;
+            }
         protected:
             void setupSegments(LinkedList<ScriptPatternElement*>& elements,int totalPixels) {
                 int elementCount = elements.size();
@@ -917,7 +938,9 @@ namespace DevRelief
                 
             }
 
-
+            bool toJson(JsonObject* json) const override {
+                return true;
+            }
         protected:
             void setupSegments(LinkedList<ScriptPatternElement*>& elements,int totalPixels) {
                 if (elements.size() != m_segments.size()){
@@ -1250,7 +1273,7 @@ namespace DevRelief
                 if (Util::isEmpty(name) || value == NULL) {
                     return;
                 }
-                m_logger->always("add NameValue %s  0x%04X",name,value);
+                m_logger->never("add NameValue %s  0x%04X",name,value);
                 NameValue* nv = new NameValue(name,value);
                 m_values.add(nv);
             }
@@ -1406,33 +1429,33 @@ namespace DevRelief
             IAnimationEase* ease = json ? createEase(json) : NULL;
 
             PatternInterpolation* pi = NULL;
-            ScriptValueLogger.always("pattern smooth %d",smooth);
+            ScriptValueLogger.never("pattern smooth %d",smooth);
             if (smooth){
                 pi = new SmoothInterpolation();
-                ScriptValueLogger.always("\tcreated SmoothInterpolation");
+                ScriptValueLogger.never("\tcreated SmoothInterpolation");
              } else {
                  pi = new StepInterpolation();
-                ScriptValueLogger.always("\tcreated StepInterpolation");
+                ScriptValueLogger.never("\tcreated StepInterpolation");
              }
-             ScriptValueLogger.always("\tset Interpolation");
+             ScriptValueLogger.never("\tset Interpolation");
             patternValue->setInterpolation(pi);
             IAnimationRange* range = NULL;
-            ScriptValueLogger.always("\tcheck domain type");
+            ScriptValueLogger.never("\tcheck domain type");
             bool isTime = (json && (json->getPropertyValue("duration") || json->getPropertyValue("speed")));
             if (repeat &&  !isTime) {
-                ScriptValueLogger.always("\tcreate Repeat range");
+                ScriptValueLogger.never("\tcreate Repeat range");
                 range = new RepeatPatternRange(patternValue,unfold);
             } else {
-                ScriptValueLogger.always("\tcreate stretch range");
+                ScriptValueLogger.never("\tcreate stretch range");
                 range = new StretchPatternRange(patternValue,unfold);
             }
-            ScriptValueLogger.always("\tcreate domain");
+            ScriptValueLogger.never("\tcreate domain");
             IAnimationDomain* domain = json ? createDomain(json,range) : new ContextPositionDomain();
-            ScriptValueLogger.always("\tcreate animator");
+            ScriptValueLogger.never("\tcreate animator");
             IValueAnimator* animator = new Animator(domain,range,ease);
-            ScriptValueLogger.always("\tset animator");
+            ScriptValueLogger.never("\tset animator");
             patternValue->setAnimator(animator);
-            ScriptValueLogger.always("\tcreated patternValue");
+            ScriptValueLogger.never("\tcreated patternValue");
             return patternValue;
     }
 
