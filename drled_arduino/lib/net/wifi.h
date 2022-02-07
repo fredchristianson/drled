@@ -27,14 +27,17 @@ namespace DevRelief {
         void initialize() {
             m_logger->info("WiFi initializing");
             WiFi.begin(ssid, password);
-            
+            unsigned long seed = millis();
             while(WiFi.status() != WL_CONNECTED) {
                 m_logger->info("waiting for wifi connection");
-                delay(500);
+                delay(50);
+                int add = millis()>>8;
+                int mult = (millis()%2)+1;
+                seed = seed*mult+add;
             }
             WiFi.hostname(m_hostname.text());
             m_ipAddress = WiFi.localIP().toString().c_str();
-            
+            randomSeed(seed);
             m_logger->info("WiFi connected %s",WiFi.localIP().toString().c_str());
         }
 

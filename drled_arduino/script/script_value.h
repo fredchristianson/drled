@@ -1287,20 +1287,20 @@ namespace DevRelief
             int count() { return m_values.size();}
 
             void initialize(ScriptValueList* source,IScriptContext*ctx) override {
-                m_logger->always("initialize ScriptValueList from source %x",source);
+                m_logger->never("initialize ScriptValueList from source %x",source);
                 m_values.clear();
                 if(source == NULL) { return;}
                 source->each([&](NameValue* nv) {
                     IScriptValue* val = nv->getValue();
                     if (val != NULL) {
-                        m_logger->always("eval() %s ",nv->getName());
-                        m_logger->showMemoryAlways();
+                        m_logger->never("eval() %s ",nv->getName());
+                        m_logger->showMemoryNever();
                         IScriptValue* newVal = val->eval(ctx);
-                        m_logger->always("\tnew val %s",newVal->toString().text());
-                        m_logger->showMemoryAlways("\tafter eval()");
+                        m_logger->never("\tnew val %s",newVal->toString().text());
+                        m_logger->showMemoryNever("\tafter eval()");
                         NameValue*newNV = new NameValue(nv->getName(),newVal);
                         m_values.add(newNV);
-                        m_logger->showMemoryAlways("\tafter added to list()");
+                        m_logger->showMemoryNever("\tafter added to list()");
                     }
                 });
             }

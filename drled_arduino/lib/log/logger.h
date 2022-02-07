@@ -275,6 +275,9 @@ public:
 
     }
 
+    void showMemoryNever(const char * label="Memory") {}
+
+
 private: 
     char * m_name;
     int m_level;

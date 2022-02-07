@@ -76,7 +76,7 @@ namespace DevRelief
                 m_strip = NULL;
                 m_position = NULL;
                 m_parentContext = NULL;
-
+                m_startTimeMsecs = millis();
                 m_valueList = new ScriptValueList();
             }
 
@@ -156,7 +156,7 @@ namespace DevRelief
             }
           
         protected:
-
+            long m_startTimeMsecs;
             IScriptContext* m_parentContext;
             IScriptHSLStrip* m_strip;
             const char * m_type;

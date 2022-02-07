@@ -168,13 +168,24 @@ namespace DevRelief
     class MakerContext : public ChildContext {
         public:
             MakerContext(IScriptContext* ownerContext, ScriptValueList* values) : ChildContext("maker") {
-                m_logger->showMemoryAlways("MakerContext::MakerContext()");
+                m_logger->showMemoryNever("MakerContext::MakerContext()");
                m_valueList->initialize(values,ownerContext);
+               
             }
 
             virtual ~MakerContext() {
 
             }
+
+            bool isComplete(int maxDuration) {
+                if (maxDuration>0 && m_startTimeMsecs+maxDuration < millis()) {
+                    return true;
+                }
+                return false;
+            }
+
+        private:
+            
     };
 
     class MakerContainer : public ScriptContainer {
@@ -191,6 +202,13 @@ namespace DevRelief
             void valuesFromJson(JsonObject* json) override {
                 ScriptContainer::valuesFromJson(json);
                 m_countValue = ScriptValue::create(json->getPropertyValue("count"));
+                m_minCountValue = ScriptValue::create(json->getPropertyValue("min-count"));
+                m_maxCountValue = ScriptValue::create(json->getPropertyValue("max-count"));
+                m_maxDurationMsecs = ScriptValue::create(json->getPropertyValue("max-duration"));
+                m_chancePerSecondValue = ScriptValue::create(json->getPropertyValue("chance-per-second"));
+                if (!m_chancePerSecondValue) {
+                    m_chancePerSecondValue = ScriptValue::create(json->getPropertyValue("chance"));
+                }
                 JsonObject* obj = json->getChild("init");
                 m_initValues.clear();
             
@@ -206,9 +224,11 @@ namespace DevRelief
 
             void valuesToJson(JsonObject* json) const override {
                 ScriptContainer::valuesToJson(json);
-                if (m_countValue) {
-                    json->set("count",m_countValue->toJson(json->getRoot()));
-                }
+                setJsonValue(json,"count",m_countValue);
+                setJsonValue(json,"min-count",m_minCountValue);
+                setJsonValue(json,"max-count",m_maxCountValue);
+                setJsonValue(json,"chance-per-second",m_chancePerSecondValue);
+                setJsonValue(json,"max-duration",m_maxDurationMsecs);
             }
 
             void draw(IScriptContext* parentContext) override {
@@ -221,27 +241,79 @@ namespace DevRelief
 
         protected:
             void checkContextList(IScriptContext* parentContext) {
-                int count = 1;
-                if (m_countValue != NULL) {
-                    count = m_countValue->getIntValue(parentContext,1);
+                int minCount = 0;
+                int maxCount = 1;
+                int maxDuration = 0;
+                if (m_minCountValue) {
+                    minCount = m_minCountValue->getIntValue(parentContext,0);
+                } else if (m_countValue) {
+                    minCount = m_countValue->getIntValue(parentContext,0);
                 }
-                m_logger->always("create MakerContexts");
-                m_logger->showMemoryAlways();
-                while(count > m_contextList.size()) {
-                    m_logger->showMemoryAlways("\t\tcreate context");
-                    m_logger->indent();
-                    m_logger->indent();
-                    MakerContext* mc = new MakerContext(parentContext,&m_initValues);
-                    m_contextList.add(mc);
-                    m_logger->outdent();
-                    m_logger->outdent();
-                    m_logger->showMemoryAlways("\t\tcreated");
+                if (m_maxCountValue) {
+                    maxCount = m_maxCountValue->getIntValue(parentContext,0);
+                } else if (m_countValue) {
+                    maxCount = m_countValue->getIntValue(parentContext,0);
                 }
-                m_logger->showMemoryAlways("\tcreated all contexts");
+
+                if (m_maxDurationMsecs) {
+                    maxDuration = m_maxDurationMsecs->getIntValue(parentContext,0);
+                }
+
+                // remove any completed contexts
+                int i=0;
+                while(i<m_contextList.size()) {
+                    MakerContext* ctx = m_contextList.get(i);
+                    if (ctx->isComplete(maxDuration)) {
+                        m_logger->always("remove complete");
+                        m_contextList.removeAt(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+
+                if (maxCount > m_contextList.size() && shouldCreate(parentContext)){
+                    m_logger->always("create by chance");
+                    createContext(parentContext);
+                }
+
+                // remove any extra contexts if creating one by chance created too many.
+                while(maxCount < m_contextList.size()) {
+                    m_logger->always("remove too many");
+                    m_contextList.removeAt(0);
+                }
+
+                m_logger->never("create MakerContexts");
+                m_logger->showMemoryNever();
+
+                // create new contexts if there are fewer than "min-count";
+                while(minCount > m_contextList.size()) {
+                    m_logger->always("create to min");
+
+                    createContext(parentContext);
+                }
+                m_logger->showMemoryNever("\tcreated all contexts");
             }
 
+            void createContext(IScriptContext* parentContext) {
+                // todo: make sure there is enough heap left.  keep track of heap needed to create previous contexts
+                MakerContext* mc = new MakerContext(parentContext,&m_initValues);
+                m_contextList.add(mc);
+            }
+
+            bool shouldCreate(IScriptContext* parentContext) {
+                if (m_chancePerSecondValue == NULL) { return false;}
+                double chance = m_chancePerSecondValue->getFloatValue(parentContext,0);
+                long time = parentContext->getStep()->getMsecsSincePrev();
+                double shouldPercent = chance*time/1000.0;
+                if (random(100) < shouldPercent) { return true;}
+                return false;
+            }
         private:
             IScriptValue* m_countValue;
+            IScriptValue* m_minCountValue;
+            IScriptValue* m_maxCountValue;
+            IScriptValue* m_chancePerSecondValue;
+            IScriptValue* m_maxDurationMsecs;
             ContainerElementHSLStrip m_segmentStrip;
             ScriptElementPosition m_segmentPosition;
             PtrList<MakerContext*> m_contextList;
