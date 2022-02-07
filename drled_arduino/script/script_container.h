@@ -168,6 +168,7 @@ namespace DevRelief
     class MakerContext : public ChildContext {
         public:
             MakerContext(IScriptContext* ownerContext, ScriptValueList* values) : ChildContext("maker") {
+                m_logger->showMemoryAlways("MakerContext::MakerContext()");
                m_valueList->initialize(values,ownerContext);
             }
 
@@ -224,10 +225,19 @@ namespace DevRelief
                 if (m_countValue != NULL) {
                     count = m_countValue->getIntValue(parentContext,1);
                 }
+                m_logger->always("create MakerContexts");
+                m_logger->showMemoryAlways();
                 while(count > m_contextList.size()) {
+                    m_logger->showMemoryAlways("\t\tcreate context");
+                    m_logger->indent();
+                    m_logger->indent();
                     MakerContext* mc = new MakerContext(parentContext,&m_initValues);
                     m_contextList.add(mc);
+                    m_logger->outdent();
+                    m_logger->outdent();
+                    m_logger->showMemoryAlways("\t\tcreated");
                 }
+                m_logger->showMemoryAlways("\tcreated all contexts");
             }
 
         private:

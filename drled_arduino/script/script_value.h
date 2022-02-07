@@ -136,22 +136,23 @@ namespace DevRelief
     public:
         NameValue(const char *name, IScriptValue *value)
         {
-            m_name = name;
+            m_name = Util::allocText(name);
             m_value = value;
         }
 
         virtual ~NameValue()
         {
+            Util::freeText(m_name);
             m_value->destroy();
         }
 
         virtual void destroy() { delete this;}
 
-        const char *getName() { return m_name.text(); }
+        const char *getName() { return m_name; }
         IScriptValue *getValue() { return m_value; }
 
     private:
-        DRString m_name;
+        const char * m_name;
         IScriptValue *m_value;
     };
     // ScriptVariableGenerator: ??? rand, trig, ...
@@ -572,7 +573,7 @@ namespace DevRelief
     class AnimatedValue : public ScriptValue {
         public:
             AnimatedValue( ) {
-                m_startMSecs = millis();
+                
             }
 
             ~AnimatedValue()  {
@@ -607,9 +608,6 @@ namespace DevRelief
                 return getFloatValue(ctx,defaultValue?1:0) != 0;
             }
         protected:
- 
-
-            unsigned long m_startMSecs;
             IValueAnimator* m_animator;
     };
 
@@ -690,7 +688,7 @@ namespace DevRelief
                 m_logger->never("\taddItem %x",element);
                 pattern->addItem(element->toJson(jsonRoot));
             });
-            m_logger->always("\tm_animate->toJson %x",m_animator);
+            m_logger->never("\tm_animate->toJson %x",m_animator);
             if (m_animator) {
                 m_animator->toJson(json);
             }
@@ -716,7 +714,7 @@ namespace DevRelief
         IScriptValue* eval(IScriptContext * ctx, double defaultValue) override{
             JsonRoot root;
             IJsonElement* json = toJson(&root);
-            m_logger->always("PaternValue.eval json=%s",JsonElement::toJsonString(json).text());
+            m_logger->never("PaternValue.eval json=%s",JsonElement::toJsonString(json).text());
             IScriptValue* copy = ScriptValue::create(json);
             return copy;
 
@@ -1080,9 +1078,10 @@ namespace DevRelief
     class ScriptVariableValue : public IScriptValue
     {
     public:
-        ScriptVariableValue(bool isSysValue, const char *value,IScriptValue* defaultValue) : m_name(value)
+        ScriptVariableValue(bool isSysValue, const char *value,IScriptValue* defaultValue) 
         {
             m_logger = &ScriptValueLogger;
+            m_name = Util::allocText(value);
             m_logger->debug("Created ScriptVariableValue %s %d.", value, isSysValue);
             m_defaultValue = defaultValue;
             m_isSysValue = isSysValue;
@@ -1091,6 +1090,7 @@ namespace DevRelief
 
         virtual ~ScriptVariableValue()
         {
+            Util::freeText(m_name);
             if (m_defaultValue) { m_defaultValue->destroy();}
         }
 
@@ -1108,7 +1108,7 @@ namespace DevRelief
                 m_logger->never("variable getFloatValue() recurse");
                 return m_defaultValue ? m_defaultValue->getFloatValue(ctx,defaultValue) : defaultValue;
             }
-            if (m_isSysValue && Util::equal("offset",m_name.text())){
+            if (m_isSysValue && Util::equal("offset",m_name)){
                 IElementPosition*pos = ctx->getPosition();
                 if (pos && pos->hasLength()) {
                     return pos->getOffset().getValue();
@@ -1116,7 +1116,7 @@ namespace DevRelief
                     return 0;
                 }
             }
-            if (m_isSysValue && Util::equal("length",m_name.text())){
+            if (m_isSysValue && Util::equal("length",m_name)){
                 IElementPosition*pos = ctx->getPosition();
                 if (pos && pos->hasLength()) {
                     return pos->getLength().getValue();
@@ -1124,7 +1124,7 @@ namespace DevRelief
                     return ctx->getStrip()->getLength();
                 }
             }
-            if (m_isSysValue && Util::equal("led",m_name.text())){
+            if (m_isSysValue && Util::equal("led",m_name)){
                 return ctx->getAnimationPositionDomain()->getValue();
             }
 
@@ -1197,7 +1197,7 @@ namespace DevRelief
         }
 
         IJsonElement* toJson(JsonRoot* jsonRoot) override {
-            DRFormattedString val("%s(%s)",(m_isSysValue?"sys":"var"),m_name.text());
+            DRFormattedString val("%s(%s)",(m_isSysValue?"sys":"var"),m_name);
             if (m_defaultValue) {
                 DRString text = m_defaultValue->stringify();
                 if (text.getLength()>0) {
@@ -1223,7 +1223,7 @@ namespace DevRelief
 
             return val ? val : &NULL_VALUE;
         }
-        DRString m_name;
+        const char * m_name;
         bool m_isSysValue;
         IScriptValue*  m_defaultValue;
         Logger *m_logger;
@@ -1287,13 +1287,20 @@ namespace DevRelief
             int count() { return m_values.size();}
 
             void initialize(ScriptValueList* source,IScriptContext*ctx) override {
+                m_logger->always("initialize ScriptValueList from source %x",source);
                 m_values.clear();
                 if(source == NULL) { return;}
                 source->each([&](NameValue* nv) {
                     IScriptValue* val = nv->getValue();
                     if (val != NULL) {
-                        NameValue*newNV = new NameValue(nv->getName(),val->eval(ctx));
+                        m_logger->always("eval() %s ",nv->getName());
+                        m_logger->showMemoryAlways();
+                        IScriptValue* newVal = val->eval(ctx);
+                        m_logger->always("\tnew val %s",newVal->toString().text());
+                        m_logger->showMemoryAlways("\tafter eval()");
+                        NameValue*newNV = new NameValue(nv->getName(),newVal);
                         m_values.add(newNV);
+                        m_logger->showMemoryAlways("\tafter added to list()");
                     }
                 });
             }

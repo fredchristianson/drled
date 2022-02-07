@@ -93,6 +93,22 @@ class Util {
             }
             return vals.size();
         }
+
+        static char * allocText(const char * from) {
+            int len = 0;
+            if (from != NULL && from[0] != 0) {
+                len = strlen(from);
+            }
+            char * text = (char*)malloc(len+1);
+            strcpy(text,from);
+            return text;
+        }
+
+        static void freeText(const char * text) {
+            if (text != NULL) {
+                free((void*)text);
+            }
+        }
 };
 
 
