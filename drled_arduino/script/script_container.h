@@ -264,7 +264,7 @@ namespace DevRelief
                 while(i<m_contextList.size()) {
                     MakerContext* ctx = m_contextList.get(i);
                     if (ctx->isComplete(maxDuration)) {
-                        m_logger->always("remove complete");
+                        m_logger->never("remove complete");
                         m_contextList.removeAt(i);
                     } else {
                         i += 1;
@@ -272,13 +272,13 @@ namespace DevRelief
                 }
 
                 if (maxCount > m_contextList.size() && shouldCreate(parentContext)){
-                    m_logger->always("create by chance");
+                    m_logger->never("create by chance");
                     createContext(parentContext);
                 }
 
                 // remove any extra contexts if creating one by chance created too many.
                 while(maxCount < m_contextList.size()) {
-                    m_logger->always("remove too many");
+                    m_logger->never("remove too many");
                     m_contextList.removeAt(0);
                 }
 
@@ -287,7 +287,7 @@ namespace DevRelief
 
                 // create new contexts if there are fewer than "min-count";
                 while(minCount > m_contextList.size()) {
-                    m_logger->always("create to min");
+                    m_logger->never("create to min");
 
                     createContext(parentContext);
                 }
@@ -304,8 +304,12 @@ namespace DevRelief
                 if (m_chancePerSecondValue == NULL) { return false;}
                 double chance = m_chancePerSecondValue->getFloatValue(parentContext,0);
                 long time = parentContext->getStep()->getMsecsSincePrev();
-                double shouldPercent = chance*time/1000.0;
-                if (random(100) < shouldPercent) { return true;}
+                double shouldPercent = 100*chance*time/1000.0;
+                int r = random(100);
+                if (r < shouldPercent) { 
+                    m_logger->never("create %d < %f (%f)",r,shouldPercent,chance);
+                    return true;
+                }
                 return false;
             }
         private:
