@@ -87,6 +87,12 @@ namespace DevRelief {
                 return ScriptValue::create(propertyValue,json);
             }
 
+            void setJsonValue(JsonObject* json,const char * name, IScriptValue*val) const  {
+                if (val) {
+                    json->set(name,val->toJson(json->getRoot()));
+                }
+            }
+
             void destroy(IScriptValue* val) {
                 m_logger->debug("destroy value");
                 if (val) { val->destroy();}
