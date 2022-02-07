@@ -313,8 +313,8 @@ namespace DevRelief
             unsigned long m_startMsecs;
             unsigned long m_durationMsecs;
             long m_delayMsecs;
-            long m_repeatLimit;
-            long m_repeatCount;
+            short m_repeatLimit;
+            short m_repeatCount;
             RunState m_state;
 
             IScriptValue* m_repeatLimitValue;

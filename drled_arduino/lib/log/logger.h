@@ -270,6 +270,11 @@ public:
 
     }
 
+    void showMemoryAlways(const char * label="Memory") {
+        write(ALWAYS,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
+
+    }
+
 private: 
     char * m_name;
     int m_level;
