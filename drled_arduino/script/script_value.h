@@ -204,7 +204,9 @@ namespace DevRelief
        bool getBoolValue(IScriptContext* ctx,  bool defaultValue) override
         {
             double d = getFloatValue(ctx,0);
-            return d != 0;
+            bool b = d != 0;
+            m_logger->never("func bool: %s",b?"true":"false");
+            return b;
         }
 
         DRString toString() { return DRString("Function: ").append(m_name); }

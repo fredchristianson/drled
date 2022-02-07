@@ -24,6 +24,7 @@ namespace DevRelief {
                 m_offsetValue = NULL;
                 m_lengthValue = NULL;
                 m_stripNumberValue = NULL;
+                m_reverseValue = NULL;
                 m_unit = POS_INHERIT;
                 m_hslOperation = REPLACE;
                 m_clip = false;
@@ -45,6 +46,7 @@ namespace DevRelief {
                 if (m_lengthValue) { m_lengthValue->destroy();}
                 m_logger->never("destroy stripNumber");
                 if (m_stripNumberValue) { m_stripNumberValue->destroy();}
+                if (m_reverseValue) { m_reverseValue->destroy();}
                 m_logger->never("destroy done");
 
             }
@@ -88,6 +90,10 @@ namespace DevRelief {
                 if (m_offsetValue) { m_offset = m_offsetValue->getUnitValue(context,0,POS_INHERIT);}
                 if (m_lengthValue) { m_length = m_lengthValue->getUnitValue(context,100,POS_INHERIT);}
                 if (m_stripNumberValue) { m_stripNumber = m_stripNumberValue->getIntValue(context,0);}
+                if (m_reverseValue) { 
+                    m_reverse = m_reverseValue->getBoolValue(context,false);
+                    m_logger->never("got reverse value: %d",m_reverse);
+                }
 
             }
 
@@ -132,7 +138,11 @@ namespace DevRelief {
             void setLength(IJsonElement* json)  { m_lengthValue = ScriptValue::create(json);}
             void setStrip(IJsonElement* json)  { m_stripNumberValue = ScriptValue::create(json);}
             void setUnit(IJsonElement*json) {if (json) {m_unit = parseJsonUnit(json);}}
-            void setReverse(IJsonElement*json) { if (json) { m_reverse = getBool(json,false);}}
+            void setReverse(IJsonElement*json) { if (json) {
+                 //m_reverse = getBool(json,false);
+                 m_reverseValue = ScriptValue::create(json);
+                 }
+            }
             void setHSLOperation(IJsonElement*json){
                 m_logger->never("PositionProperty.setHSLOperation %x",json);
                 if (json) {m_hslOperation = parseJsonOperation(json);}
@@ -195,6 +205,7 @@ namespace DevRelief {
             IScriptValue* m_offsetValue;
             IScriptValue* m_lengthValue;
             IScriptValue* m_stripNumberValue;
+            IScriptValue* m_reverseValue;
 
             // evaluated values
             UnitValue m_offset;
