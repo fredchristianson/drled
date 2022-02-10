@@ -198,6 +198,13 @@ public:
      void never(const char * message,...) {
      }
 
+    void condition(bool test, const char * message,...) {
+        if (!test) { return;}
+        va_list args;
+        va_start(args,message);
+        write(ALWAYS,message,args);
+    }
+
     void errorNoRepeat(const char * message,...) {
         if (strncmp(message,lastErrorMessage,100)==0){
             return; //don't repeat the error message

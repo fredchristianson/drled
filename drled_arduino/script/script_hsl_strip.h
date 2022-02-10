@@ -38,30 +38,30 @@ namespace DevRelief{
             IScriptHSLStrip* getParent() const override {  return m_parent;}
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
-                m_logger->debug("ScriptHSLStrip.setHue(%d,%d) strip=%x parent=%x",hue,index,this,m_parent);
+                m_logger->debug("ScriptHSLStrip.setHue(%d,%d) strip=%x parent=%x op=%d",hue,index,this,m_parent,translateOp(op));
                 if (!isPositionValid(index)) { 
                     m_logger->debug("Invalid index %d, %d",index,m_length);
                     return;
                 }
-                m_parent->setHue(hue,translateIndex(index),op);
+                m_parent->setHue(hue,translateIndex(index),translateOp(op));
                 m_logger->debug("hue set %x",this);
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}            
-                m_logger->never("ScriptHSLStrip.setSaturation op=%d",op); 
-                m_parent->setSaturation(saturation,translateIndex(index),op);
+                m_logger->never("ScriptHSLStrip.setSaturation op=%d",translateOp(op)); 
+                m_parent->setSaturation(saturation,translateIndex(index),translateOp(op));
             }
 
             void setLightness(int16_t lightness,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}             
                 
-                m_parent->setLightness(lightness,translateIndex(index),op);
+                m_parent->setLightness(lightness,translateIndex(index),translateOp(op));
             }
 
             void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
                 
-                m_parent->setRGB(rgb,translateIndex(index),op);
+                m_parent->setRGB(rgb,translateIndex(index),translateOp(op));
             }  
   
             int getFlowIndex() const { 
@@ -164,6 +164,9 @@ namespace DevRelief{
                 return tidx;
             }
             
+            virtual HSLOperation translateOp(HSLOperation op) {
+                return op;
+            }
 
             IScriptHSLStrip* m_parent;
             IElementPosition* m_position;
@@ -197,7 +200,7 @@ namespace DevRelief{
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
                 m_parentLength = m_base->getCount();
 
-                m_logger->debug("RootHSLStrip.update %x %x",pos,context);
+                m_logger->never("RootHSLStrip.update %x %x op=%d %x",pos,context,pos->getHSLOperation(),m_position);
                 m_logger->debug("\tplen %d",m_parentLength);
                 m_unit = pos->getUnit();
                 if (pos->hasLength()) {
@@ -221,25 +224,25 @@ namespace DevRelief{
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}
-                m_logger->debug("RootHSLStrip setHue %d  op=%d",index,op);
-                m_base->setHue(translateIndex(index),hue,op);
+                m_logger->write(index==0?ALWAYS:NEVER,"RootHSLStrip setHue %d  op=%d top=%d",index,op,translateOp(op));
+                m_base->setHue(translateIndex(index),hue,translateOp(op));
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}     
-                m_logger->never("RootHSLStrip.setSaturation op=%d",op);        
-                m_base->setSaturation(translateIndex(index),saturation,op);
+                m_logger->never("RootHSLStrip.setSaturation op=%d",translateOp(op));        
+                m_base->setSaturation(translateIndex(index),saturation,translateOp(op));
             }
 
             void setLightness(int16_t lightness,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}             
                 
-                m_base->setLightness(translateIndex(index),lightness,op);
+                m_base->setLightness(translateIndex(index),lightness,translateOp(op));
             }
 
             void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
                 
-                m_base->setRGB(translateIndex(index),rgb,op);
+                m_base->setRGB(translateIndex(index),rgb,translateOp(op));
             }  
 
             void setHSLStrip(IHSLStrip* base) {
@@ -256,6 +259,15 @@ namespace DevRelief{
 
 
         protected:
+            virtual HSLOperation translateOp(HSLOperation op) {
+                m_logger->never("root translate %x op %d %d",m_position,op,m_position->getHSLOperation());
+                HSLOperation pop = m_position ? m_position->getHSLOperation() : ADD;
+                if (op == INHERIT || op == UNSET) {
+                    return pop;
+                }
+                return op;
+            }
+
             IHSLStrip* m_base;
     };
 
@@ -329,7 +341,7 @@ namespace DevRelief{
             void eachLED(auto&& drawer) {
                 
                 HSLOperation op = m_position->getHSLOperation();
-                m_logger->debug("eachLED HSL op: %d",op);
+                m_logger->never("eachLED HSL op: %d",op);
                 DrawLED led(this,m_context,op);
                 if (m_length == 0) {
                     return;
@@ -345,10 +357,10 @@ namespace DevRelief{
 
 
 
-            // void setHue(int16_t hue, int position, HSLOperation op) { m_parent->setHue(hue,position+m_offset,op);}
-            // void setSaturation(int16_t saturation, int position, HSLOperation op) { m_parent->setSaturation(saturation,position+m_offset,op);}
-            // void setLightness(int16_t lightness, int position, HSLOperation op) { m_parent->setLightness(lightness,position+m_offset,op);}
-            // void setRGB(const CRGB& rgb, int position, HSLOperation op) { m_parent->setRGB(rgb,position+m_offset,op);}
+            // void setHue(int16_t hue, int position, HSLOperation op) { m_parent->setHue(hue,position+m_offset,translateOp(op));}
+            // void setSaturation(int16_t saturation, int position, HSLOperation op) { m_parent->setSaturation(saturation,position+m_offset,translateOp(op));}
+            // void setLightness(int16_t lightness, int position, HSLOperation op) { m_parent->setLightness(lightness,position+m_offset,translateOp(op));}
+            // void setRGB(const CRGB& rgb, int position, HSLOperation op) { m_parent->setRGB(rgb,position+m_offset,translateOp(op));}
 
 
         private:
