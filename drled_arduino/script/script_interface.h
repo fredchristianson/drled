@@ -38,6 +38,7 @@ namespace DevRelief{
     class IScriptElement;
     class PositionDomain;
     class ScriptValueList;
+    class ScriptContainer;
 
     class UnitValue {
         public:
@@ -165,7 +166,7 @@ namespace DevRelief{
             virtual void setLightness(int16_t lightness, int index, HSLOperation op)=0;
             virtual void setRGB(const CRGB& rgb, int index, HSLOperation op)=0;
 
-            virtual void update(IElementPosition * pos, IScriptContext* context)=0;
+            virtual void updatePosition(IElementPosition * pos, IScriptContext* context)=0;
 
             virtual IScriptHSLStrip* getParent() const=0;
             virtual void setParent(IScriptHSLStrip* parent)=0;
@@ -253,7 +254,7 @@ namespace DevRelief{
         virtual IScriptValue *getValue(const char *name) = 0;
         virtual void setValue(const char *name, IScriptValue*val)=0;
         virtual void initialize(ScriptValueList* source, IScriptContext* context)=0;
-        
+        virtual void clear()=0;
     };
 
 
@@ -270,22 +271,23 @@ namespace DevRelief{
 
             virtual bool isPositionable()const=0;
             virtual IElementPosition* getPosition() const =0;
-
-            virtual void setParent(IScriptElement*)=0;
-            //virtual IScriptHSLStrip* getStrip() const = 0;
+            virtual void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext)=0;
+            
     };
 
     class IScriptContainer {
         public:
             virtual void elementsFromJson(JsonArray* json)=0;
             virtual const PtrList<IScriptElement*>& getChildren() const =0;
+            virtual void drawChildren()=0;
+            virtual IScriptContext* getContext()const = 0;
     };
     
     class ScriptElementCreator {
         public:
             ScriptElementCreator(IScriptContainer* container);
 
-            IScriptElement* elementFromJson(IJsonElement* json);
+            IScriptElement* elementFromJson(IJsonElement* json, ScriptContainer* container);
         protected:
             const char * guessType(JsonObject* json);
         private:

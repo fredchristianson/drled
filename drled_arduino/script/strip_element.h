@@ -146,11 +146,11 @@ namespace DevRelief
                 m_elementPosition.evaluateValues(context);
                 
                 m_mirrorStrip.setParent(parentStrip);
-                m_mirrorStrip.update(m_position,context);
+                m_mirrorStrip.updatePosition(m_position,context);
                 m_multiStrip.clear();
                 m_multiStrip.add(&m_mirrorStrip);
                 m_multiStrip.add(parentStrip);
-                m_multiStrip.update(m_position,context);
+                m_multiStrip.updatePosition(m_position,context);
                 context->setStrip(&m_multiStrip);
                 /*
                 m_elementPosition.evaluateValues(context);
@@ -215,12 +215,12 @@ namespace DevRelief
                         strip = new CopyStrip();
                         m_multiStrip.add(strip);
                     }
-                    strip->update(m_position,context);
+                    strip->updatePosition(m_position,context);
                     strip->setCopyOffset(nextOffset);
                     strip->setParent(parentStrip);
                     nextOffset += copyOffset;
                 }
-                m_multiStrip.update(m_position,context);
+                m_multiStrip.updatePosition(m_position,context);
                 context->setStrip(&m_multiStrip);
                 m_logger->never("\tdone copyElement.draw()");
                 m_logger->showMemory();

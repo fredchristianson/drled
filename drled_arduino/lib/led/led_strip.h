@@ -525,6 +525,7 @@ class HSLFilter : public DRLedStrip, IHSLStrip {
             m_base = NULL;
         }
 
+        virtual ~HSLFilter() { delete m_base;};
         void setBase(IHSLStrip* base) { m_base = base;}
 
         void setHue(int index, int16_t hue, HSLOperation op=REPLACE) { if (m_base) { m_base->setHue(index,hue,op);}}

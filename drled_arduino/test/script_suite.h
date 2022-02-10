@@ -12,7 +12,7 @@ namespace DevRelief {
 const char *HSL_SIMPLE_SCRIPT = R"script(
         {
             "name": "simple",
-            "commands": [
+            "elements": [
             {
                 "type": "hsl",
                 "hue": 50
@@ -24,7 +24,7 @@ const char *HSL_SIMPLE_SCRIPT = R"script(
 class DummyStrip : public HSLFilter {
     public:
         DummyStrip(): HSLFilter(NULL) {}
-        
+        virtual ~DummyStrip() {}
 };
 
 class ScriptTestSuite : public TestSuite{
@@ -37,7 +37,7 @@ class ScriptTestSuite : public TestSuite{
         }
 
         void run() {
-            runTest("destroyScript",[&](TestResult&r){destroyScript(r);});
+            runTest("scriptLifecycle",[&](TestResult&r){scriptLifecycle(r);});
         }
 
         ScriptTestSuite(Logger* logger) : TestSuite("Script Tests",logger){
@@ -47,12 +47,12 @@ class ScriptTestSuite : public TestSuite{
 
 
 
-    void destroyScript(TestResult& result);
+    void scriptLifecycle(TestResult& result);
 };
 
 
-void ScriptTestSuite::destroyScript(TestResult& result) {
-    m_logger->debug("ScriptTestScript::destroyScript");
+void ScriptTestSuite::scriptLifecycle(TestResult& result) {
+    m_logger->debug("ScriptTestScript::scriptLifecycle");
     m_logger->showMemory();
     ScriptDataLoader loader;
     m_logger->debug("\tcreated loader");
@@ -60,8 +60,8 @@ void ScriptTestSuite::destroyScript(TestResult& result) {
     Script* script = loader.parse(HSL_SIMPLE_SCRIPT);
     m_logger->debug("\tparsed script %x",script);
     m_logger->showMemory();
-
-    HSLStrip strip(new DummyStrip());
+    auto dummy  = new DummyStrip();
+    HSLStrip strip(dummy);
     m_logger->debug("\tcreated strip");
     m_logger->showMemory();
     script->begin(&strip,NULL);
@@ -74,6 +74,7 @@ void ScriptTestSuite::destroyScript(TestResult& result) {
     m_logger->debug("\tstep");
     m_logger->showMemory();
     script->destroy();
+    m_logger->showMemory();
     m_logger->debug("\tdestroyed");
     m_logger->showMemory();
 }

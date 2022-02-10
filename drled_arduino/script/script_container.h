@@ -19,22 +19,18 @@ namespace DevRelief
     class ScriptContainer: public PositionableElement, public IScriptContainer
     {
     public:
-        ScriptContainer(const char * type, IScriptHSLStrip* strip, IElementPosition* position) : PositionableElement(type, position)
+        ScriptContainer(const char * type,IScriptContext* context, IScriptHSLStrip* strip, IElementPosition* position) : PositionableElement(type, position)
         {
             m_logger = &ScriptContainerLogger;
             m_logger->debug("Create ScriptContainer type: %s",m_type);
             m_strip = strip;
+            m_context = context;
         }
 
         virtual ~ScriptContainer() {
             m_logger->debug("delete ScriptContainer type: %s",m_type);
         }
 
-        void destroy() override {
-            m_logger->debug("destroy ScriptContainer type: %s",m_type);
-            delete this;
-            m_logger->debug("\tdestroyed ScriptContainer");
-        }
 
         bool isContainer()const  override {
             return true;
@@ -45,56 +41,55 @@ namespace DevRelief
         }
 
         const PtrList<IScriptElement*>& getChildren() const override { return m_children;}
-        
-        void elementsFromJson(JsonArray* array) override {
-            m_logger->info("Parse elements array");
-            m_children.clear();
-            if (array == NULL) {
-                m_logger->debug("no child element array");
-                return;
-            }
-            ScriptElementCreator creator(this);
-            array->each([&](IJsonElement* element) {
-                m_logger->debug("\tgot child json");
-                IScriptElement*child = creator.elementFromJson(element);
-                m_logger->debug("\tcreated child %x",child);
-                if (child) {
-                    m_children.add(child);
-                    child->setParent(this);
-                }
+
+        void draw(IScriptContext* parentContext) override {
+            m_logger->debug("draw %x %s  parent: %x",this,getType(),parentContext);
+            m_logger->debug("\tstrip %x,  parent-strip %x",m_strip,parentContext->getStrip());
+            // use the container's strip at the start of draw().
+            // children may replace (add to) the strip but only for this drawing
+            m_logger->debug("setStrip %x",m_strip);
+            m_context->setStrip(m_strip);
+            
+            m_logger->never("getPosition");
+            // update position based on current parentContext values
+            IElementPosition*pos = getPosition();
+            m_context->setPosition(pos);
+            updatePosition(parentContext->getPosition(),parentContext);
+
+            auto parentStrip = parentContext->getStrip();
+            m_logger->debug("parent %x len=%d",parentStrip,parentStrip->getLength());
+            m_strip->setParent(parentContext->getStrip());
+            m_strip->updatePosition(pos,m_context);
+            drawChildren();
+        }
+
+        void drawChildren() override {
+            m_logger->debug("draw children %x %s context %x strip: %x",this,getType(),m_context, m_context->getStrip());
+            m_children.each([&](IScriptElement* child) {
+                m_logger->debug("\tchild %s",child->getType());
+                drawChild(m_context,child);
             });
         }
 
-        void draw(IScriptContext* parentContext) override {
-            m_logger->never("setCurrentElement %s %x",getType(),parentContext);
-            ChildContext scope;
-            scope.setParentContext(parentContext);
-            auto previousElement = scope.setCurrentElement(this);
+        void drawChild(IScriptContext* context, IScriptElement * child) {
+            m_logger->debug("set current element  %x %s",child, child->getType());
+            m_logger->indent();
+            context->setCurrentElement(child);
+            m_logger->debug("drawChild  %s",child->getType());
+            auto pos = child->getPosition();
+            if (pos) {
+                m_logger->debug("update position");
+                pos->setParent(getPosition());
+                pos->evaluateValues(context);
+            }
+
+            child->draw(m_context);
+            m_logger->outdent();
+            m_logger->debug("\tdone draw() child");
             
-            m_logger->never("getPosition");
-            IElementPosition*pos = getPosition();
-
-            pos->evaluateValues(&scope);
-            m_logger->never("update strip %x",m_strip);
-         
-            m_strip->update(pos,&scope);
-            scope.setStrip(m_strip);
-            m_logger->never("draw container %s %d",m_type,m_position->isReverse());
-
-            m_children.each([&](IScriptElement* child) {
-                m_logger->never("set current element  %x %s",child, child->getType());
-                scope.setCurrentElement(child);
-                m_logger->never("drawChild  %x",child);
-                child->draw(&scope);
-
-                m_logger->never("\tdone draw() child");
-            });
-            
-            m_logger->never("finished draw %s",getType());
         };
 
-        bool isPositionable()  const override { return true;}
-    
+        IScriptContext* getContext()const { return m_context;}
         void valuesFromJson(JsonObject* json) override {
             PositionableElement::valuesFromJson(json);
             m_logger->never("Load container json %s %s",getType(),json->toString().text());
@@ -122,37 +117,74 @@ namespace DevRelief
         }
 
     protected:
+        
+        void elementsFromJson(JsonArray* array) override {
+            m_logger->debug("Parse elements array");
+            m_children.clear();
+            if (array == NULL) {
+                m_logger->debug("no child element array");
+                return;
+            }
+            ScriptElementCreator creator(this);
+            array->each([&](IJsonElement* element) {
+                m_logger->debug("\tgot child json");
+                IScriptElement*child = creator.elementFromJson(element,this);
+                m_logger->debug("\tcreated child %x",child);
+                if (child) {
+                    m_children.add(child);
+                }
+            });
+        }
+
         PtrList<IScriptElement*> m_children;
         IScriptHSLStrip* m_strip;
+        IScriptContext* m_context;
         Logger* m_logger;
     };
 
     class ScriptRootContainer : public ScriptContainer {
         public:
-            ScriptRootContainer() : ScriptContainer(S_ROOT_CONTAINER,&m_rootStrip, &m_rootPosition) {
+            ScriptRootContainer() : ScriptContainer(S_ROOT_CONTAINER,&m_rootContext,&m_rootStrip, &m_rootPosition) {
                 m_logger->info("Created ScriptRootContainer");
             }
 
+            virtual ~ScriptRootContainer() {}
             void setStrip(IHSLStrip*strip) {
                 m_rootStrip.setHSLStrip(strip);
-
                 m_rootPosition.setRootPosition(0,strip->getCount());
             }
 
-            virtual ~ScriptRootContainer() {
+            void draw() { 
+                m_logger->debug("ScriptRootContainer.draw %x %x %x",this,&m_rootContext,&m_rootStrip);
+                m_logger->debug("\tlength=%d",m_rootStrip.getLength());
+                m_rootContext.setStrip(&m_rootStrip);
+                m_rootPosition.evaluateValues(&m_rootContext);
+                m_rootStrip.updatePosition(&m_rootPosition,&m_rootContext);
+                m_rootContext.beginStep();
+                drawChildren();
+                m_rootContext.endStep();
             }
 
+
+
+            RootContext* getContext() { return &m_rootContext;}
+
+            void setParams(JsonObject* params) {
+                m_rootContext.setParams(params);
+            }
 
         private:
             RootHSLStrip m_rootStrip;
             RootElementPosition m_rootPosition;
+            RootContext m_rootContext;
     };
 
     class ScriptSegmentContainer : public ScriptContainer {
         public:
-            ScriptSegmentContainer() : ScriptContainer(S_SEGMENT,&m_segmentStrip,&m_segmentPosition) {
+            ScriptSegmentContainer(IScriptContainer* parent) : m_context(parent->getContext()), ScriptContainer(S_SEGMENT,&m_context,&m_segmentStrip,&m_segmentPosition) {
                 m_logger->info("create ScriptSegmentContainer");
-
+                m_parent = parent;
+                m_context.setParentContext(parent->getContext());
             }
 
             virtual ~ScriptSegmentContainer() {
@@ -161,15 +193,17 @@ namespace DevRelief
 
 
         private:
+            IScriptContainer* m_parent;
             ContainerElementHSLStrip m_segmentStrip;
             ScriptElementPosition m_segmentPosition;
+            ChildContext m_context;
     };
 
     class MakerContext : public ChildContext {
         public:
-            MakerContext(IScriptContext* ownerContext, ScriptValueList* values) : ChildContext("maker") {
-                m_logger->showMemoryNever("MakerContext::MakerContext()");
-               m_valueList->initialize(values,ownerContext);
+            MakerContext(IScriptContext* ownerContext, ScriptValueList* values) :  ChildContext(ownerContext,"maker") {
+                m_logger->showMemory("MakerContext::MakerContext()");
+                m_valueList->initialize(values,ownerContext);
                
             }
 
@@ -183,20 +217,48 @@ namespace DevRelief
                 }
                 return false;
             }
+            IScriptStep* getStep() override {
+                return &m_currentStep;
+            };
 
+            IScriptStep* getLastStep() override {
+                return &m_lastStep;
+            };
+
+            IScriptStep* beginStep()  {
+                m_currentStep.begin(&m_lastStep);
+                return &m_currentStep;
+            }
+
+            void endStep()  {
+            m_currentStep.end(&m_lastStep);
+            }
         private:
-            
+            ScriptStep  m_currentStep;
+            ScriptStep  m_lastStep;
     };
 
     class MakerContainer : public ScriptContainer {
         public:
-            MakerContainer() : ScriptContainer(S_SEGMENT,&m_segmentStrip,&m_segmentPosition) {
+            MakerContainer(IScriptContainer* parent) : m_context(parent->getContext()),ScriptContainer(S_SEGMENT,&m_context, &m_segmentStrip,&m_segmentPosition) {
                 m_logger->info("create MakerContainer");
-
+                m_countValue = NULL;
+                m_minCountValue = NULL;
+                m_maxCountValue = NULL;
+                m_maxDurationMsecs = NULL;
+                m_chancePerSecondValue = NULL;
+                m_frequencyMsecsValue  = NULL;
+                m_lastCreateMsecs = 0;
             }
 
             virtual ~MakerContainer() {
                 m_logger->info("~MakerContainer");
+                destroy(m_countValue);
+                destroy(m_minCountValue);
+                destroy(m_maxCountValue);
+                destroy(m_maxDurationMsecs);
+                destroy(m_chancePerSecondValue);
+                destroy(m_frequencyMsecsValue );
             }
 
             void valuesFromJson(JsonObject* json) override {
@@ -206,6 +268,7 @@ namespace DevRelief
                 m_maxCountValue = ScriptValue::create(json->getPropertyValue("max-count"));
                 m_maxDurationMsecs = ScriptValue::create(json->getPropertyValue("max-duration"));
                 m_chancePerSecondValue = ScriptValue::create(json->getPropertyValue("chance-per-second"));
+                m_frequencyMsecsValue  = ScriptValue::create(json->getPropertyValue("frequency-msecs"));
                 if (!m_chancePerSecondValue) {
                     m_chancePerSecondValue = ScriptValue::create(json->getPropertyValue("chance"));
                 }
@@ -229,21 +292,33 @@ namespace DevRelief
                 setJsonValue(json,"max-count",m_maxCountValue);
                 setJsonValue(json,"chance-per-second",m_chancePerSecondValue);
                 setJsonValue(json,"max-duration",m_maxDurationMsecs);
+                setJsonValue(json,"frequency-msecs",m_maxDurationMsecs);
             }
 
-            void draw(IScriptContext* parentContext) override {
-                checkContextList(parentContext);
+            void drawChildren() override {
+                m_logger->never("MakerContainer.draw");
+                checkContextList();
                 m_contextList.each([&](MakerContext* ctx) {
-                    ctx->setParentContext(parentContext);
-                    ScriptContainer::draw(ctx);
+                    m_logger->never("\t\tupdate strip pos");
+                    m_segmentPosition.evaluateValues(&m_context);
+                    m_logger->never("\t\tupdate strip %x %x",ctx->getStrip(),&m_segmentStrip);
+                    m_segmentStrip.updatePosition(&m_segmentPosition,&m_context);
+                    ctx->setParentContext(&m_context);
+                    ctx->beginStep();
+                    m_children.each([&](IScriptElement* child) {
+                        drawChild(ctx,child);
+                    });
+                    ctx->endStep();
                 });
             }
 
         protected:
-            void checkContextList(IScriptContext* parentContext) {
+            void checkContextList() {
+                IScriptContext* parentContext = &m_context;
                 int minCount = 0;
                 int maxCount = 1;
                 int maxDuration = 0;
+
                 if (m_minCountValue) {
                     minCount = m_minCountValue->getIntValue(parentContext,0);
                 } else if (m_countValue) {
@@ -259,6 +334,7 @@ namespace DevRelief
                     maxDuration = m_maxDurationMsecs->getIntValue(parentContext,0);
                 }
 
+
                 // remove any completed contexts
                 int i=0;
                 while(i<m_contextList.size()) {
@@ -272,9 +348,10 @@ namespace DevRelief
                 }
 
                 if (maxCount > m_contextList.size() && shouldCreate(parentContext)){
-                    m_logger->never("create by chance");
+                    m_logger->never("should create");
                     createContext(parentContext);
                 }
+
 
                 // remove any extra contexts if creating one by chance created too many.
                 while(maxCount < m_contextList.size()) {
@@ -296,19 +373,31 @@ namespace DevRelief
 
             void createContext(IScriptContext* parentContext) {
                 // todo: make sure there is enough heap left.  keep track of heap needed to create previous contexts
+                m_logger->never("create new context");
                 MakerContext* mc = new MakerContext(parentContext,&m_initValues);
+                m_logger->never("\tadd to list");
                 m_contextList.add(mc);
+                m_logger->never("\tadded to list");
+                m_lastCreateMsecs = millis();
             }
 
             bool shouldCreate(IScriptContext* parentContext) {
-                if (m_chancePerSecondValue == NULL) { return false;}
-                double chance = m_chancePerSecondValue->getFloatValue(parentContext,0);
+                double chance = m_chancePerSecondValue ? m_chancePerSecondValue->getFloatValue(parentContext,0) : 0;
+                double frequency = m_frequencyMsecsValue ? m_frequencyMsecsValue->getFloatValue(parentContext,0) : 0;
                 long time = parentContext->getStep()->getMsecsSincePrev();
-                double shouldPercent = 100*chance*time/1000.0;
-                int r = random(100);
-                if (r < shouldPercent) { 
-                    m_logger->never("create %d < %f (%f)",r,shouldPercent,chance);
-                    return true;
+                if (chance != 0) {
+                    double shouldPercent = 100*chance*time/1000.0;
+                    int r = random(100);
+                    if (r < shouldPercent) { 
+                        m_logger->never("create %d < %f (%f)",r,shouldPercent,chance);
+                        return true;
+                    }
+                } else if (frequency>0) {
+                    time = millis();
+                    if (m_lastCreateMsecs+frequency<time) {
+                        m_logger->never("create frequency  %d %f %d",m_lastCreateMsecs,frequency,time);
+                        return true;
+                    }
                 }
                 return false;
             }
@@ -317,11 +406,14 @@ namespace DevRelief
             IScriptValue* m_minCountValue;
             IScriptValue* m_maxCountValue;
             IScriptValue* m_chancePerSecondValue;
+            IScriptValue* m_frequencyMsecsValue;
             IScriptValue* m_maxDurationMsecs;
             ContainerElementHSLStrip m_segmentStrip;
             ScriptElementPosition m_segmentPosition;
+            ChildContext m_context;
             PtrList<MakerContext*> m_contextList;
             ScriptValueList m_initValues;
+            int m_lastCreateMsecs;
     };
 
 
@@ -331,7 +423,7 @@ namespace DevRelief
         m_logger = &ScriptElementLogger;
     }
 
-    IScriptElement* ScriptElementCreator::elementFromJson(IJsonElement* json){
+    IScriptElement* ScriptElementCreator::elementFromJson(IJsonElement* json,ScriptContainer* container){
         m_logger->debug("parse Json type=%d",json->getType());
         JsonObject* obj = json ? json->asObject() : NULL;
         if (obj == NULL){
@@ -356,9 +448,9 @@ namespace DevRelief
         } else if (Util::equalAny(type,S_RGB)) {
             element = new RGBElement();
         } else if (Util::equalAny(type,S_SEGMENT)) {
-            element = new ScriptSegmentContainer();
+            element = new ScriptSegmentContainer(container);
         }  else if (Util::equalAny(type,S_MAKER)) {
-            element = new MakerContainer();
+            element = new MakerContainer(container);
         } else if (Util::equalAny(type,S_MIRROR)) {
             element = new MirrorElement();
         } else if (Util::equalAny(type,S_COPY)) {
