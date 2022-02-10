@@ -59,6 +59,8 @@ namespace DevRelief{
             virtual UnitValue getOffset() const=0;
             virtual bool hasLength() const=0;
             virtual UnitValue getLength() const=0;
+    
+            virtual UnitValue getGap() const=0;
 
             virtual PositionUnit getUnit() const=0;
             virtual HSLOperation getHSLOperation() const=0;

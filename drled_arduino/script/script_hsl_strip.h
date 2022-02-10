@@ -68,7 +68,9 @@ namespace DevRelief{
                 return m_flowIndex;
             }
             void setFlowIndex(int index) { 
-                m_flowIndex = index;
+                UnitValue unitGap = m_position->getGap();
+                int gap = unitToPixel(unitGap);
+                m_flowIndex = index+gap;
                 if (m_position && !m_position->hasLength()) {
                     if (m_position->isFlow() && m_parent) {
                         m_parent->setFlowIndex(m_flowIndex+m_offset);
@@ -133,6 +135,7 @@ namespace DevRelief{
                 }
                 m_overflow = pos->getOverflow();
                 if (pos->isFlow()) {
+
                     m_parent->setFlowIndex(m_offset+m_length);
                 }
                 m_logger->debug("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
