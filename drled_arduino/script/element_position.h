@@ -25,6 +25,7 @@ namespace DevRelief {
                 m_lengthValue = NULL;
                 m_stripNumberValue = NULL;
                 m_reverseValue = NULL;
+                m_gapValue = NULL;
                 m_unit = POS_INHERIT;
                 m_hslOperation = INHERIT;
                 m_clip = false;
@@ -36,6 +37,7 @@ namespace DevRelief {
                 m_center = false;
                 m_flow = true;
                 m_reverse = false;
+                m_gap = UnitValue(0,POS_INHERIT);
             }
 
             ~PositionProperties() {
@@ -48,7 +50,7 @@ namespace DevRelief {
                 if (m_stripNumberValue) { m_stripNumberValue->destroy();}
                 if (m_reverseValue) { m_reverseValue->destroy();}
                 m_logger->never("destroy done");
-
+                if(m_gapValue) { m_gapValue->destroy();}
             }
 
             bool toJson(JsonObject* json) {
@@ -64,6 +66,9 @@ namespace DevRelief {
                 if (m_stripNumberValue) { 
                     m_logger->debug("\tstrip number");
                     json->set("strip",m_stripNumberValue->toJson(json->getRoot()));
+                }
+                if (m_gapValue) { 
+                    json->set("gap",m_gapValue->toJson(json->getRoot()));
                 }
 
                 m_logger->debug("\tunit %x",m_unit);
@@ -90,6 +95,10 @@ namespace DevRelief {
                 if (m_offsetValue) { m_offset = m_offsetValue->getUnitValue(context,0,POS_INHERIT);}
                 if (m_lengthValue) { m_length = m_lengthValue->getUnitValue(context,100,POS_INHERIT);}
                 if (m_stripNumberValue) { m_stripNumber = m_stripNumberValue->getIntValue(context,0);}
+                if (m_gapValue) { 
+                    m_gap = m_gapValue->getUnitValue(context,0,POS_INHERIT);
+                    m_logger->always("updategap %f",m_gap.getValue());
+                }
                 if (m_reverseValue) { 
                     m_reverse = m_reverseValue->getBoolValue(context,false);
                     m_logger->never("got reverse value: %d",m_reverse);
@@ -122,6 +131,8 @@ namespace DevRelief {
                 return m_lengthValue != NULL;
             }
             UnitValue getLength() const { return m_length;}
+
+            UnitValue getGap() const { return m_gap;}
             bool hasStrip()const  { return m_stripNumberValue != NULL;}
             int getStrip()const { return m_stripNumber;}
 
@@ -134,6 +145,10 @@ namespace DevRelief {
             void setFlow(IJsonElement* json)  { if (json) {m_flow = getBool(json,!m_center && !m_cover);}}
             void setPositionAbsolute(IJsonElement* json)  {if (json) { m_absolute = getBool(json,false);}}
 
+            void setGap(IJsonElement* json)  { 
+                m_gapValue = ScriptValue::create(json);
+                m_logger->always("pos setGap %s",m_gapValue?m_gapValue->toString().text() : "NULL");
+            }
             void setOffset(IJsonElement* json)  { m_offsetValue = ScriptValue::create(json);}
             void setLength(IJsonElement* json)  { m_lengthValue = ScriptValue::create(json);}
             void setStrip(IJsonElement* json)  { m_stripNumberValue = ScriptValue::create(json);}
@@ -156,6 +171,7 @@ namespace DevRelief {
             void setUnit(PositionUnit unit) { m_unit = unit;}
             void setOffset(int val) { m_offset = val;}
             void setLength(int val) { m_length = val;}
+            void setGap(int val) { m_gap = val;}
 
 
         protected:
@@ -206,10 +222,12 @@ namespace DevRelief {
             IScriptValue* m_lengthValue;
             IScriptValue* m_stripNumberValue;
             IScriptValue* m_reverseValue;
+            IScriptValue* m_gapValue;
 
             // evaluated values
             UnitValue m_offset;
             UnitValue m_length;
+            UnitValue m_gap;
             bool    m_clip;
             bool    m_wrap;
             uint8_t m_stripNumber;
@@ -219,6 +237,7 @@ namespace DevRelief {
             bool m_flow;
             bool m_absolute;   
             bool m_reverse;     
+
             HSLOperation m_hslOperation;
     };
 
@@ -258,9 +277,10 @@ namespace DevRelief {
                 IJsonElement * unit = json->getPropertyValue("unit");
                 IJsonElement * reverse = json->getPropertyValue("reverse");
                 IJsonElement * op = json->getPropertyValue("op");
+                IJsonElement * gap = json->getPropertyValue("gap");
 
                 if (offsetValue || lengthValue || stripNumberValue ||
-                    clip || wrap || absolute || cover || center || flow || unit || reverse){
+                    clip || wrap || absolute || cover || center || flow || unit || reverse || gap){
                         if(m_properties == NULL || m_properties == &DEFAULT_PROPERTIES) {
                             m_logger->debug("create properties %x (default=%x)",m_properties,&DEFAULT_PROPERTIES);
                             m_properties = new PositionProperties();
@@ -277,6 +297,7 @@ namespace DevRelief {
                         m_properties->setUnit(unit);
                         m_properties->setReverse(reverse);
                         m_properties->setHSLOperation(op);
+                        m_properties->setGap(gap);
                     }
 
                 return true;
@@ -307,7 +328,7 @@ namespace DevRelief {
             bool isReverse() const { return m_properties->isReverse();}
             bool isPositionAbsolute() const { return m_properties->useRootStrip();}
             bool isPositionRelative() const { return !m_properties->useRootStrip();}
-
+            UnitValue getGap() const  { return m_properties->getGap();}
             bool hasOffset() const { return  m_properties->hasOffset();}
             UnitValue getOffset() const { return m_properties->getOffset();}
             bool hasLength() const { 
