@@ -37,7 +37,7 @@ namespace DevRelief {
             }
             WiFi.hostname(m_hostname.text());
             m_ipAddress = WiFi.localIP().toString().c_str();
-            randomSeed(seed);
+           // randomSeed(seed);
             m_logger->info("WiFi connected %s",WiFi.localIP().toString().c_str());
         }
 

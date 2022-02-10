@@ -26,16 +26,12 @@ namespace DevRelief
             m_durationMsecs = 0;
             m_frequencyMsecs = 50;
             m_startMsecs = 0;
-            m_rootContext = NULL;
             m_rootContainer = NULL;
         }
 
         virtual ~Script() {
             m_logger->test("~Script %x",this);
-            if (m_rootContext) {
-                m_logger->test("destroy rootcontext %x",m_rootContext);
-                m_rootContext->destroy();
-            }
+            
             if (m_rootContainer) {
                 m_logger->test("destroy rootcontainer %x",m_rootContainer);
                 m_rootContainer->destroy();
@@ -53,17 +49,14 @@ namespace DevRelief
             m_logger->debug("Begin script %x %s",strip,m_name.text());
             m_realStrip = strip;
             m_startMsecs = millis();
-            getRootContainer()->setStrip(strip);
-
-            if (m_rootContext) {
-                m_rootContext->destroy();
-            }
-            m_rootContext = new RootContext(strip,params);
+            ScriptRootContainer* root = getRootContainer();
+            root->setStrip(strip);
+            root->setParams(params);
             m_logger->debug("created RootContext");
         }
 
         void step() {
-            auto lastStep = m_rootContext->getLastStep();
+            auto lastStep = m_rootContainer->getContext()->getLastStep();
             if (m_durationMsecs > 0 && (m_startMsecs>0 && m_startMsecs+m_durationMsecs<millis())) {
                 return; // past duration
             }
@@ -72,16 +65,13 @@ namespace DevRelief
                 return; // to soon to start next step
             }
             m_logger->never("step %d %d %d",lastStep?lastStep->getStartMsecs():-1, m_frequencyMsecs , millis());
-            m_logger->debug("Begin step %s",m_name.text());
             
             m_realStrip->clear();
-            m_rootContext->beginStep();
 
             m_logger->debug("\tdraw");
-            m_rootContainer->draw(m_rootContext);
+            m_rootContainer->draw();
             m_logger->debug("\tend step");
 
-            m_rootContext->endStep();
             m_realStrip->show();
             m_logger->debug("\tstep done");
 
@@ -108,7 +98,6 @@ namespace DevRelief
         Logger *m_logger;
         DRString m_name;
         ScriptRootContainer* m_rootContainer;
-        RootContext* m_rootContext;
         IHSLStrip* m_realStrip;
         int         m_durationMsecs;
         int         m_frequencyMsecs;

@@ -31,16 +31,20 @@ namespace DevRelief{
             int getOffset() override { return m_offset;}
             int getLength() override { return m_length;}
 
-            void setParent(IScriptHSLStrip* parent) override { m_parent = parent;}
+            void setParent(IScriptHSLStrip* parent) override { 
+                if (parent == this) { return;}
+                m_parent = parent;
+            }
             IScriptHSLStrip* getParent() const override {  return m_parent;}
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
-                m_logger->never("ScriptHSLStrip.setHue(%d,%d)",hue,index);
+                m_logger->debug("ScriptHSLStrip.setHue(%d,%d) strip=%x parent=%x",hue,index,this,m_parent);
                 if (!isPositionValid(index)) { 
                     m_logger->debug("Invalid index %d, %d",index,m_length);
                     return;
                 }
                 m_parent->setHue(hue,translateIndex(index),op);
+                m_logger->debug("hue set %x",this);
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
@@ -71,10 +75,7 @@ namespace DevRelief{
                     }
                 }
             }
-        protected:
-
-  
-
+       
             int unitToPixel(const UnitValue& uv) {
                 m_logger->never("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
                 int val = uv.getValue();
@@ -91,24 +92,23 @@ namespace DevRelief{
             }
 
 
-            void update(IElementPosition * pos, IScriptContext* context) override  {
+            void updatePosition(IElementPosition * pos, IScriptContext* context) override  {
                 m_logger->never("ScriptHSLStrip.update %x %x",pos,context);
                 m_reverse = pos->isReverse();
                 m_logger->never("\treverse %d",m_reverse);
                 
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
+                m_logger->never("\tgetUnit %x",pos);
                 m_unit = pos->getUnit();
+                m_logger->never("\tunit=%d",m_unit);
                 if (pos->isPositionAbsolute()) {
-                    m_logger->never("getRootStrip()");
+                    m_logger->debug("getRootStrip()");
                     m_parent = context->getRootStrip();
-                    m_logger->never("\tgot root %x",m_parent);
-                } else {
-                    m_parent = context->getStrip();
-                    m_logger->never("\tgot parent %x",m_parent);
+                    m_logger->debug("\tgot root %x",m_parent);
                 }
                 m_parentLength = m_parent->getLength();
-                m_logger->never("\m_parentLength %d",m_parentLength);
+                m_logger->debug("\m_parentLength %d",m_parentLength);
                 if (pos->isCover()) {
                     m_offset = 0;
                     m_length = m_parentLength;
@@ -116,26 +116,26 @@ namespace DevRelief{
                 } else {
                     m_length = pos->hasLength() ? unitToPixel(pos->getLength()) : m_parentLength;
                     m_offset = pos->hasOffset() ? unitToPixel(pos->getOffset()) : 0;
-                    m_logger->never("\len %d",m_length);
+                    m_logger->debug("\len %d",m_length);
                     if (pos->isCenter()) {
                         int margin = (m_parentLength - m_length)/2;
                         m_offset += margin;
-                        m_logger->never("\tcenter %d %d",m_offset,m_length);
+                        m_logger->debug("\tcenter %d %d",m_offset,m_length);
                     } else {
                         if (pos->isFlow()) {
                             m_offset += m_parent->getFlowIndex();
-                            m_logger->never("\tflow %d",m_offset);
+                            m_logger->debug("\tflow %d",m_offset);
                         } else {
-                            m_logger->never("\tno flow %d",m_offset);
+                            m_logger->debug("\tno flow %d",m_offset);
                         }
-                        m_logger->never("\toffset/len %d/%d",m_offset,m_length);
+                        m_logger->debug("\toffset/len %d/%d",m_offset,m_length);
                     }
                 }
                 m_overflow = pos->getOverflow();
                 if (pos->isFlow()) {
                     m_parent->setFlowIndex(m_offset+m_length);
                 }
-                m_logger->never("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
+                m_logger->debug("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
 
             }
 
@@ -192,7 +192,7 @@ namespace DevRelief{
             }
 
 
-            void update(IElementPosition * pos, IScriptContext* context) override  {
+            void updatePosition(IElementPosition * pos, IScriptContext* context) override  {
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
                 m_parentLength = m_base->getCount();
@@ -221,7 +221,7 @@ namespace DevRelief{
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}
-                //m_logger->never("RootHSLStrip setHue  op=%d",op);
+                m_logger->debug("RootHSLStrip setHue %d  op=%d",index,op);
                 m_base->setHue(translateIndex(index),hue,op);
             }
 
@@ -288,7 +288,7 @@ namespace DevRelief{
 
 
             void setHue(int hue) override {
-                //ScriptHSLStripLogger.never("DrawLED.setHue op %d",m_operation);
+                ScriptHSLStripLogger.never("DrawLED.setHue op %d op=%d",m_index,m_operation);
                 m_strip->setHue(hue,m_index,m_operation);
             }
             void setSaturation(int saturation) override {
@@ -319,7 +319,7 @@ namespace DevRelief{
                 m_parent = parent;
                 m_position = position;
                 m_position->evaluateValues(context);
-                update(position,context);
+                updatePosition(position,context);
             }
 
             virtual ~DrawStrip() {
@@ -329,7 +329,7 @@ namespace DevRelief{
             void eachLED(auto&& drawer) {
                 
                 HSLOperation op = m_position->getHSLOperation();
-                m_logger->never("eachLED HSL op: %d",op);
+                m_logger->debug("eachLED HSL op: %d",op);
                 DrawLED led(this,m_context,op);
                 if (m_length == 0) {
                     return;

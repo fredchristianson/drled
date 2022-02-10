@@ -358,7 +358,7 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const override {
-                m_logger->never("RootElementPosition.getUnit()");
+                m_logger->never("RootElementPosition.getUnit() %x",m_properties );
                 PositionUnit unit = m_properties->getUnit();
                 m_logger->never("\tunit=%d",unit);
                 if (unit == POS_INHERIT) { return POS_PERCENT;}
@@ -388,11 +388,11 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const override {
-                PositionUnit unit = m_properties->getUnit();
-                m_logger->never("ScriptElementPosition.getUnit() %d",unit);
+                m_logger->never("ScriptElementPosition.getUnit() %x",m_properties);
+                PositionUnit unit = m_properties ? m_properties->getUnit() : POS_INHERIT;
                 if (unit == POS_INHERIT) { 
-                    m_logger->never("\tget parent unit");
-                    return m_parent->getUnit();
+                    m_logger->never("\tget parent unit %x",m_parent);
+                    return m_parent ? m_parent->getUnit() : POS_PERCENT;
                 }
                 return unit;
             }

@@ -17,7 +17,7 @@ namespace DevRelief {
             ScriptElement(const char * type){
                 m_logger = &ScriptElementLogger;
                 m_type = type;
-                m_parent = NULL;
+                m_container = NULL;
                 m_logger->debug("Create ScriptElement type=%s",m_type);
             }
 
@@ -60,16 +60,15 @@ namespace DevRelief {
 
             bool isPositionable() const override { return false; }
             IElementPosition* getPosition() const override { return NULL;}
-            void setParent(IScriptElement*parent) {
-                m_parent = parent;
-                IElementPosition * pos = getPosition();
+
+            void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext) {
+                IElementPosition* pos = getPosition();
                 if (pos) {
-                    pos->setParent(parent->getPosition());
+                    pos->setParent(parentPosition);
+                    pos->evaluateValues(parentContext);
                 }
             }
         protected:
-
-
             virtual void valuesToJson(JsonObject* json) const{
                 m_logger->never("ScriptElement type %s does not implement valuesToJson",getType());
             }
@@ -99,7 +98,7 @@ namespace DevRelief {
             }
 
             const char * m_type;
-            IScriptElement* m_parent;
+            IScriptElement* m_container;
             Logger* m_logger;
     };
 
@@ -129,6 +128,7 @@ namespace DevRelief {
 
             bool isPositionable() const override { return true; }
             IElementPosition* getPosition() const override { return m_position;}
+            
 
 
         protected:
@@ -209,14 +209,13 @@ namespace DevRelief {
 
             virtual void draw(IScriptContext*context) override {
                 m_logger->never("ScriptLEDElement.draw");
-                m_logger->showMemory();
                 
                 IScriptHSLStrip* parentStrip = context->getStrip();
                 
-                m_elementPosition.evaluateValues(context);
-                context->setPosition(&m_elementPosition);
-                m_logger->debug("ScriptLEDElement.draw()");
+                //m_elementPosition.evaluateValues(context);
+                m_logger->never("create DrawStrip");
                 DrawStrip strip(context,parentStrip,&m_elementPosition);
+                m_logger->never("\titerate LEDs");
                 strip.eachLED([&](IHSLStripLED& led) {
                     DrawLED* dl = (DrawLED*)&led;
                     m_logger->never("\tdraw child LED %d",dl->index()); 
@@ -224,7 +223,7 @@ namespace DevRelief {
                 });
                 
                 m_logger->never("\t done ScriptLEDElement.draw()");
-                m_logger->showMemory();
+                //m_logger->showMemory();
 
             }
 

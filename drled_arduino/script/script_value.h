@@ -25,7 +25,7 @@ namespace DevRelief
             }
 
             virtual ~ScriptValueReference() { /* do not delete m_reference*/}
-            void destroy() { delete this;}
+            void destroy() override { delete this;}
 
             int getIntValue(IScriptContext* ctx,  int defaultValue)  { return m_reference->getIntValue(ctx,defaultValue);}
             double getFloatValue(IScriptContext* ctx,  double defaultValue)  { return m_reference->getFloatValue(ctx,defaultValue);} 
@@ -136,12 +136,14 @@ namespace DevRelief
     public:
         NameValue(const char *name, IScriptValue *value)
         {
+            ScriptValueLogger.never("add NameValue %s",name);
             m_name = Util::allocText(name);
             m_value = value;
         }
 
         virtual ~NameValue()
         {
+            ScriptValueLogger.never("remove NameValue %s",m_name);
             Util::freeText(m_name);
             m_value->destroy();
         }
@@ -151,6 +153,11 @@ namespace DevRelief
         const char *getName() { return m_name; }
         IScriptValue *getValue() { return m_value; }
 
+        void replaceValue(IScriptValue* newValue) {
+            ScriptValueLogger.never("replace value %s",m_name);
+            if (m_value) { m_value->destroy();}
+            m_value = newValue;
+        }
     private:
         const char * m_name;
         IScriptValue *m_value;
@@ -174,7 +181,7 @@ namespace DevRelief
     public:
         ScriptFunction(const char *name, FunctionArgs* args=NULL) : m_name(name)
         {
-            randomSeed(analogRead(0)+millis());
+           // randomSeed(analogRead(0)+millis());
             if (args == NULL) {
                 m_args = new FunctionArgs();
             } else {
@@ -718,6 +725,7 @@ namespace DevRelief
             IJsonElement* json = toJson(&root);
             m_logger->never("PaternValue.eval json=%s",JsonElement::toJsonString(json).text());
             IScriptValue* copy = ScriptValue::create(json);
+            m_logger->never("first value %f",copy->getFloatValue(ctx,-1));
             return copy;
 
         }
@@ -1246,7 +1254,9 @@ namespace DevRelief
 
 
             virtual ~ScriptValueList() {
-                m_logger->never("delete ~ScriptValueList()");
+                m_logger->debug("delete ~ScriptValueList()");
+                clear();
+                m_logger->debug("cleared");
             }
 
             bool hasValue(const char *name) override  {
@@ -1273,6 +1283,13 @@ namespace DevRelief
 
             void setValue(const char * name,IScriptValue * value) {
                 if (Util::isEmpty(name) || value == NULL) {
+                    return;
+                }
+                NameValue** find = m_values.first([&](NameValue*&nv) {
+                    return strcmp(nv->getName(),name)==0;
+                });
+                if (find) {
+                    (*find)->replaceValue(value);
                     return;
                 }
                 m_logger->never("add NameValue %s  0x%04X",name,value);

@@ -69,13 +69,13 @@ namespace DevRelief
     class ScriptContext: public IScriptContext
     {
         public:
-            ScriptContext(const char * type) { 
+            ScriptContext(const char * type, IScriptContext* parent) { 
                 m_type = type;
                 m_logger = &ScriptLogger;
                 m_logger->never("Create ScriptContext type: %s",m_type);
                 m_strip = NULL;
                 m_position = NULL;
-                m_parentContext = NULL;
+                m_parentContext = parent;
                 m_startTimeMsecs = millis();
                 m_valueList = new ScriptValueList();
             }
@@ -83,6 +83,7 @@ namespace DevRelief
             virtual ~ScriptContext() {
                 m_logger->debug("delete ScriptContext type: %s",m_type);
                 if (m_valueList) { m_valueList->destroy();}
+                m_logger->debug("m_valueList destroyed");
             }
 
 
@@ -150,12 +151,15 @@ namespace DevRelief
 
             void setParentContext(IScriptContext* parent) { 
                 m_parentContext = parent;
-                if (parent) {
-                    m_strip = parent->getStrip();
-                }
+
             }
           
         protected:
+            void clearValues() { 
+                if(m_valueList) {
+                    m_valueList->clear();
+                }
+            }
             long m_startTimeMsecs;
             IScriptContext* m_parentContext;
             IScriptHSLStrip* m_strip;
@@ -170,10 +174,19 @@ namespace DevRelief
 
     class RootContext : public ScriptContext {
         public:
-        RootContext(IHSLStrip* strip, JsonObject* params) : ScriptContext("RootContext")
+        RootContext( ) : ScriptContext("RootContext",NULL)
         {
-            m_logger->never("RootContext(%x,%x)",strip,params);
-            m_baseStrip = strip;
+            m_logger->never("RootContext()");
+        }
+
+
+        virtual ~RootContext() {
+            m_logger->debug("~RootContext %x",this);
+
+        }
+
+        void setParams(JsonObject* params){
+            clearValues();
             if (params) {
                 m_logger->debug("\tcopy params %s",params->toString().text());
                 params->eachProperty([&](const char * name, IJsonElement* jsonVal){
@@ -186,12 +199,6 @@ namespace DevRelief
                 m_logger->debug("\tno params passed");
             }
             createSystemValues();
-            m_logger->debug("created RootContext %x",this);
-        }
-
-        virtual ~RootContext() {
-            m_logger->debug("~RootContext %x",this);
-
         }
 
         IScriptStep* getStep() override {
@@ -226,14 +233,13 @@ namespace DevRelief
                 setSysValue("purple",new ScriptNumberValue(HUE::PURPLE));
                 
             }
-            IHSLStrip* m_baseStrip;
             ScriptStep  m_currentStep;
             ScriptStep  m_lastStep;
     };
 
     class ChildContext : public ScriptContext {
         public:
-            ChildContext(const char * type="child") : ScriptContext(type) {
+            ChildContext(IScriptContext* parent,const char * type="child") : ScriptContext(type,parent) {
                 
             }
 
