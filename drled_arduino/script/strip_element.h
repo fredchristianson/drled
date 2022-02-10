@@ -97,7 +97,7 @@ namespace DevRelief
             int getSize() const { return m_strips.size();}
             IScriptHSLStrip* getStrip(int index) { return m_strips.get(index);}
             void setHue(int16_t hue,int index, HSLOperation op) override {
-                m_logger->never("MultStrip.setHue %d",index);
+                m_logger->never("MultStrip.setHue %d %d",index,op);
                 m_strips.each([&](IScriptHSLStrip*strip) { strip->setHue(hue,index,op);});
             }
 
@@ -142,27 +142,17 @@ namespace DevRelief
                 m_logger->showMemory();
                 
                 IScriptHSLStrip* parentStrip = context->getStrip();
-
                 m_elementPosition.evaluateValues(context);
                 
                 m_mirrorStrip.setParent(parentStrip);
                 m_mirrorStrip.updatePosition(m_position,context);
                 m_multiStrip.clear();
+                m_multiStrip.setParent(parentStrip);
+                m_multiStrip.updatePosition(m_position,context);
                 m_multiStrip.add(&m_mirrorStrip);
                 m_multiStrip.add(parentStrip);
-                m_multiStrip.updatePosition(m_position,context);
                 context->setStrip(&m_multiStrip);
-                /*
-                m_elementPosition.evaluateValues(context);
-                context->setPosition(&m_elementPosition);
-                m_logger->debug("ScriptLEDElement.draw()");
-                DrawStrip strip(context,parentStrip,&m_elementPosition);
-                strip.eachLED([&](IHSLStripLED& led) {
-                    DrawLED* dl = (DrawLED*)&led;
-                    m_logger->never("\tdraw child LED %d",dl->index()); 
-                    drawLED(led);
-                });
-                */
+
                 m_logger->never("\tdone MirrorElement.draw()");
                 m_logger->showMemory();
 
@@ -186,12 +176,12 @@ namespace DevRelief
             CopyElement() : StripElement("Copy"){
                 m_countValue = NULL;
                 m_count = 0;
-                m_logger->always("create CopyElement");
+                m_logger->never("create CopyElement");
             }
 
             virtual ~CopyElement() { 
                 if (m_countValue) { m_countValue->destroy();}
-                
+                m_multiStrip.destroyAndClear();
             }
 
             virtual void draw(IScriptContext*context) override {
@@ -215,11 +205,13 @@ namespace DevRelief
                         strip = new CopyStrip();
                         m_multiStrip.add(strip);
                     }
+                    strip->setParent(parentStrip);
                     strip->updatePosition(m_position,context);
                     strip->setCopyOffset(nextOffset);
                     strip->setParent(parentStrip);
                     nextOffset += copyOffset;
                 }
+                m_multiStrip.setParent(parentStrip);
                 m_multiStrip.updatePosition(m_position,context);
                 context->setStrip(&m_multiStrip);
                 m_logger->never("\tdone copyElement.draw()");

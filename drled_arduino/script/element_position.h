@@ -26,7 +26,7 @@ namespace DevRelief {
                 m_stripNumberValue = NULL;
                 m_reverseValue = NULL;
                 m_unit = POS_INHERIT;
-                m_hslOperation = REPLACE;
+                m_hslOperation = INHERIT;
                 m_clip = false;
                 m_wrap = false;   
                 m_offset = UnitValue(0,POS_PERCENT);
