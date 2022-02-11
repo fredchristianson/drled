@@ -245,6 +245,7 @@ namespace DevRelief
 
 
             IScriptStep* getStep() override {
+                m_logger->never("ChildContext.getStep() parent->%x",m_parentContext);
                 return m_parentContext ? m_parentContext->getStep() : NULL;
             };
 

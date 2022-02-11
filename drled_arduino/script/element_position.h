@@ -97,7 +97,7 @@ namespace DevRelief {
                 if (m_stripNumberValue) { m_stripNumber = m_stripNumberValue->getIntValue(context,0);}
                 if (m_gapValue) { 
                     m_gap = m_gapValue->getUnitValue(context,0,POS_INHERIT);
-                    m_logger->always("updategap %f",m_gap.getValue());
+                    m_logger->never("updategap %f",m_gap.getValue());
                 }
                 if (m_reverseValue) { 
                     m_reverse = m_reverseValue->getBoolValue(context,false);
@@ -147,7 +147,7 @@ namespace DevRelief {
 
             void setGap(IJsonElement* json)  { 
                 m_gapValue = ScriptValue::create(json);
-                m_logger->always("pos setGap %s",m_gapValue?m_gapValue->toString().text() : "NULL");
+                m_logger->never("pos setGap %s",m_gapValue?m_gapValue->toString().text() : "NULL");
             }
             void setOffset(IJsonElement* json)  { m_offsetValue = ScriptValue::create(json);}
             void setLength(IJsonElement* json)  { m_lengthValue = ScriptValue::create(json);}

@@ -1137,11 +1137,15 @@ namespace DevRelief
             if (m_isSysValue && Util::equal("led",m_name)){
                 return ctx->getAnimationPositionDomain()->getValue();
             }
-
+            if (m_isSysValue && Util::equal("step",m_name)){
+                int step =  ctx->getStep()->getNumber();
+                m_logger->never("sys(step)=%d  %x",step,ctx);
+                return step;
+            }
             m_recurse = true;
 
             IScriptValue * val = getScriptValue(ctx);
-            double result = val->getFloatValue(ctx,defaultValue);
+            double result = val ? val->getFloatValue(ctx,defaultValue) : defaultValue;
             m_recurse = false;
             return result;
         }
