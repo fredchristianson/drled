@@ -216,6 +216,14 @@ namespace DevRelief
                 if (maxDuration>0 && m_startTimeMsecs+maxDuration < millis()) {
                     return true;
                 }
+                IScriptValue *duration = m_valueList->getValue("duration");
+                if (duration) {
+                    int msecs = duration->getMsecValue(this,0);
+                    if (msecs>0 && m_startTimeMsecs+msecs < millis()){
+                        m_logger->never("duration expired %d",msecs);
+                        return true;
+                    }
+                }
                 return false;
             }
             IScriptStep* getStep() override {
