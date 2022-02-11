@@ -144,7 +144,7 @@ namespace DevRelief{
 
             virtual bool isPositionValid(int index) {
                 
-                if (m_parent == NULL || m_length <= 0) { return false;}
+                if (m_parent == NULL ) { return false;}
                 if (m_overflow != OVERFLOW_CLIP) { return true;}
                 return index >= 0 || index < m_length;
             }
@@ -351,9 +351,11 @@ namespace DevRelief{
                 }
                 PositionDomain* domain = m_context->getAnimationPositionDomain();
                 if (domain) { domain->setPosition(0,0,m_length-1); }
-                for(int i=0;i<m_length;i++){
+                int count = abs(m_length);
+                int neg = m_length<0?-1 : 1;
+                for(int i=0;i<count;i++){
                     if (domain) {domain->setPos(i);}
-                    led.setIndex(i);
+                    led.setIndex(i*neg);
                     drawer(led);
                 }
             }
