@@ -72,20 +72,20 @@ namespace DevRelief
         }
 
         void drawChild(IScriptContext* context, IScriptElement * child) {
-            m_logger->debug("set current element  %x %s",child, child->getType());
+            m_logger->never("set current element %x  %x %s",context, child, child ?child->getType():"null");
             m_logger->indent();
             context->setCurrentElement(child);
-            m_logger->debug("drawChild  %s",child->getType());
+            m_logger->never("drawChild  %s",child->getType());
             auto pos = child->getPosition();
             if (pos) {
-                m_logger->debug("update position");
+                m_logger->never("update position");
                 pos->setParent(getPosition());
                 pos->evaluateValues(context);
             }
-
-            child->draw(m_context);
+            /* use the passed context, not this element's context */
+            child->draw(context);
             m_logger->outdent();
-            m_logger->debug("\tdone draw() child");
+            m_logger->never("\tdone draw() child");
             
         };
 
@@ -204,7 +204,8 @@ namespace DevRelief
             MakerContext(IScriptContext* ownerContext, ScriptValueList* values) :  ChildContext(ownerContext,"maker") {
                 m_logger->showMemory("MakerContext::MakerContext()");
                 m_valueList->initialize(values,ownerContext);
-               
+                setStrip(ownerContext->getStrip());
+
             }
 
             virtual ~MakerContext() {
@@ -227,11 +228,12 @@ namespace DevRelief
 
             IScriptStep* beginStep()  {
                 m_currentStep.begin(&m_lastStep);
+                m_logger->never("beginStep %d",m_currentStep.getNumber());
                 return &m_currentStep;
             }
 
             void endStep()  {
-            m_currentStep.end(&m_lastStep);
+                m_currentStep.end(&m_lastStep);
             }
         private:
             ScriptStep  m_currentStep;
@@ -306,6 +308,7 @@ namespace DevRelief
                     ctx->setParentContext(&m_context);
                     ctx->beginStep();
                     m_children.each([&](IScriptElement* child) {
+                        m_logger->never("Maker.drawChild %x %x",ctx,child);
                         drawChild(ctx,child);
                     });
                     ctx->endStep();
@@ -375,7 +378,7 @@ namespace DevRelief
                 // todo: make sure there is enough heap left.  keep track of heap needed to create previous contexts
                 m_logger->never("create new context");
                 MakerContext* mc = new MakerContext(parentContext,&m_initValues);
-                m_logger->never("\tadd to list");
+                m_logger->never("add ctx to list %x",mc);
                 m_contextList.add(mc);
                 m_logger->never("\tadded to list");
                 m_lastCreateMsecs = millis();
