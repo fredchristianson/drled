@@ -326,6 +326,10 @@ namespace DevRelief{
             obj->set("value",m_value ? m_value->toJson(jsonRoot) : new JsonNull(*jsonRoot));
             return obj;
         }
+        DRString toString() {
+            return m_value->toString();
+        };
+
     private:
         IScriptValue *m_value;
         IScriptValue* m_repeatCount;

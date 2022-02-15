@@ -670,6 +670,7 @@ namespace DevRelief
         
         UnitValue getUnitValue(IScriptContext*ctx, double defaultValue, PositionUnit defaultUnit) {
             m_logger->never("PatternValue.getUnitValue %x",m_animator);
+
             if (m_animator == NULL) {
                 return UnitValue(defaultValue,defaultUnit);
             }
@@ -710,7 +711,11 @@ namespace DevRelief
         // for debugging
         virtual DRString toString()
         {
-            DRString result("pattern:");
+            DRString result("pattern: ");
+            m_elements.each([&](ScriptPatternElement*e){
+                result.append(e->toString());
+                result.append(",");
+            });
             return result;
         }
 
@@ -735,6 +740,7 @@ namespace DevRelief
         
         void setInterpolation(PatternInterpolation*interpolation) { m_interpolation = interpolation;}
     protected:
+        StepWatcher m_watcher;
         PatternInterpolation* m_interpolation;
         PtrList<ScriptPatternElement*> m_elements;
         size_t m_pixelCount;
@@ -1563,9 +1569,14 @@ namespace DevRelief
         PositionUnit unit = POS_PIXEL;
         if (json->isObject()) {
             JsonObject* obj = json->asObject();
-            val = create(obj->getPropertyValue("value"));
-            unit = getUnit(obj->getString("unit",NULL),POS_PIXEL);
-            count = create(obj->getPropertyValue("count"));
+            if (obj->getPropertyValue("value")){
+                unit = getUnit(obj->getString("unit",NULL),POS_PIXEL);
+                count = create(obj->getPropertyValue("count"));
+                val = create(obj->getPropertyValue("value"));
+            } else {
+                val = create(obj);
+                count = new ScriptNumberValue(1);
+            }
         } else if (json->isString()) {
             const char * str = json->asValue()->getString(NULL);
             if (str != NULL) { 
