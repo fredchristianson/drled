@@ -117,6 +117,11 @@ public:
         #endif
     }
 
+    void pos(char p) {
+        Serial.print(p);
+        Serial.flush();
+    }
+
     void write(int level, const char * message,...) {
         va_list args;
         va_start(args,message);
@@ -272,15 +277,17 @@ public:
         
     }
 
+    void showMemoryAlways(const char * label="Memory") {
+        write(ALWAYS,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
+
+    }
+
     void showMemory(const char * label="Memory") {
         write(INFO_LEVEL,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
 
     }
 
-    void showMemoryAlways(const char * label="Memory") {
-        write(ALWAYS,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
 
-    }
 
     void showMemoryNever(const char * label="Memory") {}
 

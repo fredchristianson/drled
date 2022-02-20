@@ -258,7 +258,7 @@ namespace DevRelief
     };
 
     bool StepWatcher::isChanged(IScriptContext*ctx) { 
-        if (ctx == NULL) { return true;}
+        if (ctx == NULL || ctx->getStep() == NULL) { return true;}
         int number = ctx->getStep()->getNumber();
         if (number != m_stepNumber) {
             m_stepNumber = number;

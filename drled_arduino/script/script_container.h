@@ -203,8 +203,11 @@ namespace DevRelief
         public:
             MakerContext(IScriptContext* ownerContext, ScriptValueList* values) :  ChildContext(ownerContext,"maker") {
                 m_logger->showMemory("MakerContext::MakerContext()");
+                //m_logger->pos('a');
                 m_valueList->initialize(values,ownerContext);
+                //m_logger->pos('b');
                 setStrip(ownerContext->getStrip());
+                //m_logger->pos('c');
 
             }
 
@@ -259,6 +262,7 @@ namespace DevRelief
                 m_chancePerSecondValue = NULL;
                 m_frequencyMsecsValue  = NULL;
                 m_lastCreateMsecs = 0;
+                m_maxContextSize = 0;
             }
 
             virtual ~MakerContainer() {
@@ -313,6 +317,7 @@ namespace DevRelief
                     m_segmentPosition.evaluateValues(&m_context);
                     m_logger->never("\t\tupdate strip %x %x",ctx->getStrip(),&m_segmentStrip);
                     m_segmentStrip.updatePosition(&m_segmentPosition,&m_context);
+                    
                     ctx->setParentContext(&m_context);
                     ctx->beginStep();
                     m_children.each([&](IScriptElement* child) {
@@ -385,10 +390,25 @@ namespace DevRelief
             void createContext(IScriptContext* parentContext) {
                 // todo: make sure there is enough heap left.  keep track of heap needed to create previous contexts
                 m_logger->never("create new context");
+                size_t heap = EspBoard.getFreeHeap();
+                if (m_maxContextSize + 2*1024 > heap) {
+                    // don't create another instance if it could be larger than the free heap space
+                    // keep an extra 2K so other things can happen.
+                    m_logger->error("not enough heap to create a new context %d > %d",m_maxContextSize,heap);
+                    return;
+                }
                 MakerContext* mc = new MakerContext(parentContext,&m_initValues);
                 m_logger->never("add ctx to list %x",mc);
                 m_contextList.add(mc);
-                m_logger->never("\tadded to list");
+
+                size_t endHeap = EspBoard.getFreeHeap();
+                int diff = heap-endHeap;
+                if (diff > m_maxContextSize) {
+                    m_logger->info("maxContextSize increased: %d",diff);
+                    m_maxContextSize = diff;
+                }
+
+                m_logger->never("\tcontext created");
                 m_lastCreateMsecs = millis();
             }
 
@@ -425,6 +445,7 @@ namespace DevRelief
             PtrList<MakerContext*> m_contextList;
             ScriptValueList m_initValues;
             int m_lastCreateMsecs;
+            int m_maxContextSize;
     };
 
 

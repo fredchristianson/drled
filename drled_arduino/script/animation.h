@@ -241,7 +241,7 @@ namespace DevRelief
                 m_pos = millis();
                 if (m_state == STATE_COMPLETE) { return;}
 
-                if (m_step == ctx->getStep()->getNumber()) {
+                if (!m_stepWatcher.isChanged(ctx)) {
                     return;
                 }
                 m_logger->never("TimeDomain.update %f %f %f",m_min,m_pos,m_max);
@@ -263,7 +263,7 @@ namespace DevRelief
                     if (m_pos >= m_min) {
                         m_logger->never("resume %f %f",m_pos,m_min);
                         m_state = STATE_RUNNING;
-                        m_logger->never("\t%f < %f < %f",m_min,m_pos,m_max);
+                        m_logger->debug("\t%f < %f < %f",m_min,m_pos,m_max);
                     } else {
                         m_logger->never("\tpaused %f < %f < %f",m_min,m_pos,m_max);
                         return;
@@ -319,7 +319,7 @@ namespace DevRelief
 
             IScriptValue* m_repeatLimitValue;
             IScriptValue* m_delayValue;
-
+            StepWatcher m_stepWatcher;
     };
 
     class SpeedDomain : public TimeDomain
@@ -336,7 +336,7 @@ namespace DevRelief
                 m_range = range;
             }
             
-            ~SpeedDomain() {
+            virtual ~SpeedDomain() {
                 if (m_speedValue) { m_speedValue->destroy();}
             }
 
@@ -382,7 +382,7 @@ namespace DevRelief
             }
 
 
-            ~DurationDomain() {
+            virtual ~DurationDomain() {
                 if (m_durationValue) { m_durationValue->destroy();}
             }
 
