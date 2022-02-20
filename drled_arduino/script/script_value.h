@@ -727,10 +727,11 @@ namespace DevRelief
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue) override{
             JsonRoot root;
+            //m_logger->pos('d');
             IJsonElement* json = toJson(&root);
-            m_logger->never("PaternValue.eval json=%s",JsonElement::toJsonString(json).text());
+            //m_logger->pos('e');
             IScriptValue* copy = ScriptValue::create(json);
-            m_logger->never("first value %f",copy->getFloatValue(ctx,-1));
+            //m_logger->pos('f');
             return copy;
 
         }
@@ -796,9 +797,6 @@ namespace DevRelief
                 if (m_stepWatcher.isChanged(ctx)) {
                     m_logger->never("update SmoothInterpolation segments");
                     setupSegments(elements,pixelCount);
-                    m_segments.each([&](InterpolationSegment*seg){
-                        m_logger->never("segment %d-%d  %f-%f",seg->startElementIndex,seg->endElementIndex,seg->startPercent,seg->endPercent);
-                    });
                 }
                 InterpolationSegment* segment = findSegment(pct,elements);
                 if (segment != NULL) {
@@ -1322,14 +1320,10 @@ namespace DevRelief
                 source->each([&](NameValue* nv) {
                     IScriptValue* val = nv->getValue();
                     if (val != NULL) {
-                        m_logger->never("eval() %s ",nv->getName());
                         m_logger->showMemoryNever();
                         IScriptValue* newVal = val->eval(ctx);
-                        m_logger->never("\tnew val %s",newVal->toString().text());
-                        m_logger->showMemoryNever("\tafter eval()");
                         NameValue*newNV = new NameValue(nv->getName(),newVal);
                         m_values.add(newNV);
-                        m_logger->showMemoryNever("\tafter added to list()");
                     }
                 });
             }

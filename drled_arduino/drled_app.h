@@ -105,11 +105,11 @@ namespace DevRelief {
             
             m_logger->debug("show build version");
             m_executor.configChange(m_config);
-            m_logger->debug("Running DRLedApplication configured: %s.  Built at %s %s",
+            m_logger->always("Running DRLedApplication configured: %s.  Built at %s %s",
                 m_config.getBuildVersion().text(),
                 m_config.getBuildDate().text(),
                 m_config.getBuildTime().text());
-            m_logger->showMemory();
+            m_logger->showMemoryAlways();
             m_scriptStartTime = 0;
             m_initialized = true;
         }
@@ -165,6 +165,7 @@ namespace DevRelief {
                 ApiResult result;
                 JsonRoot* params = getParameters(req);
                 const char * name = req->pathArg(0).c_str();
+                m_logger->always("run script %s",name);
                 runScript(name,params->getTopObject(),result);
                 result.send(req);
                 params->destroy();
@@ -172,7 +173,6 @@ namespace DevRelief {
 
 
             m_httpServer->routeBracesPost( "/api/script/{}",[this](Request* req, Response* resp){
-                m_logger->debug("save script");
                 m_logger->showMemory();
                 m_executor.endScript();
                 m_logger->debug("old script ended");
@@ -181,6 +181,7 @@ namespace DevRelief {
                 m_logger->debug("\tgot new script:%s",body);
                 m_logger->showMemory();
                 auto name =req->pathArg(0).c_str();
+                m_logger->always("save script %s",name);
                 m_logger->debug("\tname: %s",name);
                 if (name != NULL) {
                     ScriptDataLoader loader;
@@ -230,7 +231,7 @@ namespace DevRelief {
 
 
         void apiRequest(const char * api,Request * req,Response * resp) {
-            m_logger->never("handle API %s",api);
+            m_logger->always("handle API %s",api);
             int code=200;
             if (strcmp(api,"reboot") == 0) {
                 code = 200;
