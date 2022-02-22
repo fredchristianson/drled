@@ -15,6 +15,11 @@
 namespace DevRelief
 {
     extern Logger ScriptValueLogger;
+    const char * functionNames[] = {
+        "rand","add","+","subtract","sub","-","multiply","*","mult",
+        "divide","div","/","mod","%","min","max","randOf","seq","sequence",
+        NULL
+    };
 
     // ScriptValueReference is a pointer to another ScriptValue 
     // the pointer can be deleted while the real value remains
@@ -178,6 +183,16 @@ namespace DevRelief
 
     class ScriptFunction : public ScriptValue
     {
+    public:
+        static bool isFunctionName(const char * val) {
+            if (val == NULL || val[0] == NULL) {return false;}
+            for(int i=0;functionNames[i] != NULL;i++) {
+                if (Util::equal(val,functionNames[i])){
+                    return true;
+                }
+            }
+            return false;
+        }
     public:
         ScriptFunction(const char *name, FunctionArgs* args=NULL) : m_name(name)
         {
@@ -1395,26 +1410,30 @@ namespace DevRelief
    }
 
    IScriptValue* ScriptValue::createFromArray(JsonArray* json,JsonObject* parent){
+        ScriptValueLogger.always("create from array");
        if (json == NULL || json->getCount() == 0) { return NULL;}
        int count = json->getCount();
+        ScriptValueLogger.always("\tcount %d",count);
+       
        IJsonElement* first = json->getAt(0);
-       if (first == NULL) { return new ScriptNullValue();}
+        ScriptValueLogger.always("\tfirst %x",first);
+       
+       if (first == NULL || first->asValue() == NULL) { return new ScriptNullValue();}
        // if the first element is a string, that is the function name.  otherwise this is a range;
        IJsonValueElement* val = first->asValue();
-       bool num = first->isNumber();
-       if (!num) {
-            const char * str = val->getString();
-            if (str == NULL || str[0] == 0) { return new ScriptNullValue();}
-            num = isdigit(str[0]);
-       }
-       if (!num) {
-            ScriptFunction* func = new ScriptFunction(json->getAt(0)->asValue()->getString());
+        ScriptValueLogger.always("\tfirst val %x",val);
+       const char * name = val->getString(NULL);
+       ScriptValueLogger.always("got name %x",name);
+        bool isFunc = ScriptFunction::isFunctionName(name);
+        if (isFunc) {
+           ScriptValueLogger.always("create function %s",name);
+            ScriptFunction* func = new ScriptFunction(name);
             for(int i=1;i<count;i++){
                 func->addArg(create(json->getAt(i),parent));
             }
             return func;
        } else {
-           ScriptValueLogger.never("range shorthand %x",parent);
+           ScriptValueLogger.always("range shorthand %x",parent);
             bool unfold = parent ? parent->getBool("unfold",false) : false;
             bool repeat = parent ? parent->getBool("repeat",false) : false;
             bool smooth = parent ? parent->getBool("smooth",true) : true;
@@ -1452,14 +1471,17 @@ namespace DevRelief
    }
 
     IScriptValue* ScriptValue::createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json){
+            ScriptValueLogger.always("create pattern");
+        
             PatternValue* patternValue = new PatternValue();
             pattern->each([&](IJsonElement*elemenValue){
                 patternValue->addElement(createPatternElement(elemenValue));
             });
+            ScriptValueLogger.always("create ease");
             IAnimationEase* ease = json ? createEase(json) : NULL;
 
             PatternInterpolation* pi = NULL;
-            ScriptValueLogger.never("pattern smooth %d",smooth);
+            ScriptValueLogger.always("pattern smooth %d",smooth);
             if (smooth){
                 pi = new SmoothInterpolation();
                 ScriptValueLogger.never("\tcreated SmoothInterpolation");

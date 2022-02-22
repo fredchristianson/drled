@@ -200,6 +200,12 @@ class JsonInt : public JsonValueElement {
 
         bool isInt() override { return true;}
         bool isNumber() override { return true;}
+
+        const char * getString(const char *defaultValue=NULL) override {
+            jsonLogger->always("JsonInt.getString()");    
+            return defaultValue;
+        }
+
         int getInt(int defaultValue) override { 
             jsonLogger->debug("JsonInt.getInt() m_value=%d",m_value);
             return m_value;
@@ -227,6 +233,11 @@ class JsonFloat : public  JsonValueElement {
 
         int getInt(int defaultValue) override { return m_value;}
         double getFloat(double defaultValue) override { return m_value;}
+        const char * getString(const char *defaultValue=NULL) override {
+            jsonLogger->always("JsonFloat.getString()");    
+            return defaultValue;
+        }
+
         
      protected:
         double m_value;
