@@ -90,7 +90,7 @@ namespace DevRelief {
             void step() {
                 m_logger->never("step %x %x",m_ledStrip,m_script);
                 if (m_ledStrip == NULL || m_script == NULL) {
-                    m_logger->periodic(DEBUG_LEVEL,10000,"\t***REMOVED*** to run");
+                    m_logger->periodic(DEBUG_LEVEL,10000,"\tnothing to run");
                     return;
                 }
                 m_logger->never("\tm_script->setp()");

@@ -1,13 +1,12 @@
 #ifndef DRWIFIF_H
 #define DRWIFIF_H
 #include <ESP8266WiFi.h>
+#include "./wifi_credentials.h"
 #include "../log/logger.h"
 #include "../util/drstring.h"
 
 namespace DevRelief {
-    const char* ssid = "***REMOVED***"; //replace this with your WiFi network name
-    const char* password = "Dolphin#22"; //replace this with your WiFi network password
-    
+
     class DRWiFi {
     public:
         static DRWiFi* get() {
@@ -26,7 +25,7 @@ namespace DevRelief {
 
         void initialize() {
             m_logger->info("WiFi initializing");
-            WiFi.begin(ssid, password);
+            WiFi.begin(wifi_ssid, wifi_password);
             unsigned long seed = millis();
             while(WiFi.status() != WL_CONNECTED) {
                 m_logger->info("waiting for wifi connection");
