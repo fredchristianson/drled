@@ -54,7 +54,7 @@ namespace DevRelief {
 
 
             void draw(IScriptContext* context) override {
-                m_logger->never("ScriptElement draw - ***REMOVED***");
+                m_logger->never("ScriptElement draw - nothing");
 
             };
 
