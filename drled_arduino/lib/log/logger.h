@@ -109,6 +109,7 @@ public:
         Serial.printf("%6s/%3d - %02d:%02d:%02d - %20s: %s ",
             getLevelName(level),m_level,hours,minutes,seconds,m_name,tabs);
         Serial.println(messageBuffer);
+        Serial.flush();
         #else
         printf("%6s/%3d - %02d:%02d:%02d - %20s: %s ",
             getLevelName(level),m_level,hours,minutes,seconds,m_name,tabs);
