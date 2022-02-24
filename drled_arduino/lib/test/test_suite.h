@@ -16,7 +16,7 @@ namespace DevRelief {
         public:
             TestResult(ILogger * logger) { 
                 m_success = true;
-                m_logger = logger;    
+                m_logger = (LOGGER_TYPE*) logger;    
             }
 
             void fail(const char * msg = UNKNOWN_TEST) { 
@@ -155,7 +155,7 @@ namespace DevRelief {
             TestSuite(const char * name, ILogger* logger,bool logTestMessages=false){
                 m_logTestMessages = logTestMessages;
                 m_name = name;
-                m_logger = logger;
+                m_logger = (LOGGER_TYPE*) logger;
             }
             virtual ~TestSuite(){
              

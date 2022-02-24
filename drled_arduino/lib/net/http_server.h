@@ -59,7 +59,7 @@ class HttpServer {
             auto handler = httpHandler;
             m_server->onNotFound([this,handler,server](){
                 if (m_server->method() == HTTP_OPTIONS){
-                    this->m_logger->debug("send CORS for HTTP_OPTIONS");
+                    m_logger->debug("send CORS for HTTP_OPTIONS");
                     this->cors(m_server);
                     m_server->send(204);
                     return;

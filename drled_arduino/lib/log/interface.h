@@ -70,42 +70,62 @@ class ILogConfig {
 
 class ILogger {
     public:
-        virtual void write(int level, const char * message, va_list args )=0;
-        virtual void write(int level, const char * message,...)=0;
+        virtual void write(int level, const char * message, va_list args )const=0;
+        virtual void write(int level, const char * message,...)const=0;
     
-        virtual void test(const char * message,...)=0;  // message only writen during unit test
+        virtual void test(const char * message,...) const=0;  // message only writen during unit test
 
-        virtual void debug(const char * message,...) =0;
-        virtual void info(const char * message,...) =0;
-        virtual void warn(const char * message,...) =0;
-        virtual void error(const char * message,...) =0;
-        virtual void always(const char * message,...) =0;
-        virtual void never(const char * message,...) =0;
-        virtual void conditional(bool test, const char * message,...)=0;
-        virtual void errorNoRepeat(const char * message,...)=0;
-        virtual void showMemory(const char * label="Memory")=0;
-        virtual void showMemory(int level, const char * label="Memory") =0;
+        virtual void debug(const char * message,...) const=0;
+        virtual void info(const char * message,...) const=0;
+        virtual void warn(const char * message,...) const=0;
+        virtual void error(const char * message,...) const=0;
+        virtual void always(const char * message,...) const=0;
+        virtual void never(const char * message,...) const=0;
+        virtual void conditional(bool test, const char * message,...) const=0;
+        virtual void conditional(bool test, int level, const char * message,...) const=0;
+        virtual void errorNoRepeat(const char * message,...) const=0;
+        virtual void showMemory(const char * label="Memory") const=0;
+        virtual void showMemory(int level, const char * label="Memory")  const=0;
     
 };
 
 class NullLogger : public ILogger {
     public:
-        void write(int level, const char * message, va_list args ) override {}
-        void write(int level, const char * message,...) override {}
+        void write(int level, const char * message, va_list args ) const override {}
+        void write(int level, const char * message,...) const override {}
     
-        void test(const char * message,...) override {}
+        void test(const char * message,...) const override {}
 
-        void debug(const char * message,...)  override {}
-        void info(const char * message,...)  override {}
-        void warn(const char * message,...)  override {}
-        void error(const char * message,...)  override {}
-        void always(const char * message,...)  override {}
-        void never(const char * message,...)  override {}
-        void conditional(bool test, const char * message,...) override {}
-        void errorNoRepeat(const char * message,...) override {}
-        void showMemory(const char * label="Memory") override{}
-        void showMemory(int level, const char * label="Memory")override {}
+        void debug(const char * ,...)  const override {}
+        void info(const char * ,...)  const override {}
+        void warn(const char * ,...)  const override {}
+        void error(const char * ,...)  const override {}
+        void always(const char * ,...)  const override {}
+        void never(const char * ,...)  const override {}
+        void conditional(bool test, const char * ,...) const override {}
+        void conditional(bool test, int level, const char * ,...) const override {}
+        void errorNoRepeat(const char * ,...) const override {}
+        void showMemory(const char * label="Memory") const override{}
+        void showMemory(int level, const char * label="Memory")const override {}
 
+};
+
+class NullLogConfig : public ILogConfig {
+    public:
+        NullLogConfig() : ILogConfig() { m_instance = this;}
+
+        virtual void indent() {}
+        virtual void outdent() {}
+
+        virtual void setLevel(LogLevel l) {}
+        virtual int getLevel() const  { return 0;}
+        virtual bool isDebug() const  { return false;}
+        virtual void setTesting(bool isUnitTest) {}
+
+        virtual ILogFilter* getFilter()const {return NULL;}
+        virtual ILogFormatter* getFormatter()const { return NULL;}
+        virtual ILogDestination* getDestination()const {return NULL;}
+    protected:
 };
 
 /*
@@ -137,10 +157,6 @@ class LogIndent {
 
 ILogConfig* ILogConfig::m_instance = NULL;
 
-
-}
-
-
 #if LOGGING_ON==1
 // set and declare m_logger member of a class.  
 #define SET_LOGGER(logger)  extern ILogger* logger; m_logger= logger
@@ -149,18 +165,26 @@ ILogConfig* ILogConfig::m_instance = NULL;
 #define SET_CUSTOM_LOGGER(var,logger) extern ILogger* logger; var = logger
 #define DECLARE_CUSTOM_LOGGER(var)  ILogger* var 
 
+// the main logger type when logging is on
+#define LOGGER_TYPE DRLogger
+
+
 #else
 NullLogger nullLogger;
-ILogger* m_logger = &nullLogger; // m_logger-> can be used anywhere even though members are not declared
+NullLogger* m_logger = &nullLogger; // m_logger-> can be used anywhere even though members are not declared
 #define SET_LOGGER(LOGGER) /*nothing*/
-#define DECLARE_LOGGER     /*nothing*/ 
+#define DECLARE_LOGGER()     /*nothing*/ 
 // standard loggers are named m_logger.  If LOGGIN_ON is not 1, m_logger is a global NullLogger
 // custom loggers have names other than m_logger so must be declared members
 #define SET_CUSTOM_LOGGER(name,LOGGER) name=LOGGER
-#define DECLARE_CUSTOM_LOGGER(name,LOGGER) ILogger* name=&NullLogger
+#define DECLARE_CUSTOM_LOGGER(name) ILogger* name
 
+// the main logger type when logging is off
+#define LOGGER_TYPE NullLogger
 
 #endif
+
+}
 
 #endif
 

@@ -10,13 +10,15 @@
 
 using namespace DevRelief;
 
+#if LOGGING_ON==1
 auto logConfig = new LogConfig(new LogSerialDestination());
+#else 
+auto logConfig = new NullLogConfig();
+#endif 
 
 Application * app=NULL;
 
 void setup() {
-  DRLogger logger("test",100);
-  logger.always("running");
 #if RUN_TESTS==1
   if (!Tests::Run()) {
     DevRelief::AppLogger->error("Tests failed.  Not running application.");

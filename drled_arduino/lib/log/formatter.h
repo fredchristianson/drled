@@ -71,7 +71,7 @@ class LogDefaultFormatter : public ILogFormatter {
                 return "TEST";
             }
             if (level == CONDITION_LEVEL) {
-                return "CONDITION";
+                return "IF";
             }
             return "ERROR";
             

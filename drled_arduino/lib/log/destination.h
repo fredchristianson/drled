@@ -27,7 +27,7 @@ class LogSerialDestination : public ILogDestination {
             if (message == NULL) {
                 return;
             }
-            Serial.printf(message);
+            Serial.println(message);
             Serial.flush();
         }
     private:

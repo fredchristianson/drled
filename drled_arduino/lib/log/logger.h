@@ -41,7 +41,7 @@ public:
     }
 
 
-    virtual void write(int level, const char * message, va_list args ){
+    void write(int level, const char * message, va_list args ) const override {
         
         ILogConfig* cfg = ILogConfig::Instance();
         if (cfg == NULL) {
@@ -65,7 +65,6 @@ public:
         }
 
         if (dest) {
-            Serial.println("write message");
             dest->write(output);
         }
         
@@ -73,13 +72,13 @@ public:
     }
 
 
-    void write(int level, const char * message,...) {
+    void write(int level, const char * message,...) const override  {
         va_list args;
         va_start(args,message);
         write(level,message,args);
     }
 
-    void test(const char * message,...) {
+    void test(const char * message,...) const override  {
         if (!logTestingMessage) { return;}
         va_list args;
         va_start(args,message);
@@ -88,7 +87,7 @@ public:
 
 
 
-    void debug(const char * message,...) {
+    void debug(const char * message,...) const override  {
 
         va_list args;
         va_start(args,message);
@@ -98,7 +97,7 @@ public:
 
 
 
-    void info(const char * message,...) {
+    void info(const char * message,...) const override  {
         va_list args;
         va_start(args,message);
         write(INFO_LEVEL,message,args);
@@ -106,7 +105,7 @@ public:
     }
 
 
-    void warn(const char * message,...) {
+    void warn(const char * message,...)  const override {
         va_list args;
         va_start(args,message);
         write(WARN_LEVEL,message,args);
@@ -114,7 +113,7 @@ public:
 
 
     
-    void error(const char * message,...) {
+    void error(const char * message,...) const override  {
         va_list args;
         va_start(args,message);
         write(ERROR_LEVEL,message,args);
@@ -122,41 +121,48 @@ public:
 
     // mainly for new messages during development.  don't need to turn debug level on and get old debug messages.
     // quick search-replace of "always"->"debug" when done
-    void always(const char * message,...) {
+    void always(const char * message,...) const override  {
         va_list args;
         va_start(args,message);
         write(ALWAYS_LEVEL,message,args);
     }
 
-     void never(const char * message,...) {
+     void never(const char * message,...) const override  {
      }
 
-    void conditional(bool test, const char * message,...) {
+    void conditional(bool test, const char * message,...) const override  {
         if (!test) { return;}
         va_list args;
         va_start(args,message);
         write(CONDITION_LEVEL,message,args);
     }
 
-    void errorNoRepeat(const char * message,...) {
+    void conditional(bool test, int level, const char * message,...) const override  {
+        if (!test) { return;}
+        va_list args;
+        va_start(args,message);
+        write(level,message,args);
+    }
+
+    void errorNoRepeat(const char * message,...) const override  {
         if (message == m_lastError){
             return; //don't repeat the error message
         }
         if (EspBoard.currentMsecs()>m_lastErrorTime+500) {
             return; //don't show any errors too fast - even different message;
         }
-        m_lastError = message;
+        ((DRLogger*)this)->m_lastError = message;
         lastErrorTime = EspBoard.currentMsecs();
         va_list args;
         va_start(args,message);
         write(ERROR_LEVEL,message,args);
     }
 
-    void showMemory(const char * label="Memory") {
+    void showMemory(const char * label="Memory") const override {
         write(INFO_LEVEL,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
     }
 
-    void showMemory(int level, const char * label="Memory") {
+    void showMemory(int level, const char * label="Memory")  const override {
         write(level,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
     }
 
@@ -182,11 +188,11 @@ class PeriodicLogger : public DRLogger {
         m_lastWriteTime = 0;
     }
 
-    void write(int level, const char * message, va_list args ) override {
+    void write(int level, const char * message, va_list args ) const override {
         if (EspBoard.currentMsecs() > m_lastWriteTime+m_maxFrequencyMsecs){
             return;
         }
-        m_lastWriteTime = EspBoard.currentMsecs();
+        ((PeriodicLogger*)this)->m_lastWriteTime = EspBoard.currentMsecs();
         DRLogger::write(level,message,args);
     }
     private:
