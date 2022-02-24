@@ -49,8 +49,8 @@ class LogDefaultFormatter : public ILogFormatter {
             const char * tabs = m_indentTabCount<=0 ? "" : (m_tabs + m_maxTabs-m_indentTabCount);
             int len = snprintf(m_outputBuffer,m_maxOutputSize,"%6s-%02d:%02d - %20.20s: %s ",
                         getLevelName(level),minutes,seconds,moduleName,tabs);
-            vsnprintf(m_outputBuffer-len,m_maxOutputSize-len,message,args);
-
+            vsnprintf(m_outputBuffer+len,m_maxOutputSize-len,message,args);
+            return m_outputBuffer;
         }
         
     private:

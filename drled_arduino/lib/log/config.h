@@ -20,7 +20,7 @@ class LogConfig : public ILogConfig {
         LogConfig(ILogDestination*dest, ILogFormatter* formatter=NULL, ILogFilter* filter=NULL) {
             m_indentTabCount = 0;
             m_isTesting = false;
-            m_destination = NULL;
+            m_destination = dest;
             m_formatter = formatter?formatter : dest ? new LogDefaultFormatter(): NULL;
             m_filter = filter ? filter : dest ? new LogDefaultFilter() : NULL;
         }

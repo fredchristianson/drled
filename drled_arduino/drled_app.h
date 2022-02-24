@@ -27,7 +27,6 @@ namespace DevRelief {
    
    
         DRLedApplication() {
-            logConfig = new LogConfig(new LogSerialDestination());
             SET_LOGGER(AppLogger);
             initialize();
             resume();

@@ -227,7 +227,6 @@ namespace DevRelief{
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}
-                m_logger->conditional(index==0,"RootHSLStrip setHue %d  op=%d top=%d",index,op,translateOp(op));
                 m_base->setHue(translateIndex(index),hue,translateOp(op));
             }
 

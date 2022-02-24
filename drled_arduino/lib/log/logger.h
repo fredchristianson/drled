@@ -42,14 +42,16 @@ public:
 
 
     virtual void write(int level, const char * message, va_list args ){
-        return;
+        
         ILogConfig* cfg = ILogConfig::Instance();
         if (cfg == NULL) {
             // need LogConfig before doing anything.
+            Serial.println("no LogConfig");
             return;
         }
         ILogDestination* dest = cfg->getDestination();
         if (dest == NULL) {
+            Serial.println("no Log dest");
             return;
         }
         ILogFilter* filter = cfg->getFilter();
@@ -63,6 +65,7 @@ public:
         }
 
         if (dest) {
+            Serial.println("write message");
             dest->write(output);
         }
         

@@ -30,7 +30,9 @@ class LogDefaultFilter : public ILogFilter {
 
         virtual bool shouldLog(int level, const char* module, const char*message)const {
             if (m_isUnitTest && level == TEST_LOGGER_LEVEL) { return true;}
-            if (m_level < level) { return false;}
+            if (m_level < level) { 
+                return false;
+            }
             if (m_includeModules) { /* todo */}
             if (m_excludeModules) { /* todo */}
             return true;
