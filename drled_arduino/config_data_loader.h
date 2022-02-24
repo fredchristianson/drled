@@ -16,7 +16,7 @@ const char * CONFIG_PATH_BASE="/";
 class ConfigDataLoader : public DataLoader {
     public:
         ConfigDataLoader() {
-            m_logger = &ConfigLogger;
+            SET_LOGGER(ConfigLogger);
         }
 
         DRString getPath(const char * name) {
@@ -58,18 +58,21 @@ class ConfigDataLoader : public DataLoader {
                 m_logger->debug("get Config from JSON");
                 if (readJson(config,root->getTopObject())) {
                     m_logger->debug("save Config");
+                    root->destroy();
                     return save(config);
                 }
+                root->destroy();
             }
             return false;
         }
 
         bool save(Config& config){
             m_logger->debug("save Config");
-            SharedPtr<JsonRoot> jsonRoot = toJson(config);
+            JsonRoot* jsonRoot = toJson(config);
             
             bool success = writeJsonFile(getPath("config"),jsonRoot->getTopElement());
             m_logger->debug("\twrite %s",success?"success":"failed");
+             jsonRoot->destroy();
             return success;
         }
 
@@ -133,7 +136,7 @@ class ConfigDataLoader : public DataLoader {
         }
 
 
-        SharedPtr<JsonRoot> toJson(Config&config) {
+        JsonRoot* toJson(Config&config) {
             JsonRoot* root=new JsonRoot;  
             JsonObject * json = root->createObject();
             json->setString("buildVersion",config.getBuildVersion());

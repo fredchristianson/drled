@@ -11,7 +11,7 @@ class ApiTestSuite : public TestSuite{
     public:
         static ApiTestSuite::TestFn jsonTests[];
 
-        static bool Run(Logger* logger) {
+        static bool Run(ILogger* logger) {
             #if RUN_API_TESTS
             ApiTestSuite test(logger);
             test.run();
@@ -26,7 +26,7 @@ class ApiTestSuite : public TestSuite{
             runTest("testApiParamsMemLeak",[&](TestResult&r){testApiParamsMemLeak(r);});
         }
 
-        ApiTestSuite(Logger* logger) : TestSuite("Api Tests",logger){
+        ApiTestSuite(ILogger* logger) : TestSuite("Api Tests",logger){
 
         }
 

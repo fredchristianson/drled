@@ -18,7 +18,7 @@ namespace DevRelief {
         }
     protected:
         DRWiFi(const char * hostname="dr_unnamed") {
-            m_logger = new Logger("wifi",WARN_LEVEL);
+            SET_LOGGER(WifiLogger);
             m_logger->debug("wifi created");
             m_hostname = hostname;
         }
@@ -47,14 +47,13 @@ namespace DevRelief {
         const char * getIPAddress() { return m_ipAddress.text();}
 
     private:
+        DECLARE_LOGGER();
         static DRString m_hostname;
         static DRString m_ipAddress;
-        static Logger * m_logger;    
         static DRWiFi*  drWiFiSingleton;
     };
 
     DRWiFi * DRWiFi::drWiFiSingleton;
-    Logger*  DRWiFi::m_logger;
     DRString DRWiFi::m_hostname;
     DRString DRWiFi::m_ipAddress;
 }

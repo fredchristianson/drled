@@ -32,7 +32,7 @@ namespace DevRelief
     public:
         static TestSuite::TestFn jsonTests[];
 
-        static bool Run(Logger *logger)
+        static bool Run(ILogger *logger)
         {
 #if RUN_JSON_TESTS
             JsonTestSuite test(logger);
@@ -58,7 +58,7 @@ namespace DevRelief
                                   
         }
 
-        JsonTestSuite(Logger *logger) : TestSuite("JSON Tests", logger,false)
+        JsonTestSuite(ILogger *logger) : TestSuite("JSON Tests", logger,false)
         {
         }
 

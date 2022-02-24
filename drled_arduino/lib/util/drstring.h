@@ -1,12 +1,12 @@
 #ifndef DR_STRING_H
 #define DR_STRING_H
 
-#include "../log/logger.h"
+#include "../log/interface.h"
 #include "../util/shared_ptr.h"
 
 namespace DevRelief {
 
-Logger* stringLogger = &StringLogger;
+DECLARE_GLOBAL_LOGGER(stringLogger,StringLogger);
 
 class DRStringData {
     public:

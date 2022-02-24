@@ -5,9 +5,8 @@
 
 namespace DevRelief {
 
-
-extern Logger GenneratorLogger;
-extern Logger JsonLogger;
+DECLARE_GLOBAL_LOGGER(generatorLogger,GeneratorLogger);
+DECLARE_GLOBAL_LOGGER(jsonLogger,JsonLogger);
 
 typedef enum TokenType {
     TOK_EOD=1000,

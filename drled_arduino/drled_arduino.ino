@@ -10,11 +10,15 @@
 
 using namespace DevRelief;
 
-Logger * drapp_logger=&APP_LOGGER;
+LogSerialDestination serialLog;
+
+
+DECLARE_GLOBAL_LOGGER(drapp_logger,DevRelief::AppLogger);
 Application * app=NULL;
 
 void setup() {
   
+serialLog.write("DRLED setup");
 #if RUN_TESTS==1
   if (!Tests::Run()) {
     drapp_logger->error("Tests failed.  Not running application.");
@@ -28,6 +32,7 @@ void setup() {
 
 
 void loop() {
+  serialLog.write("DRLED loop");
   if (app) {
     app->loop();
   }

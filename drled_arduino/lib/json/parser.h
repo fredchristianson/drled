@@ -10,7 +10,7 @@
 
 namespace DevRelief {
 
-extern Logger JsonParserLogger;
+DECLARE_GLOBAL_LOGGER(jsonParserLogger,JsonParserLogger);
 
 class TokenParser {
     public:
@@ -75,7 +75,7 @@ class TokenParser {
                 m_pos+=4;
             }  else {
 
-                JsonParserLogger.error("token error");
+                jsonParserLogger->error("token error");
                 m_token = TOK_ERROR;
             }
             return m_token;
@@ -219,7 +219,7 @@ class TokenParser {
 class JsonParser : public IParseGen {
 public:
     JsonParser() {
-        m_logger = &JsonParserLogger;
+        SET_LOGGER(JsonParserLogger);
         m_errorMessage = NULL;
         m_hasError = false;
         m_root = NULL;
@@ -440,7 +440,7 @@ public:
     int errorCharacter() { return m_errorCharacter;}
     int errorPosition() { return m_errorPosition;}
     private:
-        Logger * m_logger;
+        DECLARE_LOGGER();
         bool        m_hasError;
         JsonRoot* m_root;
         int m_errorLineNumber;

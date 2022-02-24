@@ -10,7 +10,7 @@ namespace DevRelief {
 class DRBuffer {
 public:
     DRBuffer(size_t length=0){
-        m_logger = &DRBufferLogger;
+        SET_LOGGER(DRBufferLogger);
         m_data = NULL;
         m_maxLength = 0;
         m_length = length;
@@ -106,7 +106,7 @@ public:
 
     size_t getMaxLength() { return m_maxLength;}
 protected:
-    Logger* m_logger;
+    DECLARE_LOGGER();
 
 private:
     uint8_t * m_data;

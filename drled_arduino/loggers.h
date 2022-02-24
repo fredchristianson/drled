@@ -9,74 +9,46 @@ namespace DevRelief
     
 
 #ifdef DEBUG
-Logger AdafruitLogger("AdafruitLED",ADAFRUIT_LED_LOGGER_LEVEL);
-Logger AnimationLogger("Animation",ANIMATION_LOGGER_LEVEL);
-Logger ApiResultLogger("ApiResult",API_RESULT_LOGGER_LEVEL);
-Logger APP_LOGGER("DRLed",APP_LOGGER_LEVEL);
-Logger AppStateLogger("AppState",APP_STATE_LOGGER_LEVEL);
-Logger AppStateLoaderLogger("AppStateDataLoader",APP_STATE_LOGGER_LEVEL);
-Logger ColorLogger("Color",COLOR_LOGGER_LEVEL);
-Logger CompoundLogger("CompoundStrip",COMPOUND_STRIP_LOGGER_LEVEL);
-Logger ConfigLogger("Config",CONFIG_LOGGER_LEVEL);
-Logger ConfigLoaderLogger("Config Loader",CONFIG_LOADER_LOGGER_LEVEL);
-Logger DataObjectLogger("DataObject",DATA_OBJECT_LOGGER_LEVEL);
-Logger DRBufferLogger("DRBuffer",DR_BUFFER_LOGGER_LEVEL);
-Logger GeneratorLogger("JsonGenerator",JSON_GENERATOR_LOGGER_LEVEL);
-Logger HSLStripLogger("HSLStrip",HSL_STRIP_LOGGER_LEVEL);
-Logger HttpServerLogger("HTTPServer",HTTP_SERVER_LOGGER_LEVEL);
-Logger JsonLogger("Json",JSON_LOGGER_LEVEL);
-Logger JsonParserLogger("Json",JSON_PARSER_LOGGER_LEVEL);
-Logger JsonGeneratorLogger("Json",JSON_GENERATOR_LOGGER_LEVEL);
-Logger LEDLogger("LED",LED_LOGGER_LEVEL);
-Logger LinkedListLogger("LinkedList",LINKED_LIST_LOGGER_LEVEL);
-Logger MemoryLogger("Memory",MEMORY_LOGGER_LEVEL);
-Logger PtrListLogger("PtrList",PTR_LIST_LOGGER_LEVEL);
-Logger ParserLogger("JsonParser",JSON_PARSER_LOGGER_LEVEL);
-Logger ScriptLogger("Script",SCRIPT_LOGGER_LEVEL);
-Logger ScriptContainerLogger("ScriptContainer",SCRIPT_CONTAINER_LOGGER_LEVEL);
-Logger ScriptElementLogger("ScriptElement",SCRIPT_ELEMENT_LOGGER_LEVEL);
-Logger ScriptHSLStripLogger("ScriptHSLStrip",SCRIPT_HSLSTRIP_LOGGER_LEVEL);
-Logger ScriptLoaderLogger("ScriptLoader",SCRIPT_LOADER_LOGGER_LEVEL);
-Logger ScriptPositionLogger("ScriptPosition",SCRIPT_POSITIONLOGGER_LEVEL);
-Logger ScriptValueLogger("ScriptValue",SCRIPT_VALUE_LOGGER_LEVEL);
-Logger ScriptExecutorLogger("ScriptExecutor",SCRIPT_EXECUTOR_LOGGER_LEVEL);
-Logger StripElementLogger("StripElement",STRIP_ELEMENT_LOGGER_LEVEL);
-Logger SharedPtrLogger("SharedPtr",SHARED_PTR_LOGGER_LEVEL);
-Logger StringLogger("DRString",DRSTRING_LOGGER_LEVEL);
-Logger TestLogger("Tests",TEST_LOGGER_LEVEL);
+ILogger* AdafruitLogger = new DRLogger("AdafruitLED",ADAFRUIT_LED_LOGGER_LEVEL);
+ILogger* AnimationLogger = new DRLogger("Animation",ANIMATION_LOGGER_LEVEL);
+ILogger* ApiResultLogger = new DRLogger("ApiResult",API_RESULT_LOGGER_LEVEL);
+ILogger* AppLogger = new DRLogger("DRLed",APP_LOGGER_LEVEL);
+ILogger* AppStateLogger = new DRLogger("AppState",APP_STATE_LOGGER_LEVEL);
+ILogger* AppStateLoaderLogger = new DRLogger("AppStateDataLoader",APP_STATE_LOGGER_LEVEL);
+ILogger* ColorLogger = new DRLogger("Color",COLOR_LOGGER_LEVEL);
+ILogger* CompoundLogger = new DRLogger("CompoundStrip",COMPOUND_STRIP_LOGGER_LEVEL);
+ILogger* ConfigLogger = new DRLogger("Config",CONFIG_LOGGER_LEVEL);
+ILogger* ConfigLoaderLogger = new DRLogger("Config Loader",CONFIG_LOADER_LOGGER_LEVEL);
+ILogger* DataObjectLogger = new DRLogger("DataObject",DATA_OBJECT_LOGGER_LEVEL);
+ILogger* DRBufferLogger = new DRLogger("DRBuffer",DR_BUFFER_LOGGER_LEVEL);
+ILogger* FileSystemLogger = new DRLogger("FileSystem",FILE_SYSTEM_LOGGER_LEVEL);
+ILogger* GeneratorLogger = new DRLogger("JsonGenerator",JSON_GENERATOR_LOGGER_LEVEL);
+ILogger* HSLStripLogger = new DRLogger("HSLStrip",HSL_STRIP_LOGGER_LEVEL);
+ILogger* HttpServerLogger = new DRLogger("HTTPServer",HTTP_SERVER_LOGGER_LEVEL);
+ILogger* JsonLogger = new DRLogger("Json",JSON_LOGGER_LEVEL);
+ILogger* JsonParserLogger = new DRLogger("Json",JSON_PARSER_LOGGER_LEVEL);
+ILogger* JsonGeneratorLogger = new DRLogger("Json",JSON_GENERATOR_LOGGER_LEVEL);
+ILogger* LEDLogger = new DRLogger("LED",LED_LOGGER_LEVEL);
+ILogger* LinkedListLogger = new DRLogger("LinkedList",LINKED_LIST_LOGGER_LEVEL);
+ILogger* MemoryLogger = new DRLogger("Memory",MEMORY_LOGGER_LEVEL);
+ILogger* PtrListLogger = new DRLogger("PtrList",PTR_LIST_LOGGER_LEVEL);
+ILogger* ParserLogger = new DRLogger("JsonParser",JSON_PARSER_LOGGER_LEVEL);
+ILogger* ScriptLogger = new DRLogger("Script",SCRIPT_LOGGER_LEVEL);
+ILogger* ScriptContainerLogger = new DRLogger("ScriptContainer",SCRIPT_CONTAINER_LOGGER_LEVEL);
+ILogger* ScriptElementLogger = new DRLogger("ScriptElement",SCRIPT_ELEMENT_LOGGER_LEVEL);
+ILogger* ScriptHSLStripLogger = new DRLogger("ScriptHSLStrip",SCRIPT_HSLSTRIP_LOGGER_LEVEL);
+ILogger* ScriptLoaderLogger = new DRLogger("ScriptLoader",SCRIPT_LOADER_LOGGER_LEVEL);
+ILogger* ScriptPositionLogger = new DRLogger("ScriptPosition",SCRIPT_POSITIONLOGGER_LEVEL);
+ILogger* ScriptValueLogger = new DRLogger("ScriptValue",SCRIPT_VALUE_LOGGER_LEVEL);
+ILogger* ScriptExecutorLogger = new DRLogger("ScriptExecutor",SCRIPT_EXECUTOR_LOGGER_LEVEL);
+ILogger* SharedPtrLogger = new DRLogger("SharedPtr",SHARED_PTR_LOGGER_LEVEL);
+ILogger* StripElementLogger = new DRLogger("StripElement",STRIP_ELEMENT_LOGGER_LEVEL);
+ILogger* StringLogger = new DRLogger("DRString",DRSTRING_LOGGER_LEVEL);
+ILogger* TestLogger = new DRLogger("Tests",TEST_LOGGER_LEVEL);
+ILogger* UtilLogger = new DRLogger("Util",UTIL_LOGGER_LEVEL);
+ILogger* WifiLogger = new DRLogger("Util",WIFI_LOGGER_LEVEL);
 
-#else
-Logger DUMMY_LOGGER;
-#define AdafruitLogger DUMMY_LOGGER
-#define AnimationLogger DUMMY_LOGGER
-#define ApiResultLogger DUMMY_LOGGER
-#define APP_LOGGER      DUMMY_LOGGER
-#define  AppStateLogger DUMMY_LOGGER
-#define StateLoaderLogger   DUMMY_LOGGER
-#define CompoundLogger  DUMMY_LOGGER
-#define ColorLogger  DUMMY_LOGGER
-#define ConfigLogger DUMMY_LOGGER
-#define ConfigLoaderLogger DUMMY_LOGGER
-#define DataObjectLogger  DUMMY_LOGGER
-#define DRBufferLogger  DUMMY_LOGGER
-#define GeneratorLogger DUMMY_LOGGER
-#define HSLStripLogger DUMMY_LOGGER;
-#define HttpServerLogger DUMMY_LOGGER
-#define JSONLogger      DUMMY_LOGGER
-#define LEDLogger       DUMMY_LOGGER
-#define LinkedListLogger DUMMY_LOGGER
-#define MemoryLogger    DUMMY_LOGGER
-#define  PtrListLogger  DUMMY_LOGGER
-#define ParserLogger    DUMMY_LOGGER
-#define ScriptLogger    DUMMY_LOGGER
-#define ScriptContainerLogger   DUMMY_LOGGER
-#define ScriptElementLogger   DUMMY_LOGGER
-#define ScriptLoaderLogger DUMMY_LOGGER
-#define ScriptValueLogger DUMMY_LOGGER
-#define ScriptExecutorLogger    DUMMY_LOGGER
-#define SharedPtrLogger  DUMMY_LOGGER
-#define StringLogger    DUMMY_LOGGER
-#define TestLogger      DUMMY_LOGGER
+ILogger* FiveSecondLogger = new PeriodicLogger(5000,"5 Second Logger"); // log at most every 5 seconds
 #endif
 
 }

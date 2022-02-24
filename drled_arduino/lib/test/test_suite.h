@@ -1,7 +1,7 @@
 #ifndef TEST_SUITE_H
 #define TEST_SUITE_H
 
-#include "../log/logger.h"
+#include "../log/interface.h"
 
 namespace DevRelief {
 
@@ -14,7 +14,7 @@ namespace DevRelief {
 
     class TestResult {
         public:
-            TestResult(Logger * logger) { 
+            TestResult(ILogger * logger) { 
                 m_success = true;
                 m_logger = logger;    
             }
@@ -129,7 +129,7 @@ namespace DevRelief {
             }
 
         private:
-            Logger* m_logger;
+            DECLARE_LOGGER();
             bool m_success;
     };
 
@@ -152,7 +152,7 @@ namespace DevRelief {
         public:
             typedef void (TestSuite::*TestFn)(TestResult &);
 
-            TestSuite(const char * name, Logger* logger,bool logTestMessages=false){
+            TestSuite(const char * name, ILogger* logger,bool logTestMessages=false){
                 m_logTestMessages = logTestMessages;
                 m_name = name;
                 m_logger = logger;
@@ -162,11 +162,11 @@ namespace DevRelief {
             }
 
             bool runTest(const char * name, auto  test){
-                Logger::setTesting(m_logTestMessages);
+                ILogConfig::Instance()->setTesting(m_logTestMessages);
                 TestResult result(m_logger);
                 int mem = ESP.getFreeHeap();
                 m_logger->info("Run test: %s",name);
-                m_logger->indent();
+                LogIndent indent;
                 m_logger->showMemory("memory before test");
 
                 (test)(result);
@@ -177,9 +177,8 @@ namespace DevRelief {
                     m_logger->error("Memory Leak: %d bytes",endMem-mem);
                     result.fail("memory leak");
                 }
-                m_logger->outdent();
                 success = result.isSuccess() && success;
-                Logger::setTesting(false);
+                ILogConfig::Instance()->setTesting(false);
 
                 return result.isSuccess();
             }
@@ -187,7 +186,7 @@ namespace DevRelief {
             bool isSuccess() { return success;}
         protected:
             const char * m_name;
-            Logger * m_logger;
+            DECLARE_LOGGER();
             bool m_logTestMessages;
             bool success;
     };

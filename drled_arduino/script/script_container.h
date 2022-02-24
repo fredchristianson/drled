@@ -14,14 +14,13 @@
 namespace DevRelief
 {
  
-    extern Logger ScriptContainerLogger;
     
     class ScriptContainer: public PositionableElement, public IScriptContainer
     {
     public:
         ScriptContainer(const char * type,IScriptContext* context, IScriptHSLStrip* strip, IElementPosition* position) : PositionableElement(type, position)
         {
-            m_logger = &ScriptContainerLogger;
+            SET_LOGGER(ScriptContainerLogger);
             m_logger->debug("Create ScriptContainer type: %s",m_type);
             m_strip = strip;
             m_context = context;
@@ -73,7 +72,7 @@ namespace DevRelief
 
         void drawChild(IScriptContext* context, IScriptElement * child) {
             m_logger->never("set current element %x  %x %s",context, child, child ?child->getType():"null");
-            m_logger->indent();
+            LogIndent indent;
             context->setCurrentElement(child);
             m_logger->never("drawChild  %s",child->getType());
             auto pos = child->getPosition();
@@ -84,7 +83,7 @@ namespace DevRelief
             }
             /* use the passed context, not this element's context */
             child->draw(context);
-            m_logger->outdent();
+            
             m_logger->never("\tdone draw() child");
             
         };
@@ -139,7 +138,7 @@ namespace DevRelief
         PtrList<IScriptElement*> m_children;
         IScriptHSLStrip* m_strip;
         IScriptContext* m_context;
-        Logger* m_logger;
+        DECLARE_LOGGER();
     };
 
     class ScriptRootContainer : public ScriptContainer {
@@ -375,8 +374,6 @@ namespace DevRelief
                     m_contextList.removeAt(0);
                 }
 
-                m_logger->never("create MakerContexts");
-                m_logger->showMemoryNever();
 
                 // create new contexts if there are fewer than "min-count";
                 while(minCount > m_contextList.size()) {
@@ -384,7 +381,6 @@ namespace DevRelief
 
                     createContext(parentContext);
                 }
-                m_logger->showMemoryNever("\tcreated all contexts");
             }
 
             void createContext(IScriptContext* parentContext) {
@@ -420,7 +416,6 @@ namespace DevRelief
                     double shouldPercent = 100*chance*time/1000.0;
                     int r = random(100);
                     if (r < shouldPercent) { 
-                        m_logger->never("create %d < %f (%f)",r,shouldPercent,chance);
                         return true;
                     }
                 } else if (frequency>0) {
@@ -452,7 +447,7 @@ namespace DevRelief
 
     ScriptElementCreator::ScriptElementCreator(IScriptContainer* container) {
         m_container = container;
-        m_logger = &ScriptElementLogger;
+        SET_LOGGER(ScriptElementLogger);
     }
 
     IScriptElement* ScriptElementCreator::elementFromJson(IJsonElement* json,ScriptContainer* container){

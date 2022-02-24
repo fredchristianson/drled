@@ -10,12 +10,11 @@
 
 
 namespace DevRelief {
-    extern Logger ScriptElementLogger;
 
     class ScriptElement : public IScriptElement {
         public:
             ScriptElement(const char * type){
-                m_logger = &ScriptElementLogger;
+                SET_LOGGER(ScriptElementLogger);
                 m_type = type;
                 m_container = NULL;
                 m_logger->debug("Create ScriptElement type=%s",m_type);
@@ -99,7 +98,7 @@ namespace DevRelief {
 
             const char * m_type;
             IScriptElement* m_container;
-            Logger* m_logger;
+            DECLARE_LOGGER();
     };
 
     class PositionableElement : public ScriptElement {

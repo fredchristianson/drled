@@ -5,7 +5,7 @@
 
 namespace DevRelief {
 
-Logger* sharedPtrLogger = &SharedPtrLogger;
+DECLARE_GLOBAL_LOGGER(sharedPtrLogger,SharedPtrLogger);
 
 template<typename T>
 class SharedPtr {

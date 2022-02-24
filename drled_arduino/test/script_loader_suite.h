@@ -25,7 +25,7 @@ const char *LOAD_SIMPLE_SCRIPT = R"script(
 class ScriptLoaderTestSuite : public TestSuite{
     public:
 
-        static bool Run(Logger* logger) {
+        static bool Run(ILogger* logger) {
             ScriptLoaderTestSuite test(logger);
             test.run();
             return test.isSuccess();
@@ -37,7 +37,7 @@ class ScriptLoaderTestSuite : public TestSuite{
             runTest("testScriptLoaderMemLeak",[&](TestResult&r){memLeak(r);});
         }
 
-        ScriptLoaderTestSuite(Logger* logger) : TestSuite("ScriptLoader Tests",logger){
+        ScriptLoaderTestSuite(ILogger* logger) : TestSuite("ScriptLoader Tests",logger){
         }
 
     protected: 

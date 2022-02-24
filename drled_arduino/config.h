@@ -8,13 +8,10 @@
 #include "./lib/util/util.h"
 
 namespace DevRelief {
-    //Logger ConfigLogger("Config",CONFIG_LOGGER_LEVEL);
-    extern Logger ConfigLoaderLogger;
 
     class LedPin {
         public:
         LedPin(int n, int c, bool r) {
-            ConfigLoaderLogger.debug("create LedPin 0x%04X  %d %d %d",this,n,c,r);
             number=n;
             ledCount=c;
             reverse=r;
@@ -23,7 +20,6 @@ namespace DevRelief {
         }
 
         ~LedPin() {
-            ConfigLoaderLogger.debug("destroy LedPin 0x%04X %d %d %d",this,number,ledCount,reverse);
         }
 
         void destroy() {
@@ -45,7 +41,7 @@ namespace DevRelief {
             static void setInstance(Config*cfg) { Config::instance = cfg;}
 
             Config() {
-                m_logger = &ConfigLoaderLogger;
+                SET_LOGGER(ConfigLoaderLogger);
                 hostName = HOSTNAME;
                 runningScript = NULL;
                 runningParameters = NULL;
@@ -138,7 +134,7 @@ namespace DevRelief {
             JsonElement * runningParameters;
             int  brightness;
             int  maxBrightness;
-            Logger * m_logger;
+            DECLARE_LOGGER();
             static Config* instance;
 
     };

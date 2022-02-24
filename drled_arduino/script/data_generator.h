@@ -15,7 +15,7 @@ namespace DevRelief {
     class ScriptDataGenerator {
         public:
             ScriptDataGenerator(){
-                m_logger = &ScriptLoaderLogger;
+                SET_LOGGER(ScriptLoaderLogger);
             }
 
 
@@ -48,7 +48,7 @@ namespace DevRelief {
 
 
         private:
-            Logger* m_logger;
+            DECLARE_LOGGER();
     };
 
 };

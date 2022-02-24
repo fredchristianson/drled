@@ -26,6 +26,7 @@
 #define DATA_OBJECT_LOGGER_LEVEL    ERROR_LEVEL
 #define DR_BUFFER_LOGGER_LEVEL      ERROR_LEVEL
 #define DRSTRING_LOGGER_LEVEL       ERROR_LEVEL
+#define FILE_SYSTEM_LOGGER_LEVEL    ERROR_LEVEL
 #define HSL_STRIP_LOGGER_LEVEL      ERROR_LEVEL
 #define HTTP_SERVER_LOGGER_LEVEL    ERROR_LEVEL
 #define JSON_LOGGER_LEVEL           WARN_LEVEL
@@ -46,6 +47,8 @@
 #define STRIP_ELEMENT_LOGGER_LEVEL      INFO_LEVEL
 #define SHARED_PTR_LOGGER_LEVEL         WARN_LEVEL  
 #define TEST_LOGGER_LEVEL               DEBUG_LEVEL
+#define UTIL_LOGGER_LEVEL               ERROR_LEVEL
+#define WIFI_LOGGER_LEVEL               ERROR_LEVEL
 
 #if ENV==PROD
     #define ENV_PROD
@@ -57,7 +60,7 @@
 
 
     // RUN_TESTS should be 1 to run tests on start.  otherwise they are not run
-    #define RUN_TESTS 0
+    #define RUN_TESTS 1
     #define RUN_STRING_TESTS 0
     #define RUN_JSON_TESTS 0
     #define RUN_ANIMATION_TESTS 0

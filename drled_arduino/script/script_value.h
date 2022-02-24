@@ -14,7 +14,7 @@
 
 namespace DevRelief
 {
-    extern Logger ScriptValueLogger;
+    DECLARE_GLOBAL_LOGGER(scriptValueLogger,ScriptValueLogger);
     const char * functionNames[] = {
         "rand","add","+","subtract","sub","-","multiply","*","mult",
         "divide","div","/","mod","%","min","max","randOf","seq","sequence",
@@ -74,7 +74,7 @@ namespace DevRelief
             static IScriptValue* createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json=NULL);
 
             ScriptValue() {
-                m_logger = &ScriptValueLogger;
+                SET_LOGGER(ScriptValueLogger);
             }
             virtual ~ScriptValue() {
                 m_logger->never("~ScriptValue");
@@ -131,7 +131,7 @@ namespace DevRelief
                 if (Util::equalAny(p,"inherit")) { return POS_INHERIT;}
                 return defaultUnit;
             }        
-            Logger* m_logger;
+            DECLARE_LOGGER();
     };
 
  
@@ -141,14 +141,12 @@ namespace DevRelief
     public:
         NameValue(const char *name, IScriptValue *value)
         {
-            ScriptValueLogger.never("add NameValue %s",name);
             m_name = Util::allocText(name);
             m_value = value;
         }
 
         virtual ~NameValue()
         {
-            ScriptValueLogger.never("remove NameValue %s",m_name);
             Util::freeText(m_name);
             m_value->destroy();
         }
@@ -159,7 +157,6 @@ namespace DevRelief
         IScriptValue *getValue() { return m_value; }
 
         void replaceValue(IScriptValue* newValue) {
-            ScriptValueLogger.never("replace value %s",m_name);
             if (m_value) { m_value->destroy();}
             m_value = newValue;
         }
@@ -640,7 +637,7 @@ namespace DevRelief
     class PatternInterpolation {
         public:
             PatternInterpolation() {
-                m_logger = &ScriptValueLogger;
+                SET_LOGGER(ScriptValueLogger);
             }
             virtual ~PatternInterpolation() {
             }
@@ -651,7 +648,7 @@ namespace DevRelief
 
             virtual bool toJson(JsonObject* json)const =0;
         protected:
-            Logger* m_logger;
+            DECLARE_LOGGER();
 
     };
 
@@ -1012,7 +1009,7 @@ namespace DevRelief
     class PatternRange : public AnimationRange {
         public:
             PatternRange(PatternValue * pattern,bool unfold) : AnimationRange(unfold) {
-                m_logger = &ScriptValueLogger;
+                SET_LOGGER(ScriptValueLogger);
                 m_pattern = pattern;
             }
 
@@ -1027,7 +1024,7 @@ namespace DevRelief
 
 
         protected:
-            Logger* m_logger;
+            DECLARE_LOGGER();
             PatternValue* m_pattern;
     };
 
@@ -1109,7 +1106,7 @@ namespace DevRelief
     public:
         ScriptVariableValue(bool isSysValue, const char *value,IScriptValue* defaultValue) 
         {
-            m_logger = &ScriptValueLogger;
+            SET_LOGGER(ScriptValueLogger);
             m_name = Util::allocText(value);
             m_logger->debug("Created ScriptVariableValue %s %d.", value, isSysValue);
             m_defaultValue = defaultValue;
@@ -1259,7 +1256,7 @@ namespace DevRelief
         const char * m_name;
         bool m_isSysValue;
         IScriptValue*  m_defaultValue;
-        Logger *m_logger;
+        DECLARE_LOGGER();
         bool m_recurse;
 
         static ScriptNullValue NULL_VALUE;
@@ -1270,7 +1267,7 @@ namespace DevRelief
     class ScriptValueList : public IScriptValueProvider {
         public:
             ScriptValueList() {
-                m_logger = &ScriptValueLogger;
+                SET_LOGGER(ScriptValueLogger);
                 m_logger->never("create ScriptValueList()");
             }
 
@@ -1335,7 +1332,6 @@ namespace DevRelief
                 source->each([&](NameValue* nv) {
                     IScriptValue* val = nv->getValue();
                     if (val != NULL) {
-                        m_logger->showMemoryNever();
                         IScriptValue* newVal = val->eval(ctx);
                         NameValue*newNV = new NameValue(nv->getName(),newVal);
                         m_values.add(newNV);
@@ -1346,7 +1342,7 @@ namespace DevRelief
             void clear() { m_values.clear();}
         private:
             PtrList<NameValue*> m_values;
-            Logger* m_logger;
+            DECLARE_LOGGER();
    };
 
    IScriptValue* ScriptValue::eval(IScriptContext * ctx, double defaultValue) {
@@ -1389,18 +1385,16 @@ namespace DevRelief
            bool isSysVar = string[0] == 's';
            Util::split(string+4,')',nameDefault);
            if (nameDefault.size() == 1) {
-               ScriptValueLogger.never("create variable %d %s",isSysVar,nameDefault.get(0));
                result = new ScriptVariableValue(isSysVar, nameDefault.get(0).text(),NULL);
            } else if (nameDefault.size() == 2) {
                const char * defString = nameDefault.get(1).text();
                while (defString != NULL && defString[0] != 0 && defString[0] == '|'){
                    defString++;
                }
-               ScriptValueLogger.never("create variable %d %s | %s",isSysVar,nameDefault.get(0), defString);
 
                 result = new ScriptVariableValue(isSysVar, nameDefault.get(0),createFromString(defString));
            } else {
-               ScriptValueLogger.error("Cannot create variable for %s",string);
+               scriptValueLogger->error("Cannot create variable for %s",string);
            }
        } else if (Util::equal(string,"null")) { result = new ScriptNullValue();}
        else if (Util::equal(string,"true")) { result = new ScriptBoolValue(true);}
@@ -1410,30 +1404,24 @@ namespace DevRelief
    }
 
    IScriptValue* ScriptValue::createFromArray(JsonArray* json,JsonObject* parent){
-        ScriptValueLogger.always("create from array");
+        
        if (json == NULL || json->getCount() == 0) { return NULL;}
        int count = json->getCount();
-        ScriptValueLogger.always("\tcount %d",count);
        
        IJsonElement* first = json->getAt(0);
-        ScriptValueLogger.always("\tfirst %x",first);
        
        if (first == NULL || first->asValue() == NULL) { return new ScriptNullValue();}
        // if the first element is a string, that is the function name.  otherwise this is a range;
        IJsonValueElement* val = first->asValue();
-        ScriptValueLogger.always("\tfirst val %x",val);
        const char * name = val->getString(NULL);
-       ScriptValueLogger.always("got name %x",name);
         bool isFunc = ScriptFunction::isFunctionName(name);
         if (isFunc) {
-           ScriptValueLogger.always("create function %s",name);
             ScriptFunction* func = new ScriptFunction(name);
             for(int i=1;i<count;i++){
                 func->addArg(create(json->getAt(i),parent));
             }
             return func;
        } else {
-           ScriptValueLogger.always("range shorthand %x",parent);
             bool unfold = parent ? parent->getBool("unfold",false) : false;
             bool repeat = parent ? parent->getBool("repeat",false) : false;
             bool smooth = parent ? parent->getBool("smooth",true) : true;
@@ -1456,58 +1444,42 @@ namespace DevRelief
             smoothDefault = true;
         }
         if (pattern) {
-            ScriptValueLogger.never("create PatternValue");
             bool unfold = json->getBool("unfold",unfoldDefault);
             bool repeat = json->getBool("repeat",repeatDefault);
             bool smooth = json->getBool("smooth",smoothDefault);
             IScriptValue* patternValue = createPattern(pattern,smooth,repeat,unfold,json);
             result = patternValue;
         } else {
-            ScriptValueLogger.never("unknown object type %s",json->toString().text());
 
         }
-        ScriptValueLogger.never("return IScriptValue %x",result);
         return result;
    }
 
     IScriptValue* ScriptValue::createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json){
-            ScriptValueLogger.always("create pattern");
         
             PatternValue* patternValue = new PatternValue();
             pattern->each([&](IJsonElement*elemenValue){
                 patternValue->addElement(createPatternElement(elemenValue));
             });
-            ScriptValueLogger.always("create ease");
             IAnimationEase* ease = json ? createEase(json) : NULL;
 
             PatternInterpolation* pi = NULL;
-            ScriptValueLogger.always("pattern smooth %d",smooth);
             if (smooth){
                 pi = new SmoothInterpolation();
-                ScriptValueLogger.never("\tcreated SmoothInterpolation");
              } else {
                  pi = new StepInterpolation();
-                ScriptValueLogger.never("\tcreated StepInterpolation");
              }
-             ScriptValueLogger.never("\tset Interpolation");
             patternValue->setInterpolation(pi);
             IAnimationRange* range = NULL;
-            ScriptValueLogger.never("\tcheck domain type");
             bool isTime = (json && (json->getPropertyValue("duration") || json->getPropertyValue("speed")));
             if (repeat &&  !isTime) {
-                ScriptValueLogger.never("\tcreate Repeat range");
                 range = new RepeatPatternRange(patternValue,unfold);
             } else {
-                ScriptValueLogger.never("\tcreate stretch range");
                 range = new StretchPatternRange(patternValue,unfold);
             }
-            ScriptValueLogger.never("\tcreate domain");
             IAnimationDomain* domain = json ? createDomain(json,range) : new ContextPositionDomain();
-            ScriptValueLogger.never("\tcreate animator");
             IValueAnimator* animator = new Animator(domain,range,ease);
-            ScriptValueLogger.never("\tset animator");
             patternValue->setAnimator(animator);
-            ScriptValueLogger.never("\tcreated patternValue");
             return patternValue;
     }
 
@@ -1611,7 +1583,6 @@ namespace DevRelief
         if (val == NULL) {
             val = new ScriptNullValue();
         }
-        ScriptValueLogger.never("PatternElement %d %d %s",count,unit,val->toString().text());
         element = new ScriptPatternElement(count,unit, val);
         return element;
    }

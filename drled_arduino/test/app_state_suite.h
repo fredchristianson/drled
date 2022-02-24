@@ -12,7 +12,7 @@ class AppStateTestSuite : public TestSuite{
     public:
         static AppStateTestSuite::TestFn jsonTests[];
 
-        static bool Run(Logger* logger) {
+        static bool Run(ILogger* logger) {
             #if RUN_API_TESTS
             AppStateTestSuite test(logger);
             test.run();
@@ -27,7 +27,7 @@ class AppStateTestSuite : public TestSuite{
            // runTest("testParameters",[&](TestResult&r){testParameters(r);});
         }
 
-        AppStateTestSuite(Logger* logger) : TestSuite("Api Tests",logger){
+        AppStateTestSuite(ILogger* logger) : TestSuite("Api Tests",logger){
 
         }
 

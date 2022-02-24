@@ -294,7 +294,7 @@ namespace DevRelief{
             const char * guessType(JsonObject* json);
         private:
             IScriptContainer* m_container;
-            Logger* m_logger;
+            DECLARE_LOGGER();
     };
 
     class ScriptPatternElement

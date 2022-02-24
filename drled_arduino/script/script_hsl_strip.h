@@ -5,11 +5,11 @@
 #include "./script_interface.h"
 
 namespace DevRelief{
-    extern Logger ScriptHSLStripLogger;
+
     class ScriptHSLStrip : public IScriptHSLStrip {
         public:
             ScriptHSLStrip() {
-                m_logger = &ScriptHSLStripLogger;
+                SET_LOGGER(ScriptHSLStripLogger);
                 m_offset = 0;
                 m_length = 0;
                 m_overflow = OVERFLOW_CLIP;
@@ -181,7 +181,7 @@ namespace DevRelief{
 
             PositionUnit m_unit;
             PositionOverflow m_overflow;
-            Logger* m_logger;
+            DECLARE_LOGGER();
     };
 
     class RootHSLStrip : public ScriptHSLStrip {
@@ -227,7 +227,7 @@ namespace DevRelief{
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}
-                m_logger->write(index==0?NEVER:NEVER,"RootHSLStrip setHue %d  op=%d top=%d",index,op,translateOp(op));
+                m_logger->conditional(index==0,"RootHSLStrip setHue %d  op=%d top=%d",index,op,translateOp(op));
                 m_base->setHue(translateIndex(index),hue,translateOp(op));
             }
 
@@ -292,7 +292,6 @@ namespace DevRelief{
                 m_strip = strip;
                 m_context = context;
                 m_operation = op;
-                ScriptHSLStripLogger.never("DrawLED() op %d",m_operation);
             }
 
             void setIndex(int p) {
@@ -303,11 +302,9 @@ namespace DevRelief{
 
 
             void setHue(int hue) override {
-                ScriptHSLStripLogger.never("DrawLED.setHue op %d op=%d",m_index,m_operation);
                 m_strip->setHue(hue,m_index,m_operation);
             }
             void setSaturation(int saturation) override {
-                ScriptHSLStripLogger.never("DrawLED.setSaturation op %d",m_operation);
                 m_strip->setSaturation(saturation,m_index,m_operation);
             }
             void setLightness(int lightness) override {

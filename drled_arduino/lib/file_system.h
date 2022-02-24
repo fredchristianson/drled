@@ -65,7 +65,7 @@ class DRFileSystem {
 
 public:
     DRFileSystem() {
-        m_logger = new Logger("DRFileSystem",60);
+        SET_LOGGER(FileSystemLogger);
         strcpy(m_path,"/");
         
         if (!drFileSystemInitialized) {
@@ -237,7 +237,7 @@ public:
 private:
     char m_root[MAX_PATH];    
     char m_path[MAX_PATH];    
-    Logger* m_logger;
+    DECLARE_LOGGER();
 };
 }
 #endif

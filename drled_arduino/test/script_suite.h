@@ -30,7 +30,7 @@ class DummyStrip : public HSLFilter {
 class ScriptTestSuite : public TestSuite{
     public:
 
-        static bool Run(Logger* logger) {
+        static bool Run(ILogger* logger) {
             ScriptTestSuite test(logger);
             test.run();
             return test.isSuccess();
@@ -40,7 +40,7 @@ class ScriptTestSuite : public TestSuite{
             runTest("scriptLifecycle",[&](TestResult&r){scriptLifecycle(r);});
         }
 
-        ScriptTestSuite(Logger* logger) : TestSuite("Script Tests",logger){
+        ScriptTestSuite(ILogger* logger) : TestSuite("Script Tests",logger){
         }
 
     protected: 

@@ -14,14 +14,13 @@
 namespace DevRelief
 {
  
-    extern Logger ScriptLogger;
     
     class Script 
     {
     public:
         Script()
         {
-            m_logger = &ScriptLogger;
+            SET_LOGGER(ScriptLogger);
             m_name = "unnamed";
             m_durationMsecs = 0;
             m_frequencyMsecs = 50;
@@ -95,7 +94,7 @@ namespace DevRelief
             return m_rootContainer;
         }
     private:
-        Logger *m_logger;
+        DECLARE_LOGGER();
         DRString m_name;
         ScriptRootContainer* m_rootContainer;
         IHSLStrip* m_realStrip;

@@ -9,12 +9,11 @@
 namespace DevRelief
 {
     
-extern Logger DataObjectLogger;    
 
 class DataLoader {
     public:
         DataLoader() {
-            m_logger = &DataObjectLogger;
+            SET_LOGGER(DataObjectLogger);
 
         }
 
@@ -48,7 +47,7 @@ class DataLoader {
         }
 
     protected:
-        Logger* m_logger; 
+        DECLARE_LOGGER(); 
         static DRFileSystem m_fileSystem;
 };
 

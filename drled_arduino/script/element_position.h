@@ -8,7 +8,6 @@
 #include "./json_names.h"
 
 namespace DevRelief {
-    extern Logger ScriptPositionLogger;
 
     // most elements won't have defined properties.  
     // a single default object can hold all of the defaults values
@@ -19,7 +18,7 @@ namespace DevRelief {
     class PositionProperties {
         public:
             PositionProperties() {
-                m_logger = &ScriptPositionLogger;
+                SET_LOGGER(ScriptPositionLogger);
 
                 m_offsetValue = NULL;
                 m_lengthValue = NULL;
@@ -216,7 +215,7 @@ namespace DevRelief {
                 return unit;
             }
 
-            Logger* m_logger;
+            DECLARE_LOGGER();
             // evaluatable values
             IScriptValue* m_offsetValue;
             IScriptValue* m_lengthValue;
@@ -246,7 +245,7 @@ namespace DevRelief {
     class ElementPositionBase : public IElementPosition {
         public: 
             ElementPositionBase() {
-                m_logger = &ScriptPositionLogger;
+                SET_LOGGER(ScriptPositionLogger);
                 m_properties = &DEFAULT_PROPERTIES;
             
             }
@@ -346,7 +345,7 @@ namespace DevRelief {
         protected:
  
         protected:
-            Logger* m_logger;    
+            DECLARE_LOGGER();    
             PositionProperties* m_properties;
     };
 

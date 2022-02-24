@@ -4,6 +4,8 @@
 
 #include "./lib/application.h"
 #include "./lib/log/logger.h"
+#include "./lib/log/config.h"
+#include "./lib/log/logger.h"
 #include "./lib/data/api_result.h"
 #include "./script/script.h"
 #include "./script/executor.h"
@@ -12,6 +14,7 @@
 #include "./app_state_data_loader.h"
 #include "./config.h"
 #include "./config_data_loader.h"
+#include "./loggers.h"
 
 extern EspClass ESP;
 
@@ -24,8 +27,8 @@ namespace DevRelief {
    
    
         DRLedApplication() {
-            m_logger = new Logger("APP",APP_LOGGER_LEVEL);
-            m_logger->showMemory();
+            logConfig = new LogConfig(new LogSerialDestination());
+            SET_LOGGER(AppLogger);
             initialize();
             resume();
         }
@@ -109,7 +112,7 @@ namespace DevRelief {
                 m_config.getBuildVersion().text(),
                 m_config.getBuildDate().text(),
                 m_config.getBuildTime().text());
-            m_logger->showMemoryAlways();
+            m_logger->showMemory(ALWAYS_LEVEL);
             m_scriptStartTime = 0;
             m_initialized = true;
         }
@@ -123,11 +126,11 @@ namespace DevRelief {
             m_httpServer->routeBracesGet( "/api/config",[this](Request* req, Response* resp){
                 m_logger->debug("get /api/config");
                 ConfigDataLoader configDataLoader;
-                SharedPtr<JsonRoot> jsonRoot = configDataLoader.toJson(m_config);
+                JsonRoot* jsonRoot = configDataLoader.toJson(m_config);
                 IJsonElement*json = jsonRoot->getTopElement();
                 ApiResult api(json);
                 api.send(resp);
-                
+                jsonRoot->destroy();
             });
 
 
@@ -353,7 +356,7 @@ namespace DevRelief {
         }
 
     private: 
-        Logger * m_logger;
+        DECLARE_LOGGER();
         HttpServer * m_httpServer;
         Config m_config;
         AppState m_appState;
@@ -361,6 +364,7 @@ namespace DevRelief {
         
         long m_scriptStartTime;
         bool m_initialized;
+        ILogConfig* logConfig;
     };
 
 

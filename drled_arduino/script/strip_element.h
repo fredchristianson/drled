@@ -13,12 +13,11 @@
 namespace DevRelief
 {
  
-    extern Logger StripElementLogger;
-
+    
     class ModifiedHSLStrip : public ScriptHSLStrip {
         public:
             ModifiedHSLStrip() : ScriptHSLStrip() {
-                m_logger = &StripElementLogger;
+                SET_LOGGER(StripElementLogger);
             }
 
             virtual ~ModifiedHSLStrip() {

@@ -15,7 +15,6 @@
 namespace DevRelief
 {
  
-    extern Logger ScriptLogger;
     
     class ScriptStep : public IScriptStep {
         public:
@@ -23,11 +22,9 @@ namespace DevRelief
                 m_startTimeMsecs = 0;
                 m_msecsSincePrev = m_startTimeMsecs;
                 m_stepNumber = 0;
-                ScriptLogger.never("ScriptStep # %d",m_stepNumber);
             }
 
             virtual ~ScriptStep() {
-                ScriptLogger.never("~ScriptStep # %d  %x",m_stepNumber);
 
             }
 
@@ -71,8 +68,7 @@ namespace DevRelief
         public:
             ScriptContext(const char * type, IScriptContext* parent) { 
                 m_type = type;
-                m_logger = &ScriptLogger;
-                m_logger->never("Create ScriptContext type: %s",m_type);
+                SET_LOGGER(ScriptLogger);
                 m_strip = NULL;
                 m_position = NULL;
                 m_parentContext = parent;
@@ -164,7 +160,7 @@ namespace DevRelief
             IScriptContext* m_parentContext;
             IScriptHSLStrip* m_strip;
             const char * m_type;
-            Logger* m_logger;    
+            DECLARE_LOGGER();    
 
             IScriptElement* m_currentElement; 
             IScriptValueProvider * m_valueList;
@@ -176,7 +172,7 @@ namespace DevRelief
         public:
         RootContext( ) : ScriptContext("RootContext",NULL)
         {
-            m_logger->never("RootContext()");
+            
         }
 
 

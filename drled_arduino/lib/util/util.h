@@ -1,13 +1,10 @@
 #ifndef DR_UTIL_H
 #define DR_UTIL_H
 
-#include "../log/logger.h"
 #include "./drstring.h"
 #include "./list.h"
 
 namespace DevRelief {
-
-Logger UtilLogger("Util",WARN_LEVEL);
 
 
 class Util {
@@ -56,7 +53,6 @@ class Util {
             } else {
                 val = atoi(s);
             }
-            UtilLogger.debug("toMsec %s ==> %d",s,val);
             return val;
         }
 
@@ -101,6 +97,12 @@ class Util {
             }
             char * text = (char*)malloc(len+1);
             strcpy(text,from);
+            return text;
+        }
+
+        static char* allocText(size_t length) {
+            char* text = (char*)malloc(length+1);
+            memset(text,0,length+1);
             return text;
         }
 

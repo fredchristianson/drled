@@ -12,7 +12,8 @@ namespace DevRelief {
     class ScriptExecutor {
         public:
             ScriptExecutor() {
-                m_logger = &ScriptExecutorLogger;
+                SET_LOGGER(ScriptExecutorLogger);
+                SET_CUSTOM_LOGGER(m_periodicLogger,FiveSecondLogger);
                 m_script = NULL;
                 m_ledStrip = NULL;
             }
@@ -90,7 +91,7 @@ namespace DevRelief {
             void step() {
                 m_logger->never("step %x %x",m_ledStrip,m_script);
                 if (m_ledStrip == NULL || m_script == NULL) {
-                    m_logger->periodic(DEBUG_LEVEL,10000,"\tnothing to run");
+                    m_periodicLogger->info("\tnothing to run");
                     return;
                 }
                 m_logger->never("\tm_script->setp()");
@@ -131,7 +132,8 @@ namespace DevRelief {
                 m_logger->info("created HSLStrip");
             }
 
-            Logger* m_logger;
+            DECLARE_LOGGER();
+            DECLARE_CUSTOM_LOGGER(m_periodicLogger);
             Script* m_script;
             HSLStrip* m_ledStrip;
     };

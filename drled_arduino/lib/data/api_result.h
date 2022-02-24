@@ -1,6 +1,6 @@
 #ifndef DR_API_RESULT_DATA_H
 #define DR_API_RESULT_DATA_H
-#include "../log/logger.h"
+#include "../log/interface.h"
 #include "../json/parser.h"
 #include "../json/json.h"
 #include "../json/generator.h"
@@ -10,12 +10,11 @@
 
 namespace DevRelief {
 
-extern Logger ApiResultLogger;
 
 class ApiResult : public DataObject {
     public:
         ApiResult(IJsonElement *json) {
-            m_logger = &ApiResultLogger;
+            SET_LOGGER(ApiResultLogger);
             m_logger->debug("create JSON ApiResult 0x%04X",json);
             addProperty("code",200);
             addProperty("success",true);
@@ -25,14 +24,14 @@ class ApiResult : public DataObject {
         }
 
         ApiResult(bool success=true) {
-            m_logger = &ApiResultLogger;
+            SET_LOGGER(ApiResultLogger);
             addProperty("code",success ? 200:500);
             addProperty("success",true);
             addProperty("message","success");
 
         }
         ApiResult(bool success, const char * msg, ...) {
-            m_logger = &ApiResultLogger;
+            SET_LOGGER(ApiResultLogger);
             va_list args;
             va_start(args,msg);
             addProperty("success",success);
@@ -106,7 +105,7 @@ class ApiResult : public DataObject {
     private:
         DRString mimeType;
         static int m_lastHeapSize;
-        Logger* m_logger;
+        DECLARE_LOGGER();
         
 };
 

@@ -15,14 +15,14 @@
 
 
 
-#include "../log/logger.h"
+#include "../log/interface.h"
 #include "./color.h"
 
 namespace DevRelief {
 
-extern Logger LEDLogger;
-extern Logger AdafruitLogger;
-extern Logger HSLStripLogger;
+DECLARE_GLOBAL_LOGGER(ledLogger,LEDLogger);
+DECLARE_GLOBAL_LOGGER(adafruitLogger,AdafruitLogger);
+DECLARE_GLOBAL_LOGGER(hslStripLogger,HSLStripLogger);
 
 typedef enum HSLOperation {  
     REPLACE=0,
@@ -40,7 +40,7 @@ const char * HSLOpToText(HSLOperation op) {
     if (op>=REPLACE && op <= MAX) {
         return HSLOPTEXT[op];
     }
-    LEDLogger.error("Unknown HSL OP %d",op);
+    ledLogger->error("Unknown HSL OP %d",op);
     return HSLOPTEXT[0];
 };
 
@@ -52,7 +52,7 @@ HSLOperation TextToHSLOP(const char * text) {
     if (pos <= MAX){
         return (HSLOperation)pos;
     }
-    LEDLogger.error("Unknown HSL OP text %s",text);
+    ledLogger->error("Unknown HSL OP text %s",text);
     return REPLACE;
 }
 
@@ -74,8 +74,7 @@ class IHSLStrip {
 class DRLedStrip {
     public:
         DRLedStrip() {
-            m_logger = &LEDLogger;
-            validCheck=0x123fe;
+            SET_LOGGER(LEDLogger);
         }
 
         virtual ~DRLedStrip() {
@@ -92,19 +91,17 @@ class DRLedStrip {
             return setColor(index,HSLToRGB(color));
         }
 
-        long validCheck;
-
         // use getCompoundLedStrip to find a base virtual strip made of multiple other strips
         virtual CompoundLedStrip* getCompoundLedStrip()=0; 
 
     protected:
-        Logger* m_logger;
+        DECLARE_LOGGER();
 };
 
 class AdafruitLedStrip : public DRLedStrip {
     public: 
         AdafruitLedStrip(int pin, uint16_t ledCount, neoPixelType pixelType=NEO_GRB){
-            m_logger = &AdafruitLogger;
+            SET_LOGGER(AdafruitLogger);
             m_logger->debug("create AdafruitLedStrip %d %d",pin,ledCount);
             
             m_controller = new Adafruit_NeoPixel(ledCount,pin,pixelType+NEO_KHZ800);
@@ -226,10 +223,7 @@ class CompoundLedStrip : public DRLedStrip {
                 m_logger->error("missing strip %d %d",oindex,strip);
                 return;
             }
-            if (strips[strip]->validCheck != 0x123fe) {
-                m_logger->error(" strip not valid  %d %d",oindex,strip);
-                return;
-            }
+
             // if (index == 0) {
             //     m_logger->error("set color %d %d %d %d: %d,%d,%d",index,count,strips[strip]->getCount(),strip,color.red,color.green,color.blue);
             // }
@@ -341,7 +335,7 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
             m_hue = NULL;
             m_saturation = NULL;
             m_lightness = NULL;
-            m_logger = &HSLStripLogger;
+            SET_LOGGER(HSLStripLogger);
             m_logger->debug("created HSLStrip with base 0x%04X",base);
         }
 
@@ -353,7 +347,6 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
 
         void setRGB(int index, const CRGB& rgb,HSLOperation op) {
             CHSL hsl = RGBToHSL(rgb);
-            m_logger->periodicNever(NEVER,5000,"setRGB %d (%d,%d,%d)->(%d,%d,%d)",index,rgb.red,rgb.green,rgb.blue,hsl.hue,hsl.saturation,hsl.lightness);
             setHue(index,hsl.hue,op);
             setSaturation(index,hsl.saturation,op);
             setLightness(index,hsl.lightness,op);
@@ -362,7 +355,6 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
         void setHue(int index, int16_t hue, HSLOperation op=REPLACE) {
             m_logger->never("HSL Hue %d %d",index,hue);
             if (index<0 || index>=m_count) {
-                m_logger->periodicNever(ERROR_LEVEL,5000,"HSL Hue index out of range %d (0-%d)",index,m_count);
                 return;
             } 
             if (index == 0) {
@@ -376,7 +368,6 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
  
         void setSaturation(int index, int16_t saturation, HSLOperation op=REPLACE) {
             if (index<0 || index>=m_count) {
-                m_logger->periodicNever(ERROR_LEVEL,5000,"HSL saturation index out of range %d (0-%d)",index,m_count);
                 return;
             } 
             if (saturation<0 || saturation>100) { return;}
@@ -388,7 +379,6 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
                 m_logger->never("HSL Lightness op %d %d %d",op,index,lightness);
             }
             if (index<0 || index>=m_count) {
-                m_logger->periodicNever(ERROR_LEVEL,5000,"HSL lightness index out of range %d (0-%d)",index,m_count);
                 return;
             } 
             

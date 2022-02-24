@@ -7,8 +7,6 @@
 
 namespace DevRelief {
 
-extern Logger JsonLogger;
-Logger* jsonLogger = &JsonLogger;
 
 class JsonArray;
 class JsonObject;
@@ -123,7 +121,7 @@ class JsonRoot : public JsonBase {
             m_value = top;
         }
 
-        virtual Logger* getLogger() { return jsonLogger;}
+        virtual ILogger* getLogger() { return jsonLogger;}
 
         JsonObject* asObject() override { 
             if (m_value && m_value->isObject()){
@@ -323,7 +321,6 @@ class JsonNull : public JsonValueElement {
 class JsonProperty : public JsonElement {
     public:
         JsonProperty(JsonRoot& root, const char * name,size_t nameLength,IJsonElement* value) : JsonElement(root,JSON_PROPERTY) {
-            m_logger = &JsonLogger;
             m_name = root.allocString(name,nameLength);
             m_value = value;
             m_next = NULL;
@@ -348,7 +345,7 @@ class JsonProperty : public JsonElement {
             if (m_value && m_value->getRoot() == getRoot()){
                 if (m_value) { m_value->destroy();}
             } else {
-                m_logger->error("property value does not share root with JsonProperty");
+                jsonLogger->error("property value does not share root with JsonProperty");
             }
         }
 
@@ -417,7 +414,6 @@ class JsonProperty : public JsonElement {
         char* m_name;
         IJsonElement* m_value;
         JsonProperty* m_next;
-        Logger* m_logger;
 };
 
 class JsonObject : public JsonElement {

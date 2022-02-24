@@ -6,12 +6,11 @@
 
 namespace DevRelief
 {
-extern Logger DataObjectLogger;
 
 class DataObject {
     public:
         DataObject() {
-            m_logger = &DataObjectLogger;
+            SET_LOGGER(DataObjectLogger);
             m_json = m_jsonRoot.getTopObject();
 
         }
@@ -41,7 +40,7 @@ class DataObject {
     protected:
         JsonRoot    m_jsonRoot;
         JsonObject* m_json;
-        Logger* m_logger; 
+        DECLARE_LOGGER();
 };
 
 

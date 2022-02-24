@@ -10,7 +10,7 @@ class StringTestSuite : public TestSuite{
     public:
         static StringTestSuite::TestFn jsonTests[];
 
-        static bool Run(Logger* logger) {
+        static bool Run(ILogger* logger) {
             #if RUN_STRING_TESTS
             StringTestSuite test(logger);
             test.run();
@@ -24,7 +24,7 @@ class StringTestSuite : public TestSuite{
             runTest("testReturnDRStringValue",[&](TestResult&r){testReturnDRStringValue(r);});
         }
 
-        StringTestSuite(Logger* logger) : TestSuite("JSON Tests",logger){
+        StringTestSuite(ILogger* logger) : TestSuite("JSON Tests",logger){
 
         }
 

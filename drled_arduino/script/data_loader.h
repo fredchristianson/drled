@@ -14,7 +14,7 @@ namespace DevRelief {
     class ScriptDataLoader : DataLoader {
         public:
             ScriptDataLoader(){
-                m_logger = &ScriptLoaderLogger;
+                SET_LOGGER(ScriptLoaderLogger);
             }
 
             DRString getPath(const char * name) {
@@ -36,7 +36,9 @@ namespace DevRelief {
                 m_logger->debug("save script file: %s",name);
                 JsonRoot* newJson = toJson(script);
                 m_logger->debug("Result script: %s",newJson->toString().get());
-                return writeJsonFile(getPath(name),newJson);
+                bool result = writeJsonFile(getPath(name),newJson);
+                newJson->destroy();
+                return result;
             }
 
             bool save(const char * name, const char * text) {
@@ -46,8 +48,9 @@ namespace DevRelief {
 
             Script* parse(const char * text) {
                 JsonParser parser;
-                SharedPtr<JsonRoot> root = parser.read(text);
+                JsonRoot* root = parser.read(text);
                 Script * script = parseJson(root);
+                root->destroy();
                 return script;
             }
 
@@ -106,7 +109,7 @@ namespace DevRelief {
      
 
         private:
-            Logger* m_logger;
+            DECLARE_LOGGER();
     };
 
 };

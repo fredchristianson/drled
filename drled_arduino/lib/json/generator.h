@@ -8,7 +8,6 @@
 
 namespace DevRelief {
 
-extern Logger JsonGeneratorLogger;
 
 class JsonGenerator : public IParseGen {
 public:
@@ -16,7 +15,7 @@ public:
         m_buf = buffer;
         m_depth = 0;
         m_pos = 0;
-        m_logger = &JsonGeneratorLogger;
+        SET_LOGGER(JsonGeneratorLogger);
     }
 
     ~JsonGenerator() {
@@ -242,7 +241,7 @@ protected:
     DRString& m_buf;    
     int m_depth;
     size_t m_pos;
-    Logger * m_logger;
+    DECLARE_LOGGER();
 };
 
 

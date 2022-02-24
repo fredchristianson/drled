@@ -19,8 +19,6 @@ namespace DevRelief {
     typedef ESP8266WebServer Request;
     typedef ESP8266WebServer Response;
 
-    extern Logger HttpServerLogger;
-
 using HttpHandler = std::function<void(Request*, Response*)> ;
 
 class HttpServer {
@@ -28,7 +26,7 @@ class HttpServer {
 
 
         HttpServer() {
-            m_logger = &HttpServerLogger;
+            SET_LOGGER(HttpServerLogger);
             m_logger->debug("HttpServer created");
             m_wifi = DRWiFi::get();
 
@@ -148,7 +146,7 @@ class HttpServer {
         }
 
     private:
-        Logger * m_logger; 
+        DECLARE_LOGGER(); 
         DRWiFi * m_wifi;   
         ESP8266WebServer * m_server;
     };

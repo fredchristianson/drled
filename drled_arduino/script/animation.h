@@ -6,7 +6,7 @@
 
 namespace DevRelief
 {
-    extern Logger AnimationLogger;
+
 
     class AnimationRange : public IAnimationRange
     {
@@ -21,7 +21,7 @@ namespace DevRelief
         {
             m_low = low;
             m_high = high;
-            m_logger = &AnimationLogger;
+            SET_LOGGER(AnimationLogger);
             m_logger->debug("create AnimationRange %f-%f  %s",low,high,unfold?"unfold":"");
             m_lastPosition = 99999999;
             m_lastValue = 0;
@@ -41,17 +41,14 @@ namespace DevRelief
         double getValue(double position)
         {
             if (position == m_lastPosition) { return m_lastValue;}
-            m_logger->never("AnimationRange.getValue(%f)  %f-%f",position,m_low,m_high);
 
             if (position <= 0 || m_high == m_low)
             {
-                m_logger->never("\t return low %f",position,m_low);
 
                 return m_low;
             }
             if (position >= 1)
             {
-                m_logger->never("\treturn high %f",position,m_high);
                 return m_high;
             }
             double diff = m_high - m_low;
@@ -81,7 +78,7 @@ namespace DevRelief
         double m_high;
         bool m_unfold;
 
-        Logger* m_logger;
+        DECLARE_LOGGER();
     };
 
 
@@ -90,7 +87,7 @@ namespace DevRelief
     public:
         AnimationDomain()
         {
-            m_logger = &AnimationLogger;
+            SET_LOGGER(AnimationLogger);
             m_min = 0;
             m_max = 0;
             m_pos = 0;
@@ -142,7 +139,7 @@ namespace DevRelief
            return true;
        }
     protected:
-        Logger *m_logger;
+        DECLARE_LOGGER();
 
 
         
@@ -417,7 +414,7 @@ namespace DevRelief
     {
     public:
         AnimationEase() {
-            m_logger = &AnimationLogger;
+            SET_LOGGER(AnimationLogger);
         }
 
         void destroy() { delete this;}
@@ -425,7 +422,7 @@ namespace DevRelief
         void update(IScriptContext* ctx) override { }
 
     protected:
-        Logger* m_logger;
+        DECLARE_LOGGER();
     };
 
     class LinearEase : public AnimationEase
@@ -508,7 +505,6 @@ namespace DevRelief
             double val = 3 * pow(1 - position, 2) * position * in +
                             3 * (1 - position) * pow(position, 2) * out +
                             pow(position, 3);
-            AnimationLogger.never("ease: %f==>%f  %f  %f",position,val,in,out);
             return val;
         }
         
@@ -540,7 +536,7 @@ namespace DevRelief
     public:
         Animator(IAnimationDomain* domain, IAnimationRange* range, IAnimationEase *ease = &DefaultEase) 
         {
-            m_logger = &AnimationLogger;
+            SET_LOGGER(AnimationLogger);
             m_logger->debug("create Animator()");
             m_domain = domain;
             m_range = range;
@@ -572,21 +568,15 @@ namespace DevRelief
             }
             m_logger->debug("Animator.getRangeValue()");
             if (m_domain->getState() == STATE_PAUSED) {
-                m_logger->never("\tpaused");
                 return m_range->getDelayValue(ctx);
             } else if (m_domain->getState() == STATE_COMPLETE) {
-                m_logger->never("\tcomplete");
                 return m_range->getCompleteValue(ctx);
             }
             double percent = m_domain->getPercent();
-            m_logger->never("Animator percent %f",percent);
             double ease = m_ease ? m_ease->calculate(percent) : percent;
-            m_logger->never("Animator ease %f",percent);
 
             if (m_range->unfold()) {
-                m_logger->never("Animator unfold");
                 if (ease<=0.5) {
-                    m_logger->never("fold   %f %f",ease,ease*2);
                     if (!m_folding) {
                         ease = 0;  // on the switch from unfolding make sure 0 is returned 
                     } else {
@@ -594,7 +584,6 @@ namespace DevRelief
                     }
                     m_folding = true;
                 } else {
-                    m_logger->never("unfold %f %f",ease,(1-ease)*2);
                     if (m_folding) {
                         ease = 1;// on the switch from folding make sure 1 is returned 
                     } else {
@@ -604,7 +593,6 @@ namespace DevRelief
                 }
             }
             double result = m_range->getValue(ease);
-            m_logger->never("\tpos %f.  ease %f. result %f.  ",result);
             return result;
         };
 
@@ -642,7 +630,7 @@ namespace DevRelief
         IAnimationRange*  m_range;
         IAnimationEase* m_ease;
         bool m_folding;
-        Logger *m_logger;
+        DECLARE_LOGGER();
     };
 
   
