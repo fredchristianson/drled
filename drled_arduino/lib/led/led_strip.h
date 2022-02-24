@@ -20,9 +20,6 @@
 
 namespace DevRelief {
 
-DECLARE_GLOBAL_LOGGER(ledLogger,LEDLogger);
-DECLARE_GLOBAL_LOGGER(adafruitLogger,AdafruitLogger);
-DECLARE_GLOBAL_LOGGER(hslStripLogger,HSLStripLogger);
 
 typedef enum HSLOperation {  
     REPLACE=0,
@@ -40,7 +37,6 @@ const char * HSLOpToText(HSLOperation op) {
     if (op>=REPLACE && op <= MAX) {
         return HSLOPTEXT[op];
     }
-    ledLogger->error("Unknown HSL OP %d",op);
     return HSLOPTEXT[0];
 };
 
@@ -52,7 +48,6 @@ HSLOperation TextToHSLOP(const char * text) {
     if (pos <= MAX){
         return (HSLOperation)pos;
     }
-    ledLogger->error("Unknown HSL OP text %s",text);
     return REPLACE;
 }
 

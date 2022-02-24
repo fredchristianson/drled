@@ -42,7 +42,12 @@ public:
 
 
     virtual void write(int level, const char * message, va_list args ){
+        return;
         ILogConfig* cfg = ILogConfig::Instance();
+        if (cfg == NULL) {
+            // need LogConfig before doing anything.
+            return;
+        }
         ILogDestination* dest = cfg->getDestination();
         if (dest == NULL) {
             return;

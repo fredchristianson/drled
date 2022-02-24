@@ -149,8 +149,6 @@ ILogConfig* ILogConfig::m_instance = NULL;
 #define SET_CUSTOM_LOGGER(var,logger) extern ILogger* logger; var = logger
 #define DECLARE_CUSTOM_LOGGER(var)  ILogger* var 
 
-// declare and initialize a global variable logger
-#define DECLARE_GLOBAL_LOGGER(var,logger)  extern ILogger* logger; ILogger* var =logger
 #else
 NullLogger nullLogger;
 ILogger* m_logger = &nullLogger; // m_logger-> can be used anywhere even though members are not declared
@@ -161,7 +159,6 @@ ILogger* m_logger = &nullLogger; // m_logger-> can be used anywhere even though 
 #define SET_CUSTOM_LOGGER(name,LOGGER) name=LOGGER
 #define DECLARE_CUSTOM_LOGGER(name,LOGGER) ILogger* name=&NullLogger
 
-#define DECLARE_GLOBAL_LOGGER(var,logger)  extern ILogger* nullLogger; ILogger* var =&nullLogger
 
 #endif
 

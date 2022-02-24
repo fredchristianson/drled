@@ -10,7 +10,6 @@
 
 namespace DevRelief {
 
-DECLARE_GLOBAL_LOGGER(jsonParserLogger,JsonParserLogger);
 
 class TokenParser {
     public:
@@ -75,7 +74,6 @@ class TokenParser {
                 m_pos+=4;
             }  else {
 
-                jsonParserLogger->error("token error");
                 m_token = TOK_ERROR;
             }
             return m_token;

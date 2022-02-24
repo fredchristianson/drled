@@ -14,7 +14,7 @@
 
 namespace DevRelief
 {
-    DECLARE_GLOBAL_LOGGER(scriptValueLogger,ScriptValueLogger);
+
     const char * functionNames[] = {
         "rand","add","+","subtract","sub","-","multiply","*","mult",
         "divide","div","/","mod","%","min","max","randOf","seq","sequence",
@@ -1394,7 +1394,6 @@ namespace DevRelief
 
                 result = new ScriptVariableValue(isSysVar, nameDefault.get(0),createFromString(defString));
            } else {
-               scriptValueLogger->error("Cannot create variable for %s",string);
            }
        } else if (Util::equal(string,"null")) { result = new ScriptNullValue();}
        else if (Util::equal(string,"true")) { result = new ScriptBoolValue(true);}

@@ -6,12 +6,12 @@
 
 namespace DevRelief {
 
-DECLARE_GLOBAL_LOGGER(stringLogger,StringLogger);
+
 
 class DRStringData {
     public:
         DRStringData(size_t length) : m_length(0), m_maxLength(0), m_data(NULL) {
-            stringLogger->debug("create DRStringData %d",m_data);
+            
             ensureLength(length);
             m_length = length;
         }
@@ -36,39 +36,39 @@ class DRStringData {
             return m_length;
         }
         char * ensureLength(size_t minLength){
-            stringLogger->debug("\tensureLength %d  (%d)",minLength,m_maxLength);
+            
             if (m_maxLength >= minLength) {
-                stringLogger->debug("\tensureLength %d",minLength);
+                
                 return m_data;
             }
 
             size_t newLength = minLength+1;
-            stringLogger->info("\tnew string length %d",newLength);
+            
 
             char * newData = (char*) malloc(sizeof(char)*newLength);
-            stringLogger->debug("\tzero mem");
+            
 
             memset(newData,0,newLength);
             if (m_data != NULL){
                 if (m_length > 0) {
-                    stringLogger->debug("\tcopy old data");
+                    
                     memcpy(newData,m_data,m_length);
                 }
-                stringLogger->debug("\tfree old data");
+                
                 free(m_data);
             }
             m_data = newData;
             m_maxLength = newLength-1;
-            stringLogger->debug("\tdone");
+            
             return m_data;
         }
 
         char * setLength(size_t newLength) {
             ensureLength(newLength);
-            stringLogger->debug("ensureLength done %d",newLength);
+            
             m_length = newLength;
             if (m_data != NULL) {
-                stringLogger->debug("add NULL terminate %d",m_data);
+                
                 m_data[newLength] = 0;
             }
             return m_data;
@@ -76,14 +76,14 @@ class DRStringData {
 
         char * increaseLength(size_t additional) {
             // return pointer to new data
-            stringLogger->debug("increase length %d + %d",m_length,additional);
+            
             size_t actualLength = (m_data == NULL) ? 0 : strlen(m_data);
             size_t origLength = m_length;
             if (actualLength+additional <= m_maxLength) {
                 // have enough space;
                 m_length=actualLength + additional;
-                stringLogger->debug("\tno increase %d %d %d %c",origLength, actualLength,additional,m_data[origLength]);
-                stringLogger->debug("\t\tcurrent: ~%s~",m_data);
+                
+                
                 return m_data+actualLength;
 
             }
@@ -97,14 +97,14 @@ class DRStringData {
             
             ensureLength(m_length+addLength);
             m_length = actualLength+additional;
-            stringLogger->debug("\tadded %d %d %d %c",origLength, actualLength,additional,m_data[origLength]);
-            stringLogger->debug("\t\tcurrent: ~%s~",m_data);
+            
+            
             return m_data+actualLength;
 
         }
 
         char * data() { 
-            stringLogger->debug("\tget DRStringBuffer data %d %d %s",m_length,m_maxLength,(m_data ? m_data : "<no data>"));
+            
             return m_data;
         }
         const char * data() const { return m_data;}
@@ -126,22 +126,22 @@ class DRString {
         ~DRString();
 
         const char* operator->() const { 
-            stringLogger->debug("operator->");
+            
             return m_data.get()->data();
         }
 
         operator const char*() const { 
-            stringLogger->debug("cast(const char *)operator");
+            
             return m_data.get()->data();
         }
 
         const char * get() const { 
-            stringLogger->never("get()");
+            
             if (m_data.get() == NULL){
-                stringLogger->never("string is NULL");
+                
                 return "";
             }
-            stringLogger->never("have  m_data 0x%04X",m_data.get());
+            
             return m_data.get()->get();
         }
 
@@ -150,13 +150,13 @@ class DRString {
         const char * operator+=(const DRString& other) {return append(other.text());}
 
         void clear() {
-            stringLogger->debug("clear buffer");
+            
             if (m_data.get() == NULL) {
-                stringLogger->debug("no m_data");
+                
             }
-            stringLogger->debug("setLength(0)");
+            
             m_data.get()->setLength(0);
-            stringLogger->debug("\tdone setLength(0)");
+            
         }
         char * increaseLength(size_t charsNeeded) { 
             return m_data.get()->increaseLength(charsNeeded);
@@ -182,24 +182,24 @@ DRString DRString::fromFloat(double val){
 }
 
 DRString::DRString(const DRString& other) : m_data(other.m_data){
-    stringLogger->debug("Create DRString from other");
+    
     
 }
 
 DRString::DRString(const char * orig) {
-    stringLogger->debug("Create DRString from const char *");
+    
     size_t len = orig == NULL ? 0 : strlen(orig);
     m_data = new DRStringData(len);
     if (orig != NULL) { 
-        stringLogger->debug("copy orig %.15s",orig);
+        
         strncpy(m_data.get()->data(),orig,len);
-        stringLogger->debug("copy done");
+        
     }
 
 }
 
 DRString::DRString(const char * orig, size_t length) {
-    stringLogger->debug("Create DRString from const char * and length");
+    
     size_t len = orig == NULL ? 0 : length;
     m_data = new DRStringData(len);
     if (orig != NULL) { 
@@ -209,8 +209,8 @@ DRString::DRString(const char * orig, size_t length) {
 
 
 DRString::DRString(char c, size_t repeatCount) {
-    stringLogger->debug("Create DRString from char  and repeatCount");
-    stringLogger->debug("\tchar: %c  count: %d",c,repeatCount);
+    
+    
     size_t len = repeatCount;
     m_data = new DRStringData(len);
     char * data = m_data.get()->data();
@@ -221,12 +221,12 @@ DRString::DRString(char c, size_t repeatCount) {
 }
 
 DRString::~DRString() {
-    stringLogger->debug("~DRString()");
+    
     if (m_data.get() == NULL) {
-        stringLogger->error("\tmissing m_data");
+        
     } else {
-        stringLogger->debug("\tlength=%d",m_data.get()->getLength());
-        stringLogger->debug("\ttext=%s",m_data.get()->ensureLength(1));
+        
+        
     }
 }
 

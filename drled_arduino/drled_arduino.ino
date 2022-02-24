@@ -10,29 +10,25 @@
 
 using namespace DevRelief;
 
-LogSerialDestination serialLog;
 
-
-DECLARE_GLOBAL_LOGGER(drapp_logger,DevRelief::AppLogger);
 Application * app=NULL;
 
 void setup() {
   
-serialLog.write("DRLED setup");
 #if RUN_TESTS==1
   if (!Tests::Run()) {
-    drapp_logger->error("Tests failed.  Not running application.");
+    DevRelief::AppLogger->error("Tests failed.  Not running application.");
   }
 #endif  
-  drapp_logger->info("creating app");
+  DevRelief::AppLogger->info("creating app");
   app = new DRLedApplication();
-  drapp_logger->info("created app");
+  DevRelief::AppLogger->info("created app");
   wdt_enable(WDTO_4S);
 }
 
 
 void loop() {
-  serialLog.write("DRLED loop");
+  
   if (app) {
     app->loop();
   }
