@@ -1046,7 +1046,7 @@ namespace DevRelief
             double getValue(double position) {
                 int count = m_pattern ? m_pattern->getCount() : 0;
                 if (count < 2) { return 0;}
-
+                m_logger->never("getValue");
                 double val = AnimationRange::getValue(position);
                 m_logger->never("animate stretch %.2f/%.2f=%.2f",val,count-1,(val/(count-1)));
                 return val/(count-1);

@@ -12,6 +12,7 @@ namespace DevRelief
     {
     public:
         AnimationRange(bool unfold=false){
+            SET_LOGGER(AnimationLogger);
             m_low = 0;
             m_high = 0;
             m_unfold = unfold;
@@ -24,7 +25,7 @@ namespace DevRelief
             SET_LOGGER(AnimationLogger);
             m_logger->debug("create AnimationRange %f-%f  %s",low,high,unfold?"unfold":"");
             m_lastPosition = 99999999;
-            m_lastValue = 0;
+            m_lastValue = low;
             m_unfold = unfold;
         }
 
@@ -40,6 +41,7 @@ namespace DevRelief
 
         double getValue(double position)
         {
+            m_logger->never("AnimationRange::getValue");
             if (position == m_lastPosition) { return m_lastValue;}
 
             if (position <= 0 || m_high == m_low)
