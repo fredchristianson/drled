@@ -12,7 +12,7 @@
 
 // LOGGING_ON should be 1 to enable logging.  0 optimizes all logging calls and constants (messages) out.
 
-#define LOGGING_ON 1
+#define LOGGING_ON 0
 #define ADAFRUIT_LED_LOGGER_LEVEL   ERROR_LEVEL
 #define ANIMATION_LOGGER_LEVEL      WARN_LEVEL
 #define API_RESULT_LOGGER_LEVEL     ERROR_LEVEL
@@ -60,7 +60,7 @@
 
 
     // RUN_TESTS should be 1 to run tests on start.  otherwise they are not run
-    #define RUN_TESTS 1
+    #define RUN_TESTS 0
     #define RUN_STRING_TESTS 0
     #define RUN_JSON_TESTS 0
     #define RUN_ANIMATION_TESTS 0

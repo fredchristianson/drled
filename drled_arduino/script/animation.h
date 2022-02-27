@@ -243,45 +243,32 @@ namespace DevRelief
                 if (!m_stepWatcher.isChanged(ctx)) {
                     return;
                 }
-                m_logger->never("TimeDomain.update %f %f %f",m_min,m_pos,m_max);
 
                 m_step = ctx->getStep()->getNumber();
-                m_logger->never("\tget values");
                 if (m_repeatLimitValue){
-                    m_logger->never("\trepeat");
                     m_repeatLimit = m_repeatLimitValue->getIntValue(ctx,-1);
-                    m_logger->never("\trepeat limit=%d",m_repeatLimit);
                 }
                 if (m_delayValue) {
                     m_delayMsecs = m_delayValue->getMsecValue(ctx,0);
-                    m_logger->never("\tdelay msecs=%d",m_delayMsecs);
                 }
-                m_logger->never("TimeDomainUpdate %d %d",m_step,ctx->getStep()->getNumber());
 
                 if (m_state == STATE_PAUSED) { 
                     if (m_pos >= m_min) {
-                        m_logger->never("resume %f %f",m_pos,m_min);
                         m_state = STATE_RUNNING;
-                        m_logger->debug("\t%f < %f < %f",m_min,m_pos,m_max);
                     } else {
-                        m_logger->never("\tpaused %f < %f < %f",m_min,m_pos,m_max);
                         return;
                     }
                 }
                 if (m_pos > m_max) {
                     m_repeatCount += 1;
                     if (m_repeatLimit>0 && m_repeatCount>=m_repeatLimit) {
-                        m_logger->never("complete %d %d",m_repeatCount,m_repeatLimit);
                         m_state = STATE_COMPLETE;
                         return;
                     }
 
-                    m_logger->never("repeat");
                     m_min = m_pos + m_delayMsecs;
                     m_max = m_min+m_durationMsecs;
-                    m_logger->never("repeat %f %f %d",m_pos,m_min,m_delayMsecs);
                     if (m_pos < m_min) {
-                        m_logger->never("pause");
                         m_state = STATE_PAUSED;
                     }
                 }
@@ -291,10 +278,8 @@ namespace DevRelief
             RunState getState() const { return m_state;}
 
             void setRepeat(IScriptValue* value) {
-                m_logger->never("Repeat limit %x",value);
                  m_repeatLimitValue = value;}
             void setDelay(IScriptValue* value) { 
-                m_logger->never("Repeat delay %x",value);
                 m_delayValue = value;}
 
             bool toJson(JsonObject* json) const override {

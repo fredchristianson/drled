@@ -22,18 +22,18 @@ class AppStateDataLoader : public DataLoader {
             DRString path= STATE_PATH_BASE;
             path += name;
             path += ".json";
-            m_logger->debug("AppStateDataLoader getPath(%s)==>%s",name,path.text());
+            m_logger->debug(LM("AppStateDataLoader getPath(%s)==>%s"),name,path.text());
             return path;
         }
 
 
         bool save(AppState& state, const char * name = "state"){
-            m_logger->debug("save AppState");
+            m_logger->debug(LM("save AppState"));
 
             JsonRoot* jsonRoot = toJson(state);
             
             bool success = writeJsonFile(getPath(name),jsonRoot->getTopElement());
-            m_logger->debug("\twrite %s",success?"success":"failed");
+            m_logger->debug(LM("\twrite %s"),success?"success":"failed");
             jsonRoot->destroy();
             return success;
         }
@@ -48,7 +48,7 @@ class AppStateDataLoader : public DataLoader {
                     state.setParameters(obj->getChild("parameters"));
                     auto paramJson = state.getParameters();
                     DRString json = paramJson? paramJson->toString() : DRString();
-                    m_logger->debug("Load AppState: %s %s %d %s %s",
+                    m_logger->debug(LM("Load AppState: %s %s %d %s %s"),
                                 state.isStarting()?"starting":"",
                                 state.isRunning()?"running":"",
                                 (int)state.getType(),

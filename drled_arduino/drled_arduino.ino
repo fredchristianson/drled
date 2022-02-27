@@ -18,15 +18,14 @@ auto logConfig = new NullLogConfig();
 
 Application * app=NULL;
 
+
 void setup() {
 #if RUN_TESTS==1
   if (!Tests::Run()) {
     DevRelief::AppLogger->error("Tests failed.  Not running application.");
   }
 #endif  
-  DevRelief::AppLogger->info("creating app");
   app = new DRLedApplication();
-  DevRelief::AppLogger->info("created app");
   wdt_enable(WDTO_4S);
 }
 

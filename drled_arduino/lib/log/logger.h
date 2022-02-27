@@ -44,9 +44,8 @@ public:
     void write(int level, const char * message, va_list args ) const override {
         
         ILogConfig* cfg = ILogConfig::Instance();
-        if (cfg == NULL) {
+        if (cfg == NULL || message == NULL || message[0] == 0) {
             // need LogConfig before doing anything.
-            Serial.println("no LogConfig");
             return;
         }
         ILogDestination* dest = cfg->getDestination();

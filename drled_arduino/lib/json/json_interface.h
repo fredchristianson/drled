@@ -6,11 +6,11 @@
 namespace DevRelief {
 
 
-typedef enum TokenType {
-    TOK_EOD=1000,
-    TOK_ERROR=1001,
-    TOK_START=1002,
-    TOK_NULL=1003,
+typedef enum TokenType : uint8_t {
+    TOK_EOD=127,
+    TOK_ERROR=126,
+    TOK_START=125,
+    TOK_NULL=124,
     TOK_OBJECT_START=1,
     TOK_OBJECT_END=2,
     TOK_ARRAY_START=3,
@@ -20,13 +20,13 @@ typedef enum TokenType {
     TOK_FLOAT=7,
     TOK_COLON=8,
     TOK_COMMA=9,
-    TOK_TRUE,
-    TOK_FALSE
+    TOK_TRUE=10,
+    TOK_FALSE=11
 };
 
-typedef enum JsonType {
-    JSON_UNKNOWN=999,
-    JSON_NULL=998,
+typedef enum JsonType: uint8_t {
+    JSON_UNKNOWN=127,
+    JSON_NULL=126,
     JSON_INTEGER=100,
     JSON_FLOAT=101,
     JSON_STRING=102,

@@ -95,42 +95,29 @@ namespace DevRelief{
 
 
             void updatePosition(IElementPosition * pos, IScriptContext* context) override  {
-                m_logger->never("ScriptHSLStrip.update %x %x",pos,context);
                 m_reverse = pos->isReverse();
-                m_logger->never("\treverse %d",m_reverse);
                 
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
-                m_logger->never("\tgetUnit %x",pos);
                 m_unit = pos->getUnit();
-                m_logger->never("\tunit=%d",m_unit);
                 if (pos->isPositionAbsolute()) {
-                    m_logger->debug("getRootStrip()");
                     m_parent = context->getRootStrip();
-                    m_logger->debug("\tgot root %x",m_parent);
                 }
                 m_parentLength = m_parent->getLength();
-                m_logger->debug("\m_parentLength %d",m_parentLength);
                 if (pos->isCover()) {
                     m_offset = 0;
                     m_length = m_parentLength;
-                    m_logger->debug("\tcover %d %d",m_offset,m_length);
                 } else {
                     m_length = pos->hasLength() ? unitToPixel(pos->getLength()) : m_parentLength;
                     m_offset = pos->hasOffset() ? unitToPixel(pos->getOffset()) : 0;
-                    m_logger->debug("\len %d",m_length);
                     if (pos->isCenter()) {
                         int margin = (m_parentLength - m_length)/2;
                         m_offset += margin;
-                        m_logger->debug("\tcenter %d %d",m_offset,m_length);
                     } else {
                         if (pos->isFlow()) {
                             m_offset += m_parent->getFlowIndex();
-                            m_logger->debug("\tflow %d",m_offset);
                         } else {
-                            m_logger->debug("\tno flow %d",m_offset);
                         }
-                        m_logger->debug("\toffset/len %d/%d",m_offset,m_length);
                     }
                 }
                 m_overflow = pos->getOverflow();
@@ -138,8 +125,7 @@ namespace DevRelief{
 
                     m_parent->setFlowIndex(m_offset+m_length);
                 }
-                m_logger->debug("\tflow %d %d %d",m_offset,m_length,m_parent->getFlowIndex());
-
+                
             }
 
             virtual bool isPositionValid(int index) {

@@ -168,20 +168,24 @@ ILogConfig* ILogConfig::m_instance = NULL;
 // the main logger type when logging is on
 #define LOGGER_TYPE DRLogger
 
+// if logging is on, the LM() macro leaves the (L)og (M)essage as it is
+#define LM(msg) msg
 
 #else
 NullLogger nullLogger;
 NullLogger* m_logger = &nullLogger; // m_logger-> can be used anywhere even though members are not declared
 #define SET_LOGGER(LOGGER) /*nothing*/
 #define DECLARE_LOGGER()     /*nothing*/ 
+const char * emptyMessage="";
 // standard loggers are named m_logger.  If LOGGIN_ON is not 1, m_logger is a global NullLogger
 // custom loggers have names other than m_logger so must be declared members
-#define SET_CUSTOM_LOGGER(name,LOGGER) name=LOGGER
+#define SET_CUSTOM_LOGGER(name,LOGGER) name=&nullLogger
 #define DECLARE_CUSTOM_LOGGER(name) ILogger* name
 
 // the main logger type when logging is off
 #define LOGGER_TYPE NullLogger
-
+// if logging is off, the LM() macro replaces the log message with an empty string
+#define LM(msg) emptyMessage
 #endif
 
 }
