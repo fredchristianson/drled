@@ -2,13 +2,16 @@
 #include <math.h>
 #include <time.h>
 
+#include <NTPClient.h>
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
+
 #include "./lib/application.h"
 #include "./lib/log/logger.h"
 #include "./lib/log/config.h"
 #include "./lib/log/logger.h"
 #include "./lib/data/api_result.h"
 #include "./lib/task/task.h"
-#include "./lib/net/http_client.h"
 #include "./script/script.h"
 #include "./script/executor.h"
 #include "./script/data_loader.h"
@@ -25,16 +28,15 @@ namespace DevRelief {
 
     class NetworkInitialize : public Task {
         public: 
-            NetworkInitialize(HttpServer * httpServer) : Task("NetworkInitialize",500) {
+            NetworkInitialize(HttpServer * httpServer) 
+            : Task("NetworkInitialize",500), m_ntp(m_ntpUDP,"pool.ntp.org") {
                 m_logger->debug("start NetworkInitialize");
                 m_httpServer = httpServer;
                 m_waitWifi = true;
                 m_waitTime = false;
-                m_httpClient = NULL;
             }
             virtual ~NetworkInitialize()  {
                 m_logger->debug("end NetworkInitialize");
-                delete m_httpClient; 
                 // do not delete m_httpServer;
             }
 
@@ -46,37 +48,27 @@ namespace DevRelief {
                     m_httpServer->begin();
                     m_waitWifi = false;
                     m_waitTime = true;
-                    if (!createHttpClient()) {
-                        m_logger->error("createHttpClient() failed");
-                        return TASK_COMPLETE;    
-                    }
+                    m_ntp.begin();
+                    m_ntp.update();
+                    return TASK_RUNNING;
                 }
-                if (m_waitTime) {
-                    if (m_httpClient->isComplete()) {
-                        //JsonRoot* root = m_httpClinet->getJsonResult();
-                        m_logger->debug("got time");
-                        return TASK_COMPLETE;
-                    }
+                // once epoch time is over 1000 assume it's been updated
+                if (m_waitTime && m_ntp.getEpochTime() > 1000) {
+                    EpochTime::Instance.setSecondsNow(m_ntp.getEpochTime());
+                    return TASK_COMPLETE;
                 }
                 return TASK_RUNNING;
 
             }
 
         private: 
-            bool createHttpClient() {
-                const char * timeUrl = Config::getInstance()->getTimeAPIUrl();
-                if (timeUrl == NULL) { 
-                    m_logger->warn("timeUrl not set");
-                    return NULL;
-                }
-                m_logger->info("use timeUrl %s",timeUrl);
-                m_httpClient = new HttpClient();
-                return m_httpClient->getJson(timeUrl);
-            }
             bool m_waitWifi;
             bool m_waitTime;
+            WiFiUDP m_ntpUDP;
+            NTPClient m_ntp;
+
             HttpServer* m_httpServer;
-            HttpClient* m_httpClient;
+
     };
 
     class DRLedApplication : public Application {
@@ -85,6 +77,8 @@ namespace DevRelief {
    
         DRLedApplication() {
             SET_LOGGER(AppLogger);
+            m_logger->showMemory("Starting");
+            m_startHeap = EspBoard.getFreeHeap();
             initialize();
             resume();
         }
@@ -146,6 +140,7 @@ namespace DevRelief {
 
 
         void initialize() {
+            m_logger->showMemory("Initialize app");
             ConfigDataLoader configDataLoader;
             if (!configDataLoader.load(m_config)) {
                 m_logger->error("Load failed.  Using default.");
@@ -154,24 +149,24 @@ namespace DevRelief {
             } else {
                 m_logger->info("Loaded config.json");
             }
-            m_logger->debug("set config instance");
+            m_logger->showMemory("after config load");
             m_config.setInstance(&m_config);
-            m_logger->debug("create httpserver");
             m_httpServer = new HttpServer();
-            m_logger->debug("setup routes");
+            m_logger->showMemory("after HttpServer created");
             setupRoutes();        
-            m_logger->debug("begin http server");
-            
+            m_logger->showMemory("after HttpServer routes set");
+           
             m_logger->debug("show build version");
             m_executor.configChange(m_config);
             m_logger->debug("Running DRLedApplication configured: %s.  Built at %s %s",
                 m_config.getBuildVersion(),
                 m_config.getBuildDate(),
                 m_config.getBuildTime());
-            m_logger->showMemory(ALWAYS_LEVEL);
             m_scriptStartTime = 0;
             m_initialized = true;
             new NetworkInitialize(m_httpServer);
+            m_logger->showMemory("after NetworkInitialize created");
+
         }
         
 
@@ -425,6 +420,7 @@ namespace DevRelief {
         
         long m_scriptStartTime;
         bool m_initialized;
+        long m_startHeap;
         ILogConfig* logConfig;
     };
 

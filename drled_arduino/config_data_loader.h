@@ -2,6 +2,7 @@
 #define CONFIG_DATA_LOADER_H
 
 #include "./lib/log/logger.h"
+#include "./lib/system/epoch_time.h"
 #include "./lib/data/data_object.h"
 #include "./lib/data/data_loader.h"
 #include "./lib/json/parser.h"
@@ -104,7 +105,7 @@ class ConfigDataLoader : public DataLoader {
             config.setBrightness(object->getInt("brightness",config.getBrightness()));
             m_logger->debug(LM("get maxBrightness"));
             config.setMaxBrightness(object->getInt("maxBrightness",config.getMaxBrightness()));
-            config.setTimeAPIUrl(object->getString("timeAPIUrl",config.getTimeAPIUrl()));
+            EpochTime::Instance.setGmtOffsetMinutes(object->getInt("gmtOffsetMinutes",-5*60));
 
             JsonArray* pins = object->getArray("pins");
             if (pins) {
@@ -147,12 +148,11 @@ class ConfigDataLoader : public DataLoader {
             json->setString("buildDate",config.getBuildDate());
             json->setString("buildTime",config.getBuildTime());
             json->setString("hostname",config.getHostname());
-            json->setString("hostname",config.getHostname());
+            json->setInt("gmtOffsetMinutes",EpochTime::Instance.getGmtOffsetMinutes());
 
             json->setString("ipAddress",config.getAddr());
             json->setInt("brightness",config.getBrightness());
             json->setInt("maxBrightness",config.getMaxBrightness());
-            json->setString("timeAPIUrl",config.getTimeAPIUrl());
             JsonArray* pins = root->createArray();
             json->set("pins",pins);
             m_logger->debug(LM("filling pins from config"));

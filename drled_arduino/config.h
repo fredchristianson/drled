@@ -2,11 +2,12 @@
 #define CONFIG_H
 
 #include <Adafruit_NeoPixel.h>
-
+#include "./lib/system/epoch_time.h"
 #include "./lib/log/logger.h"
 #include "./lib/util/list.h"
 #include "./lib/util/util.h"
 #include "./lib/json/json_interface.h"
+
 
 namespace DevRelief {
 
@@ -35,6 +36,7 @@ namespace DevRelief {
     };
 
 
+    
 
     class Config {
         public:
@@ -50,7 +52,6 @@ namespace DevRelief {
                 buildVersion = BUILD_VERSION;
                 buildDate = BUILD_DATE;
                 buildTime = BUILD_TIME;
-                timeAPIUrl = "https://www.timeapi.io/api/Time/current/zone?timeZone=America/New_York";
             }
 
           
@@ -133,15 +134,17 @@ namespace DevRelief {
             const char * getBuildDate()const { return buildDate.text();;}
             const char * getBuildTime()const { return buildTime.text();;}
 
-            void setTimeAPIUrl(const char * url)  { timeAPIUrl = url;}
-            const char * getTimeAPIUrl() const { return timeAPIUrl.text();}
-    private:            
+            void setEpochSeconds(unsigned long epochSeconds){
+                EpochTime::Instance.setSecondsNow(epochSeconds);
+            }
+
+    private:    
+    
             DRString     hostName;
             DRString     ipAddress;
             DRString    buildVersion;
             DRString    buildDate;
             DRString    buildTime;
-            DRString    timeAPIUrl;
             PtrList<LedPin*>  pins;
             LinkedList<DRString>   scripts;
             int  brightness;

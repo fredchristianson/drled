@@ -1,6 +1,7 @@
 #ifndef TESTS_H
 #define TESTS_H
 
+#if RUN_TESTS == 1
 #include "../lib/test/test_suite.h"
 #include "../lib/log/logger.h"
 #include "../lib/log/config.h"
@@ -10,6 +11,8 @@
 #include "./script_loader_suite.h"
 #include "./script_suite.h"
 #include "./app_state_suite.h"
+#endif 
+
 namespace DevRelief {
 
 #if RUN_TESTS!=1

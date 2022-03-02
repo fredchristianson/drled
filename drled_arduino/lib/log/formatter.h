@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include "../../env.h"
 #include "../system/board.h"
+#include "../system/epoch_time.h"
 #include "../util/util.h"
 #include "./interface.h"
 
@@ -41,14 +42,18 @@ class LogDefaultFormatter : public ILogFormatter {
 
         const char * format(const char*moduleName,int level,const char * message,va_list args) const override{
             if (moduleName == NULL) { moduleName = "???";}
-            long now = EspBoard.currentMsecs()/1000;
-            int hours = now/3600;
-            now = now % 3600;
-            int minutes = now/60;
-            int seconds = now % 60;
+            // long now = EspBoard.currentMsecs()/1000;
+            // int hours = now/3600;
+            // now = now % 3600;
+            // int minutes = now/60;
+            // int seconds = now % 60;
+            EpochTime& time = EpochTime::Instance;
+
             const char * tabs = m_indentTabCount<=0 ? "" : (m_tabs + m_maxTabs-m_indentTabCount);
-            int len = snprintf(m_outputBuffer,m_maxOutputSize,"%6s-%02d:%02d - %20.20s: %s",
-                        getLevelName(level),minutes,seconds,moduleName,tabs);
+            int len = snprintf(m_outputBuffer,m_maxOutputSize,"%6s-%d:%02d:%02d - %20.20s: %s",
+                        getLevelName(level),
+                        time.getHour(),time.getMinute(),time.getSecond(),
+                        moduleName,tabs);
             vsnprintf(m_outputBuffer+len,m_maxOutputSize-len,message,args);
             return m_outputBuffer;
         }
