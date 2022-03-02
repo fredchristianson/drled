@@ -182,6 +182,7 @@ class HttpClient {
                 m_state = HTTP_ERROR;
                 return true;
             }
+            
             if (m_state == HTTP_READING_HEADER) {
                 m_logger->debug("reading header...");
                 if (m_client->available()) {
