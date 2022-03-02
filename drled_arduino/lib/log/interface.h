@@ -110,7 +110,8 @@ class NullLogger : public ILogger {
         void errorNoRepeat(const char * ,...) const override {}
         void showMemory(const char * label="Memory") const override{}
         void showMemory(int level, const char * label="Memory")const override {}
-
+        int getLevel() const { return 0;};
+        void setLevel(int level) { };
 };
 
 class NullLogConfig : public ILogConfig {

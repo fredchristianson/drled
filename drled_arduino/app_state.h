@@ -2,6 +2,7 @@
 #define DRLED_APP_STATE_H
 
 #include "./lib/log/logger.h"
+#include "./lib/json/json.h"
 
 namespace DevRelief {
 
@@ -35,7 +36,11 @@ namespace DevRelief {
             }
             
             void setExecuteType(ExecuteType type) { m_executeType = type;}
-            void setExecuteValue(const char * val) { m_executeValue = val;}
+            void setExecuteValue(const char * val) { 
+                m_logger->debug("\t\tsetExecuteValue(%s)",val?val : "<null>");
+                m_executeValue = val;
+                m_logger->debug("\t\tsetExecuteValue() done %s",val?val : "<null>");
+            }
             void setParameters(JsonObject* params) {
                 if (params == NULL){
                     m_logger->debug(LM("AppState parameters = NULL"));
@@ -56,8 +61,9 @@ namespace DevRelief {
             }
              
             void setScript(const char * name, JsonObject*params) {
-                m_logger->debug(LM("set script %x"),name);
+                m_logger->debug(LM("set script %s"),name?name:"<no name>");
                 setExecuteValue(name);
+                m_logger->debug(LM("\tname set %s => %s"),name?name:"<no name>",m_executeValue.text());
                 m_logger->debug(LM("\tset isRunning %s"),name);
                 setIsRunning(true);
                 // set as starting until it has run long
@@ -68,6 +74,7 @@ namespace DevRelief {
                 m_logger->debug(LM("\tcopy parameters"));
                 copyParameters(m_parameterRoot.getTopObject(),params);
                 m_logger->debug(LM("\tcopied parameters"));
+                m_logger->debug(LM("\tsetScript done %s"),m_executeValue.text());
             }
 
             void copyParameters(JsonObject*  toObj,JsonObject*params=NULL) {

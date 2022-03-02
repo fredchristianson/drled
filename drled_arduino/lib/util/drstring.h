@@ -154,6 +154,9 @@ class DRString : public Printable {
         const char * operator+=(const DRString& other) {return append(other.text());}
 
         const char * operator=(const char * other){
+            if (other != NULL && other[0] != 0 && m_data.get()->data() == other) { 
+                return other;
+            }
             m_data.get()->setLength(0);
             return append(other);
         }

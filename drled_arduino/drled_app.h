@@ -114,10 +114,13 @@ namespace DevRelief {
                         m_logger->debug("\tscript state run");
                         JsonObject* params = m_appState.getParameters();
                         const char * name = m_appState.getExecuteValue();
+                        m_logger->debug(LM("\trun script: %s"),name);
                         ApiResult result;
                         runScript(name,params,result);                    
                     }
                 } 
+            } else {
+                m_logger->error(LM("load appstate failed"));
             }
             return m_appState.getExecuteValue();
         }
@@ -140,7 +143,6 @@ namespace DevRelief {
 
 
         void initialize() {
-            m_logger->showMemory("Initialize app");
             ConfigDataLoader configDataLoader;
             if (!configDataLoader.load(m_config)) {
                 m_logger->error("Load failed.  Using default.");
@@ -149,12 +151,9 @@ namespace DevRelief {
             } else {
                 m_logger->info("Loaded config.json");
             }
-            m_logger->showMemory("after config load");
             m_config.setInstance(&m_config);
             m_httpServer = new HttpServer();
-            m_logger->showMemory("after HttpServer created");
             setupRoutes();        
-            m_logger->showMemory("after HttpServer routes set");
            
             m_logger->debug("show build version");
             m_executor.configChange(m_config);
@@ -165,7 +164,6 @@ namespace DevRelief {
             m_scriptStartTime = 0;
             m_initialized = true;
             new NetworkInitialize(m_httpServer);
-            m_logger->showMemory("after NetworkInitialize created");
 
         }
         
@@ -232,13 +230,9 @@ namespace DevRelief {
 
 
             m_httpServer->routeBracesPost( "/api/script/{}",[this](Request* req, Response* resp){
-                m_logger->showMemory();
                 m_executor.endScript();
-                m_logger->debug("old script ended");
-                m_logger->showMemory();
                 auto body = req->arg("plain").c_str();
                 m_logger->debug("\tgot new script:%s",body);
-                m_logger->showMemory();
                 auto name =req->pathArg(0).c_str();
                 m_logger->debug("save script %s",name);
                 m_logger->debug("\tname: %s",name);
@@ -246,24 +240,17 @@ namespace DevRelief {
                     ScriptDataLoader loader;
                     loader.save(name,body);
                     m_logger->debug("saved");
-                    m_logger->showMemory();
                 }
                 m_logger->debug("\tget params");
                 JsonRoot* params = getParameters(req);
-                m_logger->showMemory();
-                m_logger->debug("\tgot params");
                 ApiResult result;
                 m_logger->debug("\trun script");
-                m_logger->showMemory();
                 runScript(name,params->getTopObject(),result);
                 m_logger->debug("\tsend result");
-                m_logger->showMemory();
                 result.send(req);
-                m_logger->showMemory();
                 m_logger->debug("\tdelete params");
                 params->destroy();
                 m_logger->debug("\tdeleted params");
-                m_logger->showMemory();
             });
 
 
@@ -373,27 +360,28 @@ namespace DevRelief {
         bool runScript(const char * name, JsonObject* params, ApiResult& result) {
 
             ScriptDataLoader loader;
-            m_logger->never("load script %s",name);
+            m_logger->debug("load script %s",name);
             m_executor.turnOff();
             Script* script  = loader.load(name);
+            m_logger->debug("loaded script %s",name);
 
             if (script){
-                m_logger->never("\tm_executor.setScript");
+                m_logger->debug("\tm_executor.setScript");
                 m_executor.setScript(script,params);
                 m_scriptStartTime = millis();
-                m_logger->never("\tset appState");
+                m_logger->debug("\tset appState %s",name);
                 m_appState.setScript(name,params);
                 AppStateDataLoader loader;
-                m_logger->never("\tsave appState");
+                m_logger->debug("\tsave appState");
                 loader.save(m_appState);
-                m_logger->never("\tsaved");
+                m_logger->debug("\tsaved");
                 return true;
             } else {
                 result.setCode(404);
                 result.setMessage("script not found: %s",name);
                 return false;
             }
-            m_logger->never("\trunScript failed");
+            m_logger->debug("\trunScript failed");
             return false;
         };
 
