@@ -11,6 +11,7 @@ extern EspBoardClass EspBoard;
 
 namespace DevRelief {
 
+class ILogger;
 
 
 enum LogLevel {
@@ -34,7 +35,7 @@ class ILogFilter {
     public:
         virtual void setLevel(int level)=0;
         virtual void setTesting(bool isUnitTest)=0;
-        virtual bool shouldLog(int level, const char* module, const char*message)const = 0;
+        virtual bool shouldLog(const ILogger*logger, int level, const char* module, const char*message)const = 0;
 
 
 };
@@ -87,6 +88,8 @@ class ILogger {
         virtual void showMemory(const char * label="Memory") const=0;
         virtual void showMemory(int level, const char * label="Memory")  const=0;
     
+        virtual int getLevel() const=0;
+        virtual void setLevel(int level)=0;
 };
 
 class NullLogger : public ILogger {

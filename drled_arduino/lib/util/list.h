@@ -38,7 +38,9 @@ public:
 	//T operator[](size_t& i)  const { return this->get(i); }
   	//const T operator[](const size_t& i) const { return this->get(i); }
     
-
+    // remove all items where the lambda return true;
+    void removeMatch(auto&&lambda);  
+    
     void each(auto&& lambda) const;
     T* first(auto&& lambda) const;
 
@@ -84,6 +86,30 @@ void LinkedList<T>::each(auto&& lambda) const {
       ListNode<T>*next = node->next;
       lambda(node->data);
       node = next;
+  }  
+}
+
+
+template<typename T>
+void LinkedList<T>::removeMatch(auto&& lambda)  {
+  ListNode<T>* node = m_root;
+  ListNode<T>* prev = NULL;
+  while(node != NULL) {
+      if (lambda(node->data)) {
+          if (prev != NULL) {
+              prev->next = node->next;
+              deleteNode(node);
+              node = prev->next;
+          } else {
+              m_root = node->next;
+              deleteNode(node);
+              node = m_root;
+          }
+          m_size -= 1;
+      } else {
+          node = node->next;
+      }
+
   }  
 }
 

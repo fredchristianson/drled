@@ -44,11 +44,12 @@ ILogger* ScriptExecutorLogger = new DRLogger("ScriptExecutor",SCRIPT_EXECUTOR_LO
 ILogger* SharedPtrLogger = new DRLogger("SharedPtr",SHARED_PTR_LOGGER_LEVEL);
 ILogger* StripElementLogger = new DRLogger("StripElement",STRIP_ELEMENT_LOGGER_LEVEL);
 ILogger* StringLogger = new DRLogger("DRString",DRSTRING_LOGGER_LEVEL);
+ILogger* TaskLogger = new DRLogger("Tasks",TASK_LOGGER_LEVEL);
 ILogger* TestLogger = new DRLogger("Tests",TEST_LOGGER_LEVEL);
 ILogger* UtilLogger = new DRLogger("Util",UTIL_LOGGER_LEVEL);
-ILogger* WifiLogger = new DRLogger("Util",WIFI_LOGGER_LEVEL);
+ILogger* WifiLogger = new DRLogger("WiFi",WIFI_LOGGER_LEVEL);
 
-ILogger* FiveSecondLogger = new PeriodicLogger(5000,"5 Second Logger"); // log at most every 5 seconds
+ILogger* FiveSecondLogger = new PeriodicLogger(5000,"5 Second Logger",ERROR_LEVEL); // log at most every 5 seconds
 #endif
 
 }

@@ -289,13 +289,13 @@ public:
         }  else if (next == TOK_FLOAT) {
             elem = parseFloat(tok);
         } else if (next == TOK_NULL) {
-            elem = new JsonNull(*m_root);
+            elem = new JsonNull(m_root);
             skipToken(tok,TOK_NULL);
         } else if (next == TOK_TRUE) {
-            elem = new JsonBool(*m_root,true);
+            elem = new JsonBool(m_root,true);
             skipToken(tok,TOK_TRUE);
         } else if (next == TOK_FALSE) {
-            elem = new JsonBool(*m_root,false);
+            elem = new JsonBool(m_root,false);
             skipToken(tok,TOK_FALSE);
         }
         if (elem == NULL) {
@@ -335,14 +335,14 @@ public:
         const char * nameStart;
         size_t nameLen;
         if(tok.nextString(nameStart,nameLen)){
-           return new JsonString(*m_root,nameStart,nameLen);
+           return new JsonString(m_root,nameStart,nameLen);
         }
         return NULL;
     }
     IJsonElement* parseInt(TokenParser& tok) {
         int val=0;
         if(tok.nextInt(val)){
-            return new JsonInt(*m_root,val);
+            return new JsonInt(m_root,val);
         }
         return NULL;
     }
@@ -350,7 +350,7 @@ public:
     IJsonElement* parseFloat(TokenParser& tok) {
         double val=0;
         if(tok.nextFloat(val)){
-            return new JsonFloat(*m_root,val);
+            return new JsonFloat(m_root,val);
         }
         return NULL;
     }
@@ -361,7 +361,7 @@ public:
             m_logger->debug("\t{ not found");
             return NULL;
         }
-        JsonObject* obj = new JsonObject(*m_root);
+        JsonObject* obj = new JsonObject(m_root);
         const char * nameStart;
         size_t nameLen;
         m_logger->debug("\tread string");
@@ -404,7 +404,7 @@ public:
         if (!skipToken(tok,TOK_ARRAY_START)) {
             return NULL;
         }
-        JsonArray* arr = new JsonArray(*m_root);
+        JsonArray* arr = new JsonArray(m_root);
         TokenType peek = tok.peek();
         if (peek == TOK_ARRAY_END) {
             // empty array

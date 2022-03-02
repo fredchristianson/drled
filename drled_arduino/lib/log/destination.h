@@ -40,10 +40,12 @@ void LogSerialDestination::initialize() {
     if (!Serial) {
         Serial.begin(115200);
 
-        Serial.printf("\nSerial Logger Running\n--------------\n");
         while(!Serial){
-            // wait for Serial port to be ready
+            yield();
+            
         }
+        Serial.printf("\nSerial Logger Running\n--------------\n");
+                
         m_serialInitialized = true;
     }
 

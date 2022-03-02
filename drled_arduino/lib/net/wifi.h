@@ -1,9 +1,11 @@
 #ifndef DRWIFIF_H
 #define DRWIFIF_H
 #include <ESP8266WiFi.h>
+#include <lwip/dns.h>
 #include "./wifi_credentials.h"
 #include "../log/logger.h"
 #include "../util/drstring.h"
+#include "../../config.h"
 
 namespace DevRelief {
 
@@ -16,6 +18,20 @@ namespace DevRelief {
             }
             return DRWiFi::drWiFiSingleton;
         }
+
+        bool isInitialized() {
+            if (WiFi.status() == WL_CONNECTED) {
+                WiFi.hostname(m_hostname.text());
+                m_ipAddress = WiFi.localIP().toString().c_str();
+                Config::getInstance()->setAddr(m_ipAddress.text());
+
+                // use google DNS since mine isn't resolving everything it should.
+                IP4_ADDR(&m_dnsAddr,8,8,8,8);
+                dns_setserver(0,&m_dnsAddr);
+                return true;
+            }
+            return false;
+        }
     protected:
         DRWiFi(const char * hostname="dr_unnamed") {
             SET_LOGGER(WifiLogger);
@@ -26,18 +42,7 @@ namespace DevRelief {
         void initialize() {
             m_logger->info("WiFi initializing");
             WiFi.begin(wifi_ssid, wifi_password);
-            unsigned long seed = millis();
-            while(WiFi.status() != WL_CONNECTED) {
-                m_logger->info("waiting for wifi connection");
-                delay(50);
-                int add = millis()>>8;
-                int mult = (millis()%2)+1;
-                seed = seed*mult+add;
-            }
-            WiFi.hostname(m_hostname.text());
-            m_ipAddress = WiFi.localIP().toString().c_str();
-           // randomSeed(seed);
-            m_logger->info("WiFi connected %s",WiFi.localIP().toString().c_str());
+
         }
 
         bool isConnected() {
@@ -51,6 +56,8 @@ namespace DevRelief {
         static DRString m_hostname;
         static DRString m_ipAddress;
         static DRWiFi*  drWiFiSingleton;
+
+        ip_addr m_dnsAddr;
     };
 
     DRWiFi * DRWiFi::drWiFiSingleton;

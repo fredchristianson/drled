@@ -97,35 +97,37 @@ class ConfigDataLoader : public DataLoader {
                 return false;
             }
             m_logger->debug(LM("get hostname"));
-            config.setHostname(object->getString("hostname","unknown_host"));
+            config.setHostname(object->getString("hostname",config.getHostname()));
             m_logger->debug(LM("get ipAddress"));
-            config.setAddr(object->getString("ipAddress","unknown_address"));
+            config.setAddr(object->getString("ipAddress",config.getAddr()));
             m_logger->debug(LM("get brightness"));
-            config.setBrightness(object->getInt("brightness",40));
+            config.setBrightness(object->getInt("brightness",config.getBrightness()));
             m_logger->debug(LM("get maxBrightness"));
-            config.setMaxBrightness(object->getInt("maxBrightness",100));
-            m_logger->debug(LM("get runningScript"));
-            config.setRunningScript(object->getString("runningScript",(const char*)NULL));
-            config.clearPins();
-            config.clearScripts();
-            m_logger->debug(LM("get pins"));
+            config.setMaxBrightness(object->getInt("maxBrightness",config.getMaxBrightness()));
+            config.setTimeAPIUrl(object->getString("timeAPIUrl",config.getTimeAPIUrl()));
 
             JsonArray* pins = object->getArray("pins");
             if (pins) {
-                m_logger->debug(LM("pins: %s"),pins->toString().get());
-                pins->each([&](IJsonElement*&item) {
-                    m_logger->debug(LM("got pin"));
-                    JsonObject* pin = item->asObject();
-                    m_logger->debug(LM("\tpin: %s"),pin->toString().get());
-                    if (pin){
-                        m_logger->debug(LM("add pin %d"),pin->getInt("number",-1));
-                        LedPin* configPin = config.addPin(pin->getInt("number",-1),pin->getInt("ledCount",0),pin->getBool("reverse",false)); 
-                        configPin->maxBrightness = pin->getInt("maxBrightness",40);
-                        configPin->pixelType = getPixelType(pin->getString("pixelType","NEO_GRP"));
-                    } else {
-                        m_logger->error("pin is not an Object");
-                    }
-                });
+                config.clearPins();
+                config.clearScripts();
+                m_logger->debug(LM("get pins"));
+
+                    m_logger->debug(LM("pins: %s"),pins->toString().text());
+                    pins->each([&](IJsonElement*&item) {
+                        m_logger->debug(LM("got pin"));
+                        JsonObject* pin = item->asObject();
+                        m_logger->debug(LM("\tpin: %s"),pin->toString().get());
+                        if (pin){
+                            m_logger->debug(LM("add pin %d"),pin->getInt("number",-1));
+                            LedPin* configPin = config.addPin(pin->getInt("number",-1),pin->getInt("ledCount",0),pin->getBool("reverse",false)); 
+                            if (configPin) {
+                                configPin->maxBrightness = pin->getInt("maxBrightness",40);
+                                configPin->pixelType = getPixelType(pin->getString("pixelType","NEO_GRP"));
+                            }
+                        } else {
+                            m_logger->error("pin is not an Object");
+                        }
+                    });
             } else {
                 m_logger->debug(LM("no pins found"));
             }
@@ -137,25 +139,27 @@ class ConfigDataLoader : public DataLoader {
 
 
         JsonRoot* toJson(Config&config) {
+            m_logger->debug(LM("load config json"));
+            LogIndent indent;
             JsonRoot* root=new JsonRoot;  
-            JsonObject * json = root->createObject();
+            JsonObject * json = root->getTopObject();
             json->setString("buildVersion",config.getBuildVersion());
             json->setString("buildDate",config.getBuildDate());
             json->setString("buildTime",config.getBuildTime());
+            json->setString("hostname",config.getHostname());
             json->setString("hostname",config.getHostname());
 
             json->setString("ipAddress",config.getAddr());
             json->setInt("brightness",config.getBrightness());
             json->setInt("maxBrightness",config.getMaxBrightness());
-            json->setString("runningScript",config.getRunningScript());
+            json->setString("timeAPIUrl",config.getTimeAPIUrl());
             JsonArray* pins = root->createArray();
             json->set("pins",pins);
             m_logger->debug(LM("filling pins from config"));
             config.getPins().each( [this,logger=m_logger,pins](LedPin* pin) {
                 logger->debug(LM("\thandle pin 0x%04X"),pin); 
                 logger->debug(LM("\tnumber %d"),pin->number); 
-                JsonObject* pinElement = new JsonObject(*(pins->getRoot()));
-                pins->addItem(pinElement);
+                JsonObject* pinElement = new JsonObject((pins->getRoot()));
                 pinElement->setInt("number",pin->number);
                 pinElement->setInt("ledCount",pin->ledCount);
                 pinElement->setBool("reverse",pin->reverse);
@@ -173,6 +177,7 @@ class ConfigDataLoader : public DataLoader {
                 scripts->addString(script.get());
             });
             m_logger->debug(LM("scripts done"));
+            m_logger->debug(LM("load config done %x"),root);
 
             return root;
         }

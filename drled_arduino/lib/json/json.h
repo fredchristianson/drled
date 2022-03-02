@@ -15,6 +15,7 @@ class JsonBase : public IJsonElement {
     public:
         JsonBase() {
             m_jsonId = -1;
+            SET_LOGGER(JsonLogger);
         }
         virtual ~JsonBase() {
 
@@ -51,6 +52,7 @@ class JsonBase : public IJsonElement {
 
     protected:
         int m_jsonId;
+        DECLARE_LOGGER();
 };
 
 class JsonRoot : public JsonBase {
@@ -64,7 +66,7 @@ class JsonRoot : public JsonBase {
 
 
         virtual ~JsonRoot() {
-            if (m_value){
+            if (m_value && m_value->getRoot() == this){
                 m_value->destroy();
             }
         }
@@ -131,6 +133,11 @@ class JsonRoot : public JsonBase {
 
         JsonType getType() override { return JSON_ROOT;}
         bool hasValue() override { return false;}
+
+        void setRoot(JsonRoot* root) override { 
+            m_logger->error("JsonRoot::setRoot() should not be called");
+            /* nothing to do.  should not happen;*/
+        }
     protected:
         int m_nextJsonId;
         IJsonElement * m_value;
@@ -139,9 +146,9 @@ class JsonRoot : public JsonBase {
 class JsonElement : public JsonBase {
     public:
         static DRString toJsonString(IJsonElement* element);
-        JsonElement(JsonRoot& root,JsonType t) :m_root(root) {
+        JsonElement(JsonRoot* root,JsonType t) :m_root(root) {
             m_type = t;
-            root.setJsonId(this);
+            root->setJsonId(this);
 
         }
         virtual ~JsonElement() {
@@ -149,18 +156,22 @@ class JsonElement : public JsonBase {
 
         IJsonValueElement* asValue() override { return NULL;}
         bool hasValue() override { return asValue() != NULL;}
-        JsonRoot* getRoot()  override  { return & m_root;}
+        JsonRoot* getRoot()  override  { return  m_root;}
+        void setRoot(JsonRoot* root) override { 
+            m_logger->debug("JsonElement::setRoot %d %x %x->%x",(int)this->m_type,this,m_root,root);
+            m_root = root;
+        }
 
         JsonType getType() override { return m_type;}
     protected:
-        JsonRoot& m_root;
+        JsonRoot* m_root;
         JsonType m_type;
 };
 
 
 class JsonValueElement : public JsonElement, public IJsonValueElement {
     public:
-        JsonValueElement(JsonRoot& root,JsonType t) : JsonElement(root,t) {}
+        JsonValueElement(JsonRoot* root,JsonType t) : JsonElement(root,t) {}
         virtual ~JsonValueElement() {};
         IJsonValueElement* asValue() override { return this;}
         
@@ -176,7 +187,7 @@ class JsonValueElement : public JsonElement, public IJsonValueElement {
 
 class JsonInt : public JsonValueElement {
     public:
-        JsonInt(JsonRoot& root, int value) : JsonValueElement(root,JSON_INTEGER) {
+        JsonInt(JsonRoot* root, int value) : JsonValueElement(root,JSON_INTEGER) {
 
             m_value = value;
         
@@ -205,7 +216,7 @@ class JsonInt : public JsonValueElement {
 
 class JsonFloat : public  JsonValueElement {
     public:
-        JsonFloat(JsonRoot& root, double value) : JsonValueElement(root,JSON_FLOAT) {
+        JsonFloat(JsonRoot* root, double value) : JsonValueElement(root,JSON_FLOAT) {
             m_value = value;
         
         }
@@ -229,7 +240,7 @@ class JsonFloat : public  JsonValueElement {
 
 class JsonBool : public  JsonValueElement {
     public:
-        JsonBool(JsonRoot& root, bool value) : JsonValueElement(root,JSON_BOOLEAN) {
+        JsonBool(JsonRoot* root, bool value) : JsonValueElement(root,JSON_BOOLEAN) {
 
             m_value = value;
         
@@ -248,12 +259,12 @@ class JsonBool : public  JsonValueElement {
 
 class JsonString : public JsonValueElement {
     public:
-        JsonString(JsonRoot& root, const char * value) : JsonValueElement(root,JSON_STRING) {
+        JsonString(JsonRoot* root, const char * value) : JsonValueElement(root,JSON_STRING) {
             size_t len = value == NULL ? 0 : strlen(value);
-            m_value = root.allocString(value,len);
+            m_value = root->allocString(value,len);
         }
-        JsonString(JsonRoot& root, const char * value, size_t len) : JsonValueElement(root,JSON_STRING) {
-            m_value = root.allocString(value,len);
+        JsonString(JsonRoot* root, const char * value, size_t len) : JsonValueElement(root,JSON_STRING) {
+            m_value = root->allocString(value,len);
         }
 
         virtual ~JsonString() { 
@@ -292,7 +303,7 @@ class JsonString : public JsonValueElement {
 
 class JsonNull : public JsonValueElement {
     public:
-        JsonNull(JsonRoot& root) : JsonValueElement(root,JSON_NULL){
+        JsonNull(JsonRoot* root) : JsonValueElement(root,JSON_NULL){
 
         }
         bool isNull() override { return true;}
@@ -303,28 +314,27 @@ class JsonNull : public JsonValueElement {
 
 class JsonProperty : public JsonElement {
     public:
-        JsonProperty(JsonRoot& root, const char * name,size_t nameLength,IJsonElement* value) : JsonElement(root,JSON_PROPERTY) {
-            m_name = root.allocString(name,nameLength);
+        JsonProperty(JsonRoot* root, const char * name,size_t nameLength,IJsonElement* value) : JsonElement(root,JSON_PROPERTY) {
+            m_name = root->allocString(name,nameLength);
             m_value = value;
             m_next = NULL;
         }
         
-        JsonProperty(JsonRoot& root, const char * name,IJsonElement* value) : JsonElement(root,JSON_PROPERTY) {
+        JsonProperty(JsonRoot* root, const char * name,IJsonElement* value) : JsonElement(root,JSON_PROPERTY) {
             size_t nameLength = strlen(name)+1;
-            m_name = root.allocString(name,nameLength);
+            m_name = root->allocString(name,nameLength);
             m_value = value;
             m_next = NULL;
 
         }
         virtual ~JsonProperty() { 
-
-            if (m_next) { m_next->destroy();}
-            m_root.freeString(m_name); 
-            if (m_value && m_value->getRoot() == getRoot()){
-                if (m_value) { m_value->destroy();}
-            } else {
-            }
+           if (m_value && m_value->getRoot() == getRoot()){
+             // todo: put back   m_root->freeString(m_name); 
+                m_value->destroy();
+            } 
         }
+
+        
 
 
         IJsonValueElement* asValue() { return m_value->asValue();}
@@ -378,6 +388,17 @@ class JsonProperty : public JsonElement {
         double getFloat(double defaultValue) { 
             return hasValue() ? asValue()->getFloat(defaultValue) : defaultValue;}
 
+        void setRoot(JsonRoot* root) override { 
+            m_logger->debug("JsonProperty::setRoot %d %x %x->%x",(int)this->m_type,this,m_root,root);
+
+            JsonElement::setRoot(root);
+            if (m_value) {
+                m_value->setRoot(root);
+            }
+            if (m_next) {
+                m_next->setRoot(root);
+            }
+        }
 
     private:
         char* m_name;
@@ -387,16 +408,32 @@ class JsonProperty : public JsonElement {
 
 class JsonObject : public JsonElement {
     public:
-        JsonObject(JsonRoot& root) : JsonElement(root,JSON_OBJECT) {
+        JsonObject(JsonRoot* root) : JsonElement(root,JSON_OBJECT) {
             m_firstProperty = NULL;
             setInt("jsonId",getJsonId());
         }
         virtual ~JsonObject() {
-            if (m_firstProperty) { m_firstProperty->destroy();}
+            JsonProperty* prop = m_firstProperty;
+            while (prop != NULL) {
+                JsonProperty*next = prop->getNext();
+                if (prop->getRoot() == m_root) {
+                    prop->destroy();
+                }
+                prop = next;
+            }
        }
         
         bool isObject() override  { return true;}
         JsonObject* asObject() override { return this;}
+
+        void setRoot(JsonRoot* root) override { 
+            m_logger->debug("JsonObject::setRoot %d %x %x->%x",(int)this->m_type,this,m_root,root);
+
+            JsonElement::setRoot(root);
+            if (m_firstProperty) {
+                m_firstProperty->setRoot(root);
+            }
+        }
 
         void eachProperty(auto lambda) {
             JsonProperty* prop = m_firstProperty;
@@ -421,13 +458,14 @@ class JsonObject : public JsonElement {
         }
 
         JsonProperty* set(const char *nameStart,size_t nameLen,JsonElement * value){
+            value->setRoot(m_root);
             JsonProperty* prop = new JsonProperty(m_root,nameStart,nameLen,value);
             add(prop);
             return prop;
         }
 
         JsonObject* createObject(const char * propertyName) {
-            JsonObject* obj = new JsonObject(*getRoot());
+            JsonObject* obj = new JsonObject(getRoot());
             set(propertyName,obj);
             return obj;
         }
@@ -435,6 +473,9 @@ class JsonObject : public JsonElement {
         JsonArray* createArray(const char * propertyName);
         
         JsonProperty* set(const char *name,IJsonElement * value){
+            if (value->getRoot() != m_root) {
+                value->setRoot(m_root);
+            }
             JsonProperty*prop = getProperty(name);
             if (prop != NULL) {
                 prop->setValue(value);
@@ -448,19 +489,19 @@ class JsonObject : public JsonElement {
         }
 
         JsonProperty* setBool(const char *name,bool value) {
-            JsonBool * pval = new JsonBool(*getRoot(),value);
+            JsonBool * pval = new JsonBool(getRoot(),value);
             return set(name,pval);
         }
         JsonProperty* setInt(const char *name,int value) {
-            JsonInt * pval = new JsonInt(*getRoot(),value);
+            JsonInt * pval = new JsonInt(getRoot(),value);
             return set(name,pval);
         }
         JsonProperty* setString(const char *name,const char *value) {
-            JsonString * pval = new JsonString(*getRoot(),value);
+            JsonString * pval = new JsonString(getRoot(),value);
             return set(name,pval);
         }
         JsonProperty* setFloat(const char *name,double value) {
-            JsonFloat * pval = new JsonFloat(*getRoot(),value);
+            JsonFloat * pval = new JsonFloat(getRoot(),value);
             return set(name,pval);
         }
 
@@ -530,7 +571,7 @@ class JsonObject : public JsonElement {
 
 class JsonArrayItem : public JsonElement {
     public:
-        JsonArrayItem(JsonRoot& root, IJsonElement * value) :JsonElement(root,JSON_ARRAY_ITEM) {
+        JsonArrayItem(JsonRoot* root, IJsonElement * value) :JsonElement(root,JSON_ARRAY_ITEM) {
 
             m_value = value;
             m_next = NULL;
@@ -541,9 +582,7 @@ class JsonArrayItem : public JsonElement {
             if (m_value && m_value->getRoot() == getRoot()){
                 m_value->destroy();
             }
-            if (m_next){
-                m_next->destroy();
-            }
+
         }
 
 
@@ -569,6 +608,19 @@ class JsonArrayItem : public JsonElement {
             if (index == 0) { return m_value;}
             return m_next->getAt(index-1);
         }
+
+        void setRoot(JsonRoot* root) override { 
+            m_logger->debug("JsonArrayItem::setRoot %d %x %x->%x",(int)this->m_type,this,m_root,root);
+
+            JsonElement::setRoot(root);
+            if (m_value) {
+                m_value->setRoot(root);
+            }
+            if (m_next) {
+                m_next->setRoot(root);
+            }
+        }
+
         
     protected:
         IJsonElement* m_value;
@@ -577,19 +629,35 @@ class JsonArrayItem : public JsonElement {
 
 class JsonArray : public JsonElement {
     public:
-        JsonArray(JsonRoot& root) : JsonElement(root,JSON_ARRAY) {
+        JsonArray(JsonRoot* root) : JsonElement(root,JSON_ARRAY) {
             m_firstItem = NULL;
         
         }
         virtual ~JsonArray() {
-            if (m_firstItem) { m_firstItem->destroy();}
+            JsonArrayItem* item = m_firstItem;
+            while (item != NULL) {
+                JsonArrayItem*next = item->getNext();
+                if (item->getRoot() == m_root) {
+                    item->destroy();
+                }
+                item = next;
+            }
         
         }
 
         virtual bool isArray() { return true;}
         virtual JsonArray* asArray() { return this;}
 
+        void setRoot(JsonRoot* root) override { 
+            m_logger->debug("JsonArray::setRoot %d %x %x->%x",(int)this->m_type,this,m_root,root);
+
+            JsonElement::setRoot(root);
+            if (m_firstItem) {
+                m_firstItem->setRoot(root);
+            }
+        }
         JsonArrayItem* addItem(IJsonElement * value){
+            value->setRoot(m_root);
             JsonArrayItem* item = new JsonArrayItem(m_root,value);
             if (m_firstItem == NULL) {
                 m_firstItem = item;
@@ -600,22 +668,22 @@ class JsonArray : public JsonElement {
         }
 
         JsonObject* addNewObject() {
-            JsonObject* obj = new JsonObject(*getRoot());
+            JsonObject* obj = new JsonObject(getRoot());
             addItem(obj);
             return obj;
         }
 
         JsonArrayItem* addString(const char * val){
-            return addItem(new JsonString(*getRoot(),val));
+            return addItem(new JsonString(getRoot(),val));
         }
         JsonArrayItem* addInt(int val){
-            return addItem(new JsonInt(*getRoot(),val));
+            return addItem(new JsonInt(getRoot(),val));
         }
         JsonArrayItem* addFloat(double val){
-            return addItem(new JsonFloat(*getRoot(),val));
+            return addItem(new JsonFloat(getRoot(),val));
         }
         JsonArrayItem* addBool(bool val){
-            return addItem(new JsonBool(*getRoot(),val));
+            return addItem(new JsonBool(getRoot(),val));
         }
 
         int getCount() { return m_firstItem == NULL ? 0 : m_firstItem->getCount();}
@@ -644,10 +712,10 @@ class JsonArray : public JsonElement {
     };
 
         JsonObject* JsonRoot::createObject(){
-            return new JsonObject(*this);
+            return new JsonObject(this);
         }
         JsonArray* JsonRoot::createArray() {
-            return new JsonArray(*this);
+            return new JsonArray(this);
         }
         JsonObject* JsonRoot::getTopObject() {
             if (m_value == NULL) {
@@ -664,7 +732,7 @@ class JsonArray : public JsonElement {
         }
         
         JsonArray* JsonObject::createArray(const char * propertyName){
-            JsonArray* array = new JsonArray(*getRoot());
+            JsonArray* array = new JsonArray(getRoot());
             set(propertyName,array);
             return array;
         }

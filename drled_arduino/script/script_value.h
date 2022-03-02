@@ -110,7 +110,7 @@ namespace DevRelief
             
             IJsonElement* toJson(JsonRoot* jsonRoot) override {
                 m_logger->error("toJson() not implemented");
-                JsonObject* obj = new JsonObject(*jsonRoot);
+                JsonObject* obj = new JsonObject(jsonRoot);
                 obj->setString("toJson","not implemented");
                 return obj;
             }
@@ -419,7 +419,7 @@ namespace DevRelief
         bool isNumber(IScriptContext* ctx) override { return true;}
 
         virtual DRString toString() { return DRString::fromFloat(m_value); }
-        IJsonElement* toJson(JsonRoot*root) override { return new JsonFloat(*root,m_value);}
+        IJsonElement* toJson(JsonRoot*root) override { return new JsonFloat(root,m_value);}
         DRString stringify() override { return DRString::fromFloat(m_value);}
     protected:
         double m_value;
@@ -456,7 +456,7 @@ namespace DevRelief
             return defaultValue;
         }
         bool isBool(IScriptContext* ctx) override { return true;}
-        IJsonElement* toJson(JsonRoot*root) override { return new JsonBool(*root,m_value);}
+        IJsonElement* toJson(JsonRoot*root) override { return new JsonBool(root,m_value);}
 
         DRString toString() override { 
             const char * val =  m_value ? "true":"false"; 
@@ -506,7 +506,7 @@ namespace DevRelief
             return true;  
         } 
 
-        IJsonElement* toJson(JsonRoot*root) override { return new JsonNull(*root);}
+        IJsonElement* toJson(JsonRoot*root) override { return new JsonNull(root);}
 
         DRString toString() override { 
             m_logger->debug("ScriptNulllValue.toString()");
@@ -579,7 +579,7 @@ namespace DevRelief
         }
 
         bool isString(IScriptContext* ctx) override { return true;}
-        IJsonElement* toJson(JsonRoot*root) override { return new JsonString(*root,m_value);}
+        IJsonElement* toJson(JsonRoot*root) override { return new JsonString(root,m_value);}
 
         const char * getValue() { return m_value.text();}
 
@@ -1236,7 +1236,7 @@ namespace DevRelief
                 }
                 
             }
-            return new JsonString(*jsonRoot,val.text());
+            return new JsonString(jsonRoot,val.text());
         }
         
         virtual DRString toString() { return DRString("Variable: ").append(m_name); }

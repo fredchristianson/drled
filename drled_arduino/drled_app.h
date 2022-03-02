@@ -7,6 +7,8 @@
 #include "./lib/log/config.h"
 #include "./lib/log/logger.h"
 #include "./lib/data/api_result.h"
+#include "./lib/task/task.h"
+#include "./lib/net/http_client.h"
 #include "./script/script.h"
 #include "./script/executor.h"
 #include "./script/data_loader.h"
@@ -21,6 +23,61 @@ extern EspClass ESP;
 
 namespace DevRelief {
 
+    class NetworkInitialize : public Task {
+        public: 
+            NetworkInitialize(HttpServer * httpServer) : Task("NetworkInitialize",500) {
+                m_logger->debug("start NetworkInitialize");
+                m_httpServer = httpServer;
+                m_waitWifi = true;
+                m_waitTime = false;
+                m_httpClient = NULL;
+            }
+            virtual ~NetworkInitialize()  {
+                m_logger->debug("end NetworkInitialize");
+                delete m_httpClient; 
+                // do not delete m_httpServer;
+            }
+
+            virtual TaskStatus run() {
+                m_logger->debug("check WiFi state");
+                LogIndent id;
+                if (m_waitWifi && DRWiFi::get()->isInitialized()) {
+                    m_logger->debug("WiFi ready");
+                    m_httpServer->begin();
+                    m_waitWifi = false;
+                    m_waitTime = true;
+                    if (!createHttpClient()) {
+                        m_logger->error("createHttpClient() failed");
+                        return TASK_COMPLETE;    
+                    }
+                }
+                if (m_waitTime) {
+                    if (m_httpClient->isComplete()) {
+                        //JsonRoot* root = m_httpClinet->getJsonResult();
+                        m_logger->debug("got time");
+                        return TASK_COMPLETE;
+                    }
+                }
+                return TASK_RUNNING;
+
+            }
+
+        private: 
+            bool createHttpClient() {
+                const char * timeUrl = Config::getInstance()->getTimeAPIUrl();
+                if (timeUrl == NULL) { 
+                    m_logger->warn("timeUrl not set");
+                    return NULL;
+                }
+                m_logger->info("use timeUrl %s",timeUrl);
+                m_httpClient = new HttpClient();
+                return m_httpClient->getJson(timeUrl);
+            }
+            bool m_waitWifi;
+            bool m_waitTime;
+            HttpServer* m_httpServer;
+            HttpClient* m_httpClient;
+    };
 
     class DRLedApplication : public Application {
     public: 
@@ -87,6 +144,7 @@ namespace DevRelief {
             m_executor.step();
         }
 
+
         void initialize() {
             ConfigDataLoader configDataLoader;
             if (!configDataLoader.load(m_config)) {
@@ -103,18 +161,19 @@ namespace DevRelief {
             m_logger->debug("setup routes");
             setupRoutes();        
             m_logger->debug("begin http server");
-            m_httpServer->begin();
             
             m_logger->debug("show build version");
             m_executor.configChange(m_config);
-            m_logger->always("Running DRLedApplication configured: %s.  Built at %s %s",
-                m_config.getBuildVersion().text(),
-                m_config.getBuildDate().text(),
-                m_config.getBuildTime().text());
+            m_logger->debug("Running DRLedApplication configured: %s.  Built at %s %s",
+                m_config.getBuildVersion(),
+                m_config.getBuildDate(),
+                m_config.getBuildTime());
             m_logger->showMemory(ALWAYS_LEVEL);
             m_scriptStartTime = 0;
             m_initialized = true;
+            new NetworkInitialize(m_httpServer);
         }
+        
 
         void setupRoutes() {
             m_httpServer->route("/",[this](Request* req, Response* resp){
@@ -126,8 +185,11 @@ namespace DevRelief {
                 m_logger->debug("get /api/config");
                 ConfigDataLoader configDataLoader;
                 JsonRoot* jsonRoot = configDataLoader.toJson(m_config);
-                IJsonElement*json = jsonRoot->getTopElement();
+                JsonObject*json = jsonRoot->getTopElement()->asObject();
+                m_logger->debug(LM("got config json %x %x %s"),jsonRoot,json,json->toString().text());
+                LogIndent indent;
                 ApiResult api(json);
+                m_logger->debug(LM("new root %x"),json->getRoot());
                 api.send(resp);
                 jsonRoot->destroy();
             });
@@ -167,7 +229,7 @@ namespace DevRelief {
                 ApiResult result;
                 JsonRoot* params = getParameters(req);
                 const char * name = req->pathArg(0).c_str();
-                m_logger->always("run script %s",name);
+                m_logger->debug("run script %s",name);
                 runScript(name,params->getTopObject(),result);
                 result.send(req);
                 params->destroy();
@@ -183,7 +245,7 @@ namespace DevRelief {
                 m_logger->debug("\tgot new script:%s",body);
                 m_logger->showMemory();
                 auto name =req->pathArg(0).c_str();
-                m_logger->always("save script %s",name);
+                m_logger->debug("save script %s",name);
                 m_logger->debug("\tname: %s",name);
                 if (name != NULL) {
                     ScriptDataLoader loader;
@@ -233,7 +295,7 @@ namespace DevRelief {
 
 
         void apiRequest(const char * api,Request * req,Response * resp) {
-            m_logger->always("handle API %s",api);
+            m_logger->debug("handle API %s",api);
             int code=200;
             if (strcmp(api,"reboot") == 0) {
                 code = 200;

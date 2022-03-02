@@ -6,6 +6,7 @@
 #include "./lib/log/logger.h"
 #include "./lib/util/list.h"
 #include "./lib/util/util.h"
+#include "./lib/json/json_interface.h"
 
 namespace DevRelief {
 
@@ -43,14 +44,13 @@ namespace DevRelief {
             Config() {
                 SET_LOGGER(ConfigLoaderLogger);
                 hostName = HOSTNAME;
-                runningScript = NULL;
-                runningParameters = NULL;
+                ipAddress = "unknown";
                 brightness = 40;
                 maxBrightness = 100;
                 buildVersion = BUILD_VERSION;
                 buildDate = BUILD_DATE;
                 buildTime = BUILD_TIME;
-
+                timeAPIUrl = "https://www.timeapi.io/api/Time/current/zone?timeZone=America/New_York";
             }
 
           
@@ -59,15 +59,28 @@ namespace DevRelief {
             }
 
             
-            const DRString& getAddr() const { return ipAddress;}
+            const char * getAddr() const { return ipAddress.text();}
 
             void clearPins() {
                 pins.clear();
             }
 
+            LedPin* getPinNumber(int number) {
+                for(int idx=0;idx<pins.size();idx++) {
+                    LedPin* pin = pins[idx];
+                    if (pin && pin->number == number) {
+                        return pin;
+                    }
+                }
+                return NULL;
+            }
 
             LedPin* addPin(int number,int ledCount,bool reverse=false) {
                 m_logger->debug("addPin %d %d %d",number,ledCount,reverse);
+                if (getPinNumber(number) != NULL) {
+                    m_logger->error("pin number %d added more than once");
+                    return NULL;
+                }
                 LedPin* pin = new LedPin(number,ledCount,reverse);
                 pins.add(pin);
                 return pin;
@@ -110,28 +123,27 @@ namespace DevRelief {
             }
             const LinkedList<DRString>& getScripts()  const{ return scripts;}
 
-            const DRString& getHostname() const { return hostName;}
+            const char * getHostname() const { return hostName.text();}
             void setHostname(const char * name) {
                 hostName = name;
             }
-            void setRunningScript(const char * name) {
-                runningScript = name;
-            }
-            const DRString& getRunningScript()  const{ return runningScript;}
+ 
 
-            const DRString& getBuildVersion()const { return buildVersion;}
-            const DRString& getBuildDate()const { return buildDate;}
-            const DRString& getBuildTime()const { return buildTime;}
+            const char * getBuildVersion()const { return buildVersion.text();;}
+            const char * getBuildDate()const { return buildDate.text();;}
+            const char * getBuildTime()const { return buildTime.text();;}
+
+            void setTimeAPIUrl(const char * url)  { timeAPIUrl = url;}
+            const char * getTimeAPIUrl() const { return timeAPIUrl.text();}
     private:            
             DRString     hostName;
             DRString     ipAddress;
             DRString    buildVersion;
             DRString    buildDate;
             DRString    buildTime;
+            DRString    timeAPIUrl;
             PtrList<LedPin*>  pins;
             LinkedList<DRString>   scripts;
-            DRString runningScript;
-            JsonElement * runningParameters;
             int  brightness;
             int  maxBrightness;
             DECLARE_LOGGER();

@@ -116,7 +116,7 @@ class DRStringData {
         char * m_data;
 };
 
-class DRString {
+class DRString : public Printable {
     public: 
         static DRString fromFloat(double val);
         DRString(const char * = NULL);
@@ -124,6 +124,10 @@ class DRString {
         DRString(char c, size_t repeatCount);
         DRString(const DRString& other);
         ~DRString();
+
+        size_t printTo(Print& p) const {
+            return p.print(get());
+        }
 
         const char* operator->() const { 
             
@@ -148,6 +152,11 @@ class DRString {
         DRString& append(const char * other);
         const char * operator+=(const char * other){return append(other);}
         const char * operator+=(const DRString& other) {return append(other.text());}
+
+        const char * operator=(const char * other){
+            m_data.get()->setLength(0);
+            return append(other);
+        }
 
         void clear() {
             

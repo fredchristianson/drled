@@ -28,9 +28,12 @@ class LogDefaultFilter : public ILogFilter {
             m_isUnitTest = false;
         }
 
-        virtual bool shouldLog(int level, const char* module, const char*message)const {
+        virtual bool shouldLog(const ILogger* logger, int level, const char* module, const char*message)const {
             if (m_isUnitTest && level == TEST_LOGGER_LEVEL) { return true;}
-            if (m_level < level) { 
+            if (level == ALWAYS_LEVEL) {
+                return true;
+            }
+            if (level == NEVER_LEVEL || m_level < level || logger->getLevel() < level) { 
                 return false;
             }
             if (m_includeModules) { /* todo */}

@@ -1,7 +1,9 @@
+
 #include "./env.h"
 #include "./lib/application.h"
 #include "./lib/log/logger.h"
 #include "./loggers.h"
+#include "./lib/task/task.h"
 #include "./drled_app.h"
 
 #if RUN_TESTS
@@ -10,16 +12,19 @@
 
 using namespace DevRelief;
 
-#if LOGGING_ON==1
-auto logConfig = new LogConfig(new LogSerialDestination());
-#else 
-auto logConfig = new NullLogConfig();
-#endif 
+
 
 Application * app=NULL;
-
+ILogConfig* logConfig=NULL;
 
 void setup() {
+
+#if LOGGING_ON==1
+  logConfig = new LogConfig(new LogSerialDestination(), new LogDefaultFilter(DEBUG_LEVEL));
+#else 
+  logConfig = new NullLogConfig();
+#endif 
+
 #if RUN_TESTS==1
   if (!Tests::Run()) {
     DevRelief::AppLogger->error("Tests failed.  Not running application.");
@@ -31,7 +36,7 @@ void setup() {
 
 
 void loop() {
-  
+  Tasks::Run();
   if (app) {
     app->loop();
   }

@@ -67,6 +67,7 @@ class IJsonElement {
         virtual bool isNull()=0;     
 
         virtual JsonRoot* getRoot()=0;
+        virtual void setRoot(JsonRoot* newRoot)=0; // allows moving element to new root
         virtual JsonArray* asArray()=0;
         virtual JsonObject* asObject()=0;
         virtual IJsonValueElement* asValue()=0;   

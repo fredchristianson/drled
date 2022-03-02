@@ -51,5 +51,11 @@
         "stdexcept": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp"
+    },
+    "workbench.colorCustomizations": {
+        "terminal.background":"#000000",
+        "terminal.foreground":"#A6A28C",
+        "output.background":"#000000",
+        "output.foreground":"#A6A28C"
     }
 }

@@ -17,7 +17,7 @@ namespace DevRelief {
 
 class LogConfig : public ILogConfig {
     public:
-        LogConfig(ILogDestination*dest, ILogFormatter* formatter=NULL, ILogFilter* filter=NULL) {
+        LogConfig(ILogDestination*dest, ILogFilter* filter=NULL, ILogFormatter* formatter=NULL) {
             m_indentTabCount = 0;
             m_isTesting = false;
             m_destination = dest;
@@ -28,6 +28,7 @@ class LogConfig : public ILogConfig {
         void setTesting(bool on) { if (m_filter) { m_filter->setTesting(on);}}
 
         void indent() {
+            //Serial.println("config indent");
             if (m_formatter) {
                 m_formatter->indent();
             }
@@ -35,6 +36,7 @@ class LogConfig : public ILogConfig {
         }
 
         void outdent() {
+            //Serial.println("config outdent");
             if (m_formatter) {
                 m_formatter->outdent();
             }

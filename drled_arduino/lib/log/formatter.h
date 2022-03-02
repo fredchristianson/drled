@@ -28,7 +28,7 @@ class LogDefaultFormatter : public ILogFormatter {
         }
 
         void indent() {
-            if (m_indentTabCount < m_indentTabCount) {
+            if (m_indentTabCount < m_maxTabs) {
                 m_indentTabCount++;
             }
         }
@@ -47,7 +47,7 @@ class LogDefaultFormatter : public ILogFormatter {
             int minutes = now/60;
             int seconds = now % 60;
             const char * tabs = m_indentTabCount<=0 ? "" : (m_tabs + m_maxTabs-m_indentTabCount);
-            int len = snprintf(m_outputBuffer,m_maxOutputSize,"%6s-%02d:%02d - %20.20s: %s ",
+            int len = snprintf(m_outputBuffer,m_maxOutputSize,"%6s-%02d:%02d - %20.20s: %s",
                         getLevelName(level),minutes,seconds,moduleName,tabs);
             vsnprintf(m_outputBuffer+len,m_maxOutputSize-len,message,args);
             return m_outputBuffer;

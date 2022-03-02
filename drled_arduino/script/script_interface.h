@@ -323,7 +323,7 @@ namespace DevRelief{
             if (m_repeatCount) {
                 obj->set("count",m_repeatCount->toJson(jsonRoot));
             }
-            obj->set("value",m_value ? m_value->toJson(jsonRoot) : new JsonNull(*jsonRoot));
+            obj->set("value",m_value ? m_value->toJson(jsonRoot) : new JsonNull(jsonRoot));
             return obj;
         }
         DRString toString() {

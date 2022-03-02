@@ -28,18 +28,14 @@ class HttpServer {
         HttpServer() {
             SET_LOGGER(HttpServerLogger);
             m_logger->debug(LM("HttpServer created"));
-            m_wifi = DRWiFi::get();
 
             m_server = new ESP8266WebServer(80);
 
             m_logger->info(LM("Listening to port 80 on IP %s"),WiFi.localIP().toString().c_str());
-            /*
-            if (MDNS.begin("LEDController")) {
-                m_logger->info("MSND responder started");
-            }
-            */
+
            
         }
+
 
         void begin() {
             m_logger->info(LM("HttpServer listening"));
@@ -146,7 +142,6 @@ class HttpServer {
 
     private:
         DECLARE_LOGGER(); 
-        DRWiFi * m_wifi;   
         ESP8266WebServer * m_server;
     };
 }

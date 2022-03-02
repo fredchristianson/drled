@@ -26,6 +26,7 @@ public:
         m_lastError = NULL;
         m_lastErrorTime = 0;
         setModuleName(name);
+        m_level = level;
     }
 
 
@@ -42,7 +43,6 @@ public:
 
 
     void write(int level, const char * message, va_list args ) const override {
-        
         ILogConfig* cfg = ILogConfig::Instance();
         if (cfg == NULL || message == NULL || message[0] == 0) {
             // need LogConfig before doing anything.
@@ -54,7 +54,7 @@ public:
             return;
         }
         ILogFilter* filter = cfg->getFilter();
-        if (filter && !filter->shouldLog(level,m_name,message)) {
+        if (!shouldLog(level,m_name,message) || (filter && !filter->shouldLog(this,level,m_name,message))) {
             return;
         }
         const char* output = message;
@@ -165,8 +165,15 @@ public:
         write(level,"%s: stack=%d,  heap=%d, max block size=%d, fragmentation=%d",label,EspBoard.getFreeContStack(),EspBoard.getFreeHeap(),EspBoard.getMaxFreeBlockSize(),EspBoard.getHeapFragmentation());
     }
 
+    int getLevel() const { return m_level;}
+    void setLevel(int level) { m_level = level;}
 
-private: 
+protected:
+    virtual bool shouldLog(int level,const char*m_name,const char* message)const {
+        return (m_level >= level);
+    }
+ 
+    int m_level;
     char * m_name;
     const char * m_lastError;
     int m_lastErrorTime;
@@ -183,17 +190,22 @@ private:
 class PeriodicLogger : public DRLogger {
     public:
     PeriodicLogger(int maxFrequencyMsecs, const char * name, int level = 100) : DRLogger(name,level) {
+
         m_maxFrequencyMsecs = maxFrequencyMsecs;
         m_lastWriteTime = 0;
     }
 
-    void write(int level, const char * message, va_list args ) const override {
-        if (EspBoard.currentMsecs() > m_lastWriteTime+m_maxFrequencyMsecs){
-            return;
-        }
+
+    protected:
+    bool shouldLog(int level,const char*m_name,const char* message)const {
+        if (EspBoard.currentMsecs() < m_lastWriteTime+m_maxFrequencyMsecs){
+            return false;
+        }        
+        if (m_level < level) { return false;}
         ((PeriodicLogger*)this)->m_lastWriteTime = EspBoard.currentMsecs();
-        DRLogger::write(level,message,args);
+        return true;
     }
+
     private:
         int m_maxFrequencyMsecs;
         int m_lastWriteTime;
