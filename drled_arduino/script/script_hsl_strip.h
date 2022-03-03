@@ -8,6 +8,7 @@ namespace DevRelief{
 
     class ScriptHSLStrip : public IScriptHSLStrip {
         public:
+            static int DEFAULT_PIXELS_PER_METER;
             ScriptHSLStrip() {
                 SET_LOGGER(ScriptHSLStripLogger);
                 m_offset = 0;
@@ -27,6 +28,13 @@ namespace DevRelief{
             }
 
             void destroy() { delete this;}
+
+            int getPixelsPerMeter() override { 
+                if (m_parent) {
+                    return m_parent->getPixelsPerMeter();
+                }
+                return DEFAULT_PIXELS_PER_METER;
+            }
 
             int getOffset() override { return m_offset;}
             int getLength() override { return m_length;}
@@ -79,17 +87,42 @@ namespace DevRelief{
             }
        
             int unitToPixel(const UnitValue& uv) {
-                m_logger->never("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
-                int val = uv.getValue();
+                m_logger->always("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
+                double val = uv.getValue();
                 PositionUnit unit = uv.getUnit();
                 if (unit == POS_INHERIT) {
-                    m_logger->never("\tinherit %d",m_unit);
-                    unit = m_unit;
+                    m_logger->always("\tinherit %d",m_unit);
+                    unit = m_unit == POS_INHERIT ? POS_PERCENT : m_unit;
                 }
-                if (unit != POS_PERCENT) { return val;}
-                double pct = val/100.0*m_parentLength;
-                m_logger->never("\tpct %f",pct);
-                return pct;
+                int pixels = val;
+                double meterMultiplier = 0;
+                switch(unit) {
+                    case POS_PIXEL: 
+                        // no change
+                        break;
+                    case POS_INCH: 
+                        meterMultiplier = 1/39.31;
+                        break;
+                    case POS_CENTIMETER: 
+                        meterMultiplier = 1/100.0;
+                        break;
+                    case POS_METER: 
+                        meterMultiplier = 1;
+                        break;
+                    case POS_INHERIT: 
+                    case POS_PERCENT: 
+                    default: 
+                        val = val/100.0*m_parentLength;
+                        break;
+                }
+                if (meterMultiplier != 0 && m_parent) {
+                    // this may get the wrong value if there are multiple strips with different pixels per meter
+                    double pixelsPerMeter = m_parent->getPixelsPerMeter();
+                    m_logger->always("multiplier %d * %f * %f = %f",val,meterMultiplier,pixelsPerMeter,val * meterMultiplier * pixelsPerMeter);
+                    val = val * meterMultiplier * pixelsPerMeter;
+                }
+                m_logger->always("pixels %d",val);
+                return val;
 
             }
 
@@ -170,6 +203,8 @@ namespace DevRelief{
             DECLARE_LOGGER();
     };
 
+    int ScriptHSLStrip::DEFAULT_PIXELS_PER_METER=30;
+
     class RootHSLStrip : public ScriptHSLStrip {
         public:
             RootHSLStrip( ) : ScriptHSLStrip(){
@@ -181,6 +216,14 @@ namespace DevRelief{
 
             virtual ~RootHSLStrip() {
 
+            }
+
+            int getPixelsPerMeter() override {
+                int ppm = 0;
+                if (m_base) {
+                    ppm = m_base->getPixelsPerMeter();
+                }
+                return ppm > 0 ? ppm : DEFAULT_PIXELS_PER_METER;
             }
 
 

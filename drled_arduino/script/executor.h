@@ -109,13 +109,14 @@ namespace DevRelief {
                 if (m_ledStrip) {
                     delete m_ledStrip;
                 }
-                CompoundLedStrip*  compound = new CompoundLedStrip();
                 const PtrList<LedPin*>& pins = config.getPins();
+                int pixelPerMeter = pins.size()>0 ? pins[0]->pixelsPerMeter : 30;
+                CompoundLedStrip*  compound = new CompoundLedStrip(pixelPerMeter);
                 int ledCount = 0;
                 pins.each([&](LedPin* pin) {
                     m_logger->debug("\tadd pin 0x%04X %d %d %d",pin,pin->number,pin->ledCount,pin->reverse);
                     if (pin->number >= 0) {
-                        DRLedStrip * real = new PhyisicalLedStrip(pin->number,pin->ledCount,pin->pixelType,pin->maxBrightness);
+                        DRLedStrip * real = new PhyisicalLedStrip(pin->number,pin->ledCount,pin->pixelsPerMeter,pin->pixelType,pin->maxBrightness);
                         
                         if (pin->reverse) {
                             auto* reverse = new ReverseStrip(real);

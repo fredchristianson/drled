@@ -63,17 +63,23 @@ class IHSLStrip {
         virtual int getStart()=0;
         virtual void clear()=0;
         virtual void show()=0;
+        virtual int getPixelsPerMeter()=0;
 
 };
 
 class DRLedStrip {
     public:
-        DRLedStrip() {
+        DRLedStrip(int pixelsPerMeter) {
             SET_LOGGER(LEDLogger);
+            m_pixelsPerMeter = pixelsPerMeter;
         }
 
         virtual ~DRLedStrip() {
 
+        }
+
+        virtual int getPixelsPerMeter() {
+            return m_pixelsPerMeter;
         }
 
         virtual void clear() =0;
@@ -91,11 +97,13 @@ class DRLedStrip {
 
     protected:
         DECLARE_LOGGER();
+        int m_pixelsPerMeter;
 };
 
 class AdafruitLedStrip : public DRLedStrip {
     public: 
-        AdafruitLedStrip(int pin, uint16_t ledCount, neoPixelType pixelType=NEO_GRB){
+        AdafruitLedStrip(int pin, uint16_t ledCount, int pixelsPerMeter, neoPixelType pixelType=NEO_GRB) 
+        :DRLedStrip(pixelsPerMeter) {
             SET_LOGGER(AdafruitLogger);
             m_logger->debug("create AdafruitLedStrip %d %d",pin,ledCount);
             
@@ -143,7 +151,8 @@ class AdafruitLedStrip : public DRLedStrip {
 
 class PhyisicalLedStrip : public AdafruitLedStrip {
     public:
-        PhyisicalLedStrip(int pin, uint16_t ledCount, neoPixelType pixelType,uint8_t maxBrightness): AdafruitLedStrip(pin,ledCount,pixelType) {
+        PhyisicalLedStrip(int pin, uint16_t ledCount, int pixelsPerMeter, neoPixelType pixelType,uint8_t maxBrightness)
+        : AdafruitLedStrip(pin,ledCount,pixelsPerMeter,pixelType) {
             m_maxBrightness = maxBrightness;
         }
 
@@ -160,7 +169,7 @@ class PhyisicalLedStrip : public AdafruitLedStrip {
 
 class CompoundLedStrip : public DRLedStrip {
     public:
-        CompoundLedStrip() {
+        CompoundLedStrip(int pixelsPerMeter) : DRLedStrip(pixelsPerMeter) {
             strips[0] = NULL;
             strips[1] = NULL;
             strips[2] = NULL;
@@ -176,6 +185,14 @@ class CompoundLedStrip : public DRLedStrip {
                 delete strips[i];
             }
         }
+
+        /* this always returns the value of the first strip which may result
+         * in incorrect calculations if multiple strips exist with different values */
+        int getPixelsPerMeter() override {
+            if (count == 0) { return 0;}
+            return strips[0]->getPixelsPerMeter();
+        }
+
         void add(DRLedStrip * strip) {
             if (count < 4) {
                 strips[count++] = strip;
@@ -258,7 +275,7 @@ class CompoundLedStrip : public DRLedStrip {
 
 class AlteredStrip : public DRLedStrip {
     public:
-        AlteredStrip(DRLedStrip * base) {
+        AlteredStrip(DRLedStrip * base) : DRLedStrip(base ? base->getPixelsPerMeter() : 0) {
             m_base = base;
         }   
 
@@ -339,7 +356,10 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
         }
 
         virtual int getStart() override { return 0;}
-
+        
+        int getPixelsPerMeter() {
+            return m_base->getPixelsPerMeter();
+        }
         void setRGB(int index, const CRGB& rgb,HSLOperation op) {
             CHSL hsl = RGBToHSL(rgb);
             setHue(index,hsl.hue,op);
@@ -506,7 +526,7 @@ class HSLStrip: public AlteredStrip, public IHSLStrip{
 // to the base strip
 class HSLFilter : public DRLedStrip, IHSLStrip {
     public:
-        HSLFilter(IHSLStrip* base)  {
+        HSLFilter(IHSLStrip* base) : DRLedStrip(base ? base->getPixelsPerMeter() : 30) {
             m_base = NULL;
         }
 

@@ -19,6 +19,7 @@ namespace DevRelief {
             reverse=r;
             pixelType = NEO_GRB;
             maxBrightness=50;
+            pixelsPerMeter = 30;
         }
 
         ~LedPin() {
@@ -33,6 +34,7 @@ namespace DevRelief {
         bool reverse;
         uint16_t pixelType;
         uint8_t maxBrightness;
+        uint16_t pixelsPerMeter;
     };
 
 

@@ -15,6 +15,9 @@ namespace DevRelief {
     //
     // todo: make different versionse of PositionProperties with just the common ones (e.g. offset,length)
     //       and complete properties with rarely used (e.g. stripNumber, reverse)
+
+
+
     class PositionProperties {
         public:
             PositionProperties() {
@@ -72,7 +75,7 @@ namespace DevRelief {
 
                 m_logger->debug("\tunit %x",m_unit);
 
-                json->setString("unit", m_unit == POS_PERCENT? "percent": m_unit == POS_PIXEL? "pixel" : "inherit");
+                json->setString("unit", unitToString(m_unit));
                 m_logger->debug("\twrap %d",m_wrap);
                 json->setBool("wrap", isWrap());
                 m_logger->debug("\tclip %d",m_clip);
@@ -202,13 +205,7 @@ namespace DevRelief {
                 m_logger->never("PositionProperties.setUnit");
                 auto unitVal = json ? json->asValue() : NULL;
                 if (unitVal) {
-                    m_logger->never("\tjson val: %s",unitVal->getString());
-
-                    if (Util::equalAny(unitVal->getString(),"percent","%")) {
-                        unit = POS_PERCENT;
-                    } else if (Util::equalAny(unitVal->getString(),"pixel","px")) {
-                        unit = POS_PIXEL;
-                    }
+                    unit = stringToUnit(unitVal->getString());
                     m_logger->debug("JSON unit %s ==> %d",unitVal->getString(),unit);
                 } 
                 m_logger->debug("\tunit=%d",unit);

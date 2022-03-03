@@ -264,11 +264,9 @@ namespace DevRelief {
 
             m_httpServer->routeBracesGet("/api/{}",[this](Request* req, Response* resp){
                 m_logger->debug("API start");
-                m_logger->showMemory();
 
                 this->apiRequest(req->pathArg(0).c_str(),req,resp);
                 m_logger->debug("API done");
-                m_logger->showMemory();
             });
 
         }
@@ -289,34 +287,22 @@ namespace DevRelief {
 
 
             m_logger->never("get parameters");
-            m_logger->showMemory();
             JsonRoot* paramJson = getParameters(req);
             m_logger->never("got params");
-            m_logger->showMemory();
-
-
-
-            JsonObject *params = paramJson->getTopObject();
-            m_logger->never("\t%x",params);
-            m_logger->showMemory();
             
 
 
-
+            JsonObject *params = paramJson->getTopObject();
+            
             ApiResult result;
             m_logger->never("\tcreated ApiResult");
-            m_logger->showMemory();
-
+            
 
             if (runApi(api,params,result))
             {
-                m_logger->never("\tsave state");
-                m_logger->showMemory();
                 m_appState.setApi(api,params);
                 AppStateDataLoader loader;
                 loader.save(m_appState);
-                m_logger->never("\tsaved");
-                m_logger->showMemory();
             }
 
             result.send(resp);

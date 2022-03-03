@@ -9,6 +9,9 @@ namespace DevRelief{
         POS_PERCENT = 0,
         POS_PIXEL = 1,
         POS_INHERIT = 2,
+        POS_INCH = 3,
+        POS_METER = 4,
+        POS_CENTIMETER = 5,
         POS_UNSET=999
     };
 
@@ -42,11 +45,15 @@ namespace DevRelief{
 
     class UnitValue {
         public:
-            UnitValue(double value=0, PositionUnit unit=POS_UNSET) { m_value = value; m_unit = unit;}
+            UnitValue(double value=0, PositionUnit unit=POS_UNSET) { 
+                DRLogger log("UnitValue",DEBUG_LEVEL);
+                log.debug("UnitValue %f %d",value,(int)unit);
+                m_value = value; m_unit = unit;
+            }
             double getValue() const { return m_value;}
             PositionUnit getUnit() const { return m_unit;}
         private: 
-            int m_value;
+            double m_value;
             PositionUnit m_unit;
     };
 
@@ -175,6 +182,8 @@ namespace DevRelief{
 
             virtual int getFlowIndex() const=0;
             virtual void setFlowIndex(int index)=0;
+
+            virtual int getPixelsPerMeter();
 
     };
 
@@ -354,6 +363,34 @@ namespace DevRelief{
 
 
     };
+
+        const char * unitToString(PositionUnit unit) {
+        switch(unit) {
+            case POS_PERCENT: return "percent";
+            case POS_PIXEL: return "pixel";
+            case POS_INCH: return "inch";
+            case POS_CENTIMETER: return "cm";
+            case POS_METER: return "meter";
+            case POS_INHERIT: 
+            default:
+                return "inherit";
+        }
+    }
+
+    PositionUnit stringToUnit(const char * val, PositionUnit defaultUnit=POS_INHERIT) {
+        // skip a number so it can parse a value with a unit (e.g. "123px"), or just a unit (e.g. "meter")
+        const char * p = val;
+        while(p != NULL && *p!= 0 && (*p == '-' || isdigit(*p) || *p == '.') ) {
+            p++;
+        }
+        if (Util::equalAny(p,"px","pixel")) { return POS_PIXEL;}
+        if (Util::equalAny(p,"%","percent")) { return POS_PERCENT;}
+        if (Util::equalAny(p,"in","inch")) { return POS_INCH;}
+        if (Util::equalAny(p,"m","meter")) { return POS_METER;}
+        if (Util::equalAny(p,"cm","centimeter")) { return POS_CENTIMETER;}
+        if (Util::equalAny(p,"inherit")) { return POS_INHERIT;}
+        return defaultUnit;
+    }
 };
 
 #endif

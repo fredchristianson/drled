@@ -124,6 +124,7 @@ class ConfigDataLoader : public DataLoader {
                             if (configPin) {
                                 configPin->maxBrightness = pin->getInt("maxBrightness",40);
                                 configPin->pixelType = getPixelType(pin->getString("pixelType","NEO_GRP"));
+                                configPin->pixelsPerMeter = pin->getInt("pixelsPerMeter",30);
                             }
                         } else {
                             m_logger->error("pin is not an Object");
@@ -165,6 +166,7 @@ class ConfigDataLoader : public DataLoader {
                 pinElement->setBool("reverse",pin->reverse);
                 pinElement->setInt("maxBrightness",pin->maxBrightness);
                 pinElement->setString("pixelType",getPixelType(pin->pixelType));
+                pinElement->setInt("pixelsPerMeter",pin->pixelsPerMeter);
                 pins->addItem(pinElement);
             });
             m_logger->debug(LM("pins done"));

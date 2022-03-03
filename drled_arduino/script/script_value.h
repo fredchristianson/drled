@@ -121,16 +121,7 @@ namespace DevRelief
 
         protected:
 
-            static PositionUnit getUnit(const char *val, PositionUnit defaultUnit) {
-                const char * p = val;
-                while(p != NULL && *p!= 0 && *p!='p'&& *p!='%' && *p!='i' ) {
-                    p++;
-                }
-                if (Util::equalAny(p,"px","pixel")) { return POS_PIXEL;}
-                if (Util::equalAny(p,"%","percent")) { return POS_PERCENT;}
-                if (Util::equalAny(p,"inherit")) { return POS_INHERIT;}
-                return defaultUnit;
-            }        
+      
             DECLARE_LOGGER();
     };
 
@@ -574,7 +565,7 @@ namespace DevRelief
         }
 
         UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) override{
-            UnitValue uv(getIntValue(ctx,defaultValue),getUnit(m_value.text(),defaultUnit));
+            UnitValue uv(getFloatValue(ctx,defaultValue),stringToUnit(m_value.text(),defaultUnit));
             return uv;
         }
 
@@ -1557,7 +1548,7 @@ namespace DevRelief
         if (json->isObject()) {
             JsonObject* obj = json->asObject();
             if (obj->getPropertyValue("value")){
-                unit = getUnit(obj->getString("unit",NULL),POS_PIXEL);
+                unit = stringToUnit(obj->getString("unit",NULL),POS_PIXEL);
                 count = create(obj->getPropertyValue("count"));
                 val = create(obj->getPropertyValue("value"));
             } else {
