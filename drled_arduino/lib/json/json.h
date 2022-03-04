@@ -329,7 +329,7 @@ class JsonProperty : public JsonElement {
         }
         virtual ~JsonProperty() { 
            if (m_value && m_value->getRoot() == getRoot()){
-             // todo: put back   m_root->freeString(m_name); 
+                m_root->freeString(m_name); 
                 m_value->destroy();
             } 
         }
@@ -418,6 +418,8 @@ class JsonObject : public JsonElement {
                 JsonProperty*next = prop->getNext();
                 if (prop->getRoot() == m_root) {
                     prop->destroy();
+                } else {
+                    m_logger->always("property has different root");
                 }
                 prop = next;
             }

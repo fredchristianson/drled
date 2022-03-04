@@ -73,6 +73,7 @@ namespace DevRelief
 
     void JsonTestSuite::testJsonMemory(TestResult &result)
     {
+        LogIndent li(m_logger,"testJsonMemory");
         JsonRoot root;
         JsonObject* obj = root.getTopObject();
         obj->setString("test","foo");
@@ -82,6 +83,8 @@ namespace DevRelief
 
     void JsonTestSuite::testParseSimple(TestResult &result)
     {
+        LogIndent li(m_logger,"testParseSimple");
+        m_logger->showMemory();
         JsonParser parser;
         m_logger->debug("Parse SIMPLE_SCRIPT");
         m_logger->showMemory();
@@ -89,7 +92,7 @@ namespace DevRelief
         m_logger->debug("\tgot SIMPLE_SCRIPT");
         m_logger->showMemory();
         root->destroy();
-        m_logger->debug("\tdestroyed SIMPLE_SCRIPT");
+        m_logger->debug("\tdestroyed root");
         m_logger->showMemory();
     }
     void JsonTestSuite::testParseArray(TestResult &result)

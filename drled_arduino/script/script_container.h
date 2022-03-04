@@ -387,10 +387,11 @@ namespace DevRelief
                 // todo: make sure there is enough heap left.  keep track of heap needed to create previous contexts
                 m_logger->never("create new context");
                 size_t heap = EspBoard.getFreeHeap();
-                if (m_maxContextSize + 2*1024 > heap) {
+                if (m_maxContextSize + 4*1024 > heap) {
                     // don't create another instance if it could be larger than the free heap space
-                    // keep an extra 2K so other things can happen.
-                    m_logger->error("not enough heap to create a new context %d > %d",m_maxContextSize,heap);
+                    // keep an extra 4K so other things can happen.
+                    // happens too often to log.  need periodic logger
+                    m_logger->never("not enough heap to create a new context %d > %d",m_maxContextSize,heap);
                     return;
                 }
                 MakerContext* mc = new MakerContext(parentContext,&m_initValues);

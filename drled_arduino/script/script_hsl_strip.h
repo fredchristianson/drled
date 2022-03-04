@@ -87,11 +87,9 @@ namespace DevRelief{
             }
        
             int unitToPixel(const UnitValue& uv) {
-                m_logger->always("unitToPixel %f %d   %d",uv.getValue(),uv.getUnit(),m_parentLength);
                 double val = uv.getValue();
                 PositionUnit unit = uv.getUnit();
                 if (unit == POS_INHERIT) {
-                    m_logger->always("\tinherit %d",m_unit);
                     unit = m_unit == POS_INHERIT ? POS_PERCENT : m_unit;
                 }
                 int pixels = val;
@@ -118,10 +116,8 @@ namespace DevRelief{
                 if (meterMultiplier != 0 && m_parent) {
                     // this may get the wrong value if there are multiple strips with different pixels per meter
                     double pixelsPerMeter = m_parent->getPixelsPerMeter();
-                    m_logger->always("multiplier %d * %f * %f = %f",val,meterMultiplier,pixelsPerMeter,val * meterMultiplier * pixelsPerMeter);
                     val = val * meterMultiplier * pixelsPerMeter;
                 }
-                m_logger->always("pixels %d",val);
                 return val;
 
             }

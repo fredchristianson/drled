@@ -46,8 +46,6 @@ namespace DevRelief{
     class UnitValue {
         public:
             UnitValue(double value=0, PositionUnit unit=POS_UNSET) { 
-                DRLogger log("UnitValue",DEBUG_LEVEL);
-                log.debug("UnitValue %f %d",value,(int)unit);
                 m_value = value; m_unit = unit;
             }
             double getValue() const { return m_value;}

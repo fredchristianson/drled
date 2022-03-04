@@ -25,6 +25,8 @@ class DummyStrip : public HSLFilter {
     public:
         DummyStrip(): HSLFilter(NULL) {}
         virtual ~DummyStrip() {}
+
+        int getPixelsPerMeter() override { return 30;}
 };
 
 class ScriptTestSuite : public TestSuite{

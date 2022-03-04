@@ -16,9 +16,9 @@
 #define ADAFRUIT_LED_LOGGER_LEVEL   ERROR_LEVEL
 #define ANIMATION_LOGGER_LEVEL      WARN_LEVEL
 #define API_RESULT_LOGGER_LEVEL     ERROR_LEVEL
-#define APP_LOGGER_LEVEL            DEBUG_LEVEL
-#define APP_STATE_LOGGER_LEVEL      DEBUG_LEVEL
-#define APP_STATE_LOADER_LOGGER_LEVEL      DEBUG_LEVEL
+#define APP_LOGGER_LEVEL            ERROR_LEVEL
+#define APP_STATE_LOGGER_LEVEL      ERROR_LEVEL
+#define APP_STATE_LOADER_LOGGER_LEVEL      ERROR_LEVEL
 #define COLOR_LOGGER_LEVEL          WARN_LEVEL
 #define CONFIG_LOGGER_LEVEL          ERROR_LEVEL
 #define CONFIG_LOADER_LOGGER_LEVEL  ERROR_LEVEL
@@ -47,9 +47,9 @@
 #define STRIP_ELEMENT_LOGGER_LEVEL      INFO_LEVEL
 #define SHARED_PTR_LOGGER_LEVEL         WARN_LEVEL  
 #define TASK_LOGGER_LEVEL               ERROR_LEVEL
-#define TEST_LOGGER_LEVEL               ERROR_LEVEL
+#define TEST_LOGGER_LEVEL               DEBUG_LEVEL
 #define UTIL_LOGGER_LEVEL               ERROR_LEVEL
-#define WIFI_LOGGER_LEVEL               DEBUG_LEVEL
+#define WIFI_LOGGER_LEVEL               ERROR_LEVEL
 
 #if ENV==PROD
     #define ENV_PROD
@@ -61,13 +61,13 @@
 
 
     // RUN_TESTS should be 1 to run tests on start.  otherwise they are not run
-    #define RUN_TESTS 0
+    #define RUN_TESTS 1
     #define RUN_STRING_TESTS 0
-    #define RUN_JSON_TESTS 0
+    #define RUN_JSON_TESTS 1
     #define RUN_ANIMATION_TESTS 0
-    #define SCRIPT_LOADER_TESTS 0
-    #define RUN_API_TESTS 0
-    #define RUN_APP_STATE_TESTS 0
+    #define SCRIPT_LOADER_TESTS 1
+    #define RUN_API_TESTS 1
+    #define RUN_APP_STATE_TESTS 1
     #define RUN_SCRIPT_TESTS 1
 #endif
 

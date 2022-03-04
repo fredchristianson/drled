@@ -148,16 +148,36 @@ class NullLogConfig : public ILogConfig {
  * }
 */
 
+#ifdef LOGGING_ON==1
 class LogIndent {
     public:
         LogIndent() {
             ILogConfig::Instance()->indent();
+            m_logger = NULL;
+            m_name = NULL;
+            m_level = NEVER_LEVEL;
+        }
+        LogIndent(ILogger* logger, const char * blockName, LogLevel level = DEBUG_LEVEL) {
+            logger->write(level,"->%s - start",blockName);
+            ILogConfig::Instance()->indent();
+            m_name = blockName;
+            m_level = level;
+            m_logger = logger;
         }
 
         ~LogIndent() {
             ILogConfig::Instance()->outdent();
+            if (m_logger && m_name) {
+                m_logger->write(m_level,"<-%s - end",m_name);
+            }
         }
+    private: 
+        const char * m_name;
+        ILogger* m_logger;
+        LogLevel m_level;
 };
+#else
+#endif
 
 ILogConfig* ILogConfig::m_instance = NULL;
 
@@ -174,6 +194,8 @@ ILogConfig* ILogConfig::m_instance = NULL;
 
 // if logging is on, the LM() macro leaves the (L)og (M)essage as it is
 #define LM(msg) msg
+
+
 
 #else
 NullLogger nullLogger;
