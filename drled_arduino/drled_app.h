@@ -275,7 +275,8 @@ namespace DevRelief {
 
 
         void apiRequest(const char * api,Request * req,Response * resp) {
-            m_logger->debug("handle API %s",api);
+            LogIndent li(m_logger,LM("handle API"),INFO_LEVEL);
+            m_logger->info(LM("api: %s"),api);
             int code=200;
             if (strcmp(api,"reboot") == 0) {
                 code = 200;

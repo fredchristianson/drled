@@ -376,7 +376,7 @@ namespace DevRelief
 
             void update(IScriptContext* ctx){
                 if (m_durationValue) {
-                    double val = m_durationValue->getFloatValue(ctx,0);
+                    double val = m_durationValue->getMsecValue(ctx,0);
                     m_logger->debug("set duration %f",val);
                     setDuration(val);
                 }                

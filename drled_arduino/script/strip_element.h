@@ -8,6 +8,7 @@
 #include "../lib/json/json.h"
 #include "./script_interface.h"
 #include "./script_element.h"
+#include "./script_container.h"
 #include "../loggers.h"
 
 namespace DevRelief
@@ -39,17 +40,37 @@ namespace DevRelief
 
             }
 
+            void setHue(int16_t hue,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { 
+                    return;
+                }
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                m_parent->setHue(hue,tidx,op);
+                m_parent->setHue(hue,m_parent->getLength()-tidx,top);
+            }
+
+            void setSaturation(int16_t saturation,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}            
+                m_logger->never("ScriptHSLStrip.setSaturation op=%d",translateOp(op)); 
+                m_parent->setSaturation(saturation,translateIndex(index),translateOp(op));
+            }
+
+            void setLightness(int16_t lightness,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                
+                m_parent->setLightness(lightness,translateIndex(index),translateOp(op));
+            }
+
+            void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
+                
+                m_parent->setRGB(rgb,translateIndex(index),translateOp(op));
+            }   
+
+
         protected:
             friend class MirrorElement;
-            bool isPositionValid(int index) override { return true;}
-            int translateIndex(int index) override {
-                int translated = ScriptHSLStrip::translateIndex(index);
-                //int length = m_parent->getLength();
-                int length = getLength();
-                return length - translated-1;
-                m_logger->never("MirrorStrip.setHue index %d --> %d",index, -translated);
-                return -translated;
-            }
+
     };
 
     class CopyStrip : public ScriptHSLStrip {
@@ -119,52 +140,41 @@ namespace DevRelief
     };
 
     
-    class StripElement : public PositionableElement {
+    class StripElement : public ScriptContainer {
         public:
-            StripElement(const char * type) : PositionableElement(type,&m_elementPosition) {
+            StripElement(const char * type, IScriptHSLStrip* strip,ScriptContainer*parent) 
+            : m_context(parent->getContext()), ScriptContainer(type,&m_context,strip, &m_elementPosition) {
 
             }
 
+            void valuesToJson(JsonObject* json) const override {
+                ScriptContainer::valuesToJson(json);
+            }
+
+            void valuesFromJson(JsonObject* json) override {
+                ScriptContainer::valuesFromJson(json);
+
+            }            
+
         protected:
             ScriptElementPosition m_elementPosition;
+            ChildContext m_context;
     };
 
     class MirrorElement : public StripElement {
         public:
-            MirrorElement() : StripElement("mirror"){
+            MirrorElement(ScriptContainer*parent) : StripElement("mirror",&m_mirrorStrip,parent){
 
             }
-
-
-            virtual void draw(IScriptContext*context) override {
-                m_logger->never("MirrorElement.draw");
-                m_logger->showMemory();
-                
-                IScriptHSLStrip* parentStrip = context->getStrip();
-                m_elementPosition.evaluateValues(context);
-                
-                m_mirrorStrip.setParent(parentStrip);
-                m_mirrorStrip.updatePosition(m_position,context);
-                m_multiStrip.clear();
-                m_multiStrip.setParent(parentStrip);
-                m_multiStrip.updatePosition(m_position,context);
-                m_multiStrip.add(&m_mirrorStrip);
-                m_multiStrip.add(parentStrip);
-                context->setStrip(&m_multiStrip);
-
-                m_logger->never("\tdone MirrorElement.draw()");
-                m_logger->showMemory();
-
-            }
-
 
             void valuesToJson(JsonObject* json) const override {
-
+                StripElement::valuesToJson(json);
             }
 
             void valuesFromJson(JsonObject* json) override {
+                StripElement::valuesFromJson(json);
 
-            }            
+            }                    
         private:
             MirrorStrip  m_mirrorStrip;
             MultiStrip m_multiStrip;
@@ -172,7 +182,7 @@ namespace DevRelief
 
     class CopyElement : public StripElement {
         public:
-            CopyElement() : StripElement("Copy"){
+            CopyElement(ScriptContainer*parent) : StripElement("Copy",&m_multiStrip,parent){
                 m_countValue = NULL;
                 m_count = 0;
                 m_logger->never("create CopyElement");
@@ -220,12 +230,14 @@ namespace DevRelief
 
 
             void valuesToJson(JsonObject* json) const override {
+                StripElement::valuesToJson(json);
                 if (m_countValue) {
                     json->set("count",m_countValue->toJson(json->getRoot()));
                 }
             }
 
             void valuesFromJson(JsonObject* json) override {
+                StripElement::valuesFromJson(json);
                 m_countValue = ScriptValue::create(json->getPropertyValue("count"));
 
             }            

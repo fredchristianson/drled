@@ -14,7 +14,7 @@ namespace DevRelief {
         YELLOW= 60,
         GREEN= 90,
         CYAN= 180,
-        BLUE= 240,
+        BLUE= 200,
         MAGENTA= 285,
         PURPLE= 315
     };

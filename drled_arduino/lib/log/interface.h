@@ -170,6 +170,7 @@ class LogIndent {
             if (m_logger && m_name) {
                 m_logger->write(m_level,"<-%s - end",m_name);
             }
+            ILogConfig::Instance()->outdent();
         }
     private: 
         const char * m_name;
@@ -177,6 +178,18 @@ class LogIndent {
         LogLevel m_level;
 };
 #else
+class LogIndent {
+    public:
+        LogIndent() {
+            
+        }
+        LogIndent(ILogger* logger, const char * blockName, LogLevel level = DEBUG_LEVEL) {
+            
+        }
+
+        ~LogIndent() {
+            
+        }
 #endif
 
 ILogConfig* ILogConfig::m_instance = NULL;

@@ -7,7 +7,6 @@
 #include "../lib/json/json.h"
 #include "./script_interface.h"
 #include "./script_element.h"
-#include "./strip_element.h"
 #include "./script_context.h"
 #include "../loggers.h"
 
@@ -446,62 +445,5 @@ namespace DevRelief
 
 
 
-    ScriptElementCreator::ScriptElementCreator(IScriptContainer* container) {
-        m_container = container;
-        SET_LOGGER(ScriptElementLogger);
-    }
-
-    IScriptElement* ScriptElementCreator::elementFromJson(IJsonElement* json,ScriptContainer* container){
-        m_logger->debug("parse Json type=%d",json->getType());
-        JsonObject* obj = json ? json->asObject() : NULL;
-        if (obj == NULL){
-            m_logger->error("invalid IJsonElement to create script element");
-            return NULL;
-        }
-
-        const char * type = obj->getString("type",NULL);
-        if (type == NULL) {
-            type = guessType(obj);
-        }
-        IScriptElement* element = NULL;
-        if (type == NULL) {
-            m_logger->error("json is missing a type");
-            return NULL;
-        } else if (Util::equal(type,S_VALUES)) {
-            element = new ValuesElement();
-        } else if (Util::equalAny(type,S_HSL)) {
-            element = new HSLElement();
-        } else if (Util::equalAny(type,S_RHSL)) {
-            element = new RainbowHSLElement();
-        } else if (Util::equalAny(type,S_RGB)) {
-            element = new RGBElement();
-        } else if (Util::equalAny(type,S_SEGMENT)) {
-            element = new ScriptSegmentContainer(container);
-        }  else if (Util::equalAny(type,S_MAKER)) {
-            element = new MakerContainer(container);
-        } else if (Util::equalAny(type,S_MIRROR)) {
-            element = new MirrorElement();
-        } else if (Util::equalAny(type,S_COPY)) {
-            element = new CopyElement();
-        }
-        if (element) {
-            element->fromJson(obj);
-            m_logger->debug("created element type %s %x",element->getType(),element);
-        }
-        return element;
-    }
-
-    const char * ScriptElementCreator::guessType(JsonObject* json){
-        if (json->getPropertyValue("hue")||json->getPropertyValue("lightness")||json->getPropertyValue("saturation")){
-            return S_RHSL;
-        } else if (json->getPropertyValue("red")||json->getPropertyValue("blue")||json->getPropertyValue("green")){
-            return S_RGB;
-        } else if (json->getPropertyValue("elements")){
-            return S_SEGMENT;
-        } else {
-            return S_VALUES;
-        }
-        return NULL;
-    }
 }
 #endif

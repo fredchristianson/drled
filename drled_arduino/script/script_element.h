@@ -60,7 +60,7 @@ namespace DevRelief {
             bool isPositionable() const override { return false; }
             IElementPosition* getPosition() const override { return NULL;}
 
-            void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext) {
+            virtual void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext) {
                 IElementPosition* pos = getPosition();
                 if (pos) {
                     pos->setParent(parentPosition);
@@ -315,7 +315,6 @@ namespace DevRelief {
             }
             void valuesFromJson(JsonObject* json) override {
                 ScriptLEDElement::valuesFromJson(json);
-                m_logger->debug("valuesFromJson");
                 setHue(getJsonValue(json,"hue"));
                 setLightness(getJsonValue(json,"lightness"));
                 setSaturation(getJsonValue(json,"saturation"));
@@ -334,6 +333,14 @@ namespace DevRelief {
             virtual ~RainbowHSLElement() {
 
             }
+
+            void valuesFromJson(JsonObject* json) override {
+                HSLElement::valuesFromJson(json);
+                // if rhue is set, use it.  otherwise hue is set by HSLElement::valuesFromJson ("hue")
+                if (json->getPropertyValue("rhue")) {
+                    setHue(getJsonValue(json,"rhue"));    
+                } 
+            }  
 
         protected:
             virtual int adjustHue(int hue) { 
