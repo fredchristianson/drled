@@ -96,18 +96,20 @@ void LinkedList<T>::removeMatch(auto&& lambda)  {
   ListNode<T>* prev = NULL;
   while(node != NULL) {
       if (lambda(node->data)) {
-          if (prev != NULL) {
-              prev->next = node->next;
-              deleteNode(node);
-              node = prev->next;
-          } else {
-              m_root = node->next;
-              deleteNode(node);
-              node = m_root;
-          }
-          m_size -= 1;
+        if (prev != NULL) {
+            prev->next = node->next;
+            deleteNode(node);
+            node = prev->next;
+        } else {
+            m_root = node->next;
+            deleteNode(node);
+            node = m_root;
+        }
+        m_size -= 1;
       } else {
-          node = node->next;
+        prev = node;
+
+        node = node->next;
       }
 
   }  

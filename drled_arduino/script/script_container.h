@@ -64,6 +64,10 @@ namespace DevRelief
             m_logger->debug("draw children %x %s context %x strip: %x",this,getType(),m_context, m_context->getStrip());
             IElementPosition*pos = getPosition();
             
+            IScriptContext* context = getContext();
+            m_children.removeMatch([&](IScriptElement*child) {
+                return child->updateStatus(context) == SCRIPT_COMPLETE;
+            });
             m_children.each([&](IScriptElement* child) {
                 child->updatePosition(pos,getContext());
             });
@@ -81,7 +85,6 @@ namespace DevRelief
             LogIndent indent;
             context->setCurrentElement(child);
             m_logger->never("drawChild  %s",child->getType());
-            ((ScriptElement*)child)->logPosition();
             /* use the passed context, not this element's context */
             child->draw(context);
             
@@ -167,7 +170,6 @@ namespace DevRelief
                 m_rootPosition.evaluateValues(&m_rootContext);
                 m_rootStrip.updatePosition(&m_rootPosition,&m_rootContext);
                 m_rootContext.beginStep();
-                logPosition();
                 drawChildren();
                 m_rootContext.endStep();
             }

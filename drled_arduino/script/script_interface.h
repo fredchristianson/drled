@@ -26,7 +26,8 @@ namespace DevRelief{
         SCRIPT_RUNNING,
         SCRIPT_COMPLETE,
         SCRIPT_ERROR,
-        SCRIPT_PAUSED
+        SCRIPT_PAUSED,
+        SCRIPT_HIDDEN
     };
 
     typedef enum RunState {
@@ -281,7 +282,7 @@ namespace DevRelief{
             virtual bool isPositionable()const=0;
             virtual IElementPosition* getPosition() const =0;
             virtual void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext)=0;
-            
+            virtual ScriptStatus updateStatus(IScriptContext* context)=0;
     };
 
     class IScriptContainer {

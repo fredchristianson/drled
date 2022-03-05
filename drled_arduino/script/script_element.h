@@ -18,26 +18,19 @@ namespace DevRelief {
                 m_type = type;
                 m_container = NULL;
                 m_logger->debug("Create ScriptElement type=%s",m_type);
+                m_runMsecs = 0; // msecs before deleting this element.  0 means forever
+                m_startMsecs = millis(); // time this element started
             }
 
             virtual ~ScriptElement(){
 
             }
 
-            void logPosition() {
-                LogIndent li(m_logger,"Element Position",ALWAYS_LEVEL);
-                m_logger->never("%x   type: %s", this,getType());
-                auto pos = getPosition();
-                if (pos) {
-                    m_logger->never("%x %x unit %d",pos,pos->getParent(),pos->getUnit());
-                } else {
-                    m_logger->never("not positionable");
-                }
-            }
-
+            
             void toJson(JsonObject* json) const override {
                 m_logger->debug("ScriptElement.toJson %s",getType());
                 json->setString("type",m_type);
+                json->setInt("run-duration",m_runMsecs);
                 valuesToJson(json);
                 m_logger->debug("\tdone %s",getType());
             }
@@ -45,6 +38,7 @@ namespace DevRelief {
             void fromJson(JsonObject* json) override {
                 m_logger->debug("ScriptElement fromJson %s",json==NULL?"<no json>":json->toString().text());
                 m_logger->debug("\tvalues");
+                m_runMsecs = json->getInt("run-duration",0);
                 valuesFromJson(json);
                 m_logger->debug("\tdone");
             }
@@ -81,6 +75,14 @@ namespace DevRelief {
                     m_logger->never("no position");
                 }
             }
+
+            ScriptStatus updateStatus(IScriptContext* context) override {
+                if (m_runMsecs > 0 && m_runMsecs < (millis()-m_startMsecs)) {
+                    m_logger->always("ScriptElement complete");
+                    return SCRIPT_COMPLETE;
+                }
+                return SCRIPT_RUNNING;
+            }
         protected:
             virtual void valuesToJson(JsonObject* json) const{
                 m_logger->never("ScriptElement type %s does not implement valuesToJson",getType());
@@ -110,6 +112,8 @@ namespace DevRelief {
                 if (val) { val->destroy();}
             }
 
+            int m_runMsecs;
+            int m_startMsecs;
             const char * m_type;
             IScriptElement* m_container;
             DECLARE_LOGGER();
@@ -243,7 +247,6 @@ namespace DevRelief {
 
 
             void valuesToJson(JsonObject* json) const override {
-
             }
 
             void valuesFromJson(JsonObject* json) override {
