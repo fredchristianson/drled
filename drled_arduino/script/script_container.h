@@ -42,13 +42,8 @@ namespace DevRelief
 
         void draw(IScriptContext* parentContext) override {
             m_logger->debug("draw %x %s  parent: %x",this,getType(),parentContext);
-            m_logger->debug("\tstrip %x,  parent-strip %x",m_strip,parentContext->getStrip());
-            // use the container's strip at the start of draw().
-            // children may replace (add to) the strip but only for this drawing
-            m_logger->debug("setStrip %x",m_strip);
             m_context->setStrip(m_strip);
             
-            m_logger->never("getPosition");
             // update position based on current parentContext values
             IElementPosition*pos = getPosition();
             m_context->setPosition(pos);
@@ -58,7 +53,10 @@ namespace DevRelief
             m_logger->debug("parent %x len=%d",parentStrip,parentStrip->getLength());
             m_strip->setParent(parentContext->getStrip());
             m_strip->updatePosition(pos,m_context);
-            drawChildren();
+            if (beforeDrawChildren()) {
+                drawChildren();
+                afterDrawChildren();
+            }
         }
 
         void drawChildren() override {
@@ -115,6 +113,12 @@ namespace DevRelief
         }
 
     protected:
+        // derived classes can do extra setup before children are drawn.
+        // return false if children should not be drawn this step
+        virtual bool beforeDrawChildren() { return true;}
+        
+        // derived classes can do extra cleanup after children are drawn.
+        virtual void afterDrawChildren() { }
         
         void elementsFromJson(JsonArray* array) override {
             m_logger->debug("Parse elements array");

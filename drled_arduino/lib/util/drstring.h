@@ -154,11 +154,11 @@ class DRString : public Printable {
         const char * operator+=(const DRString& other) {return append(other.text());}
 
         const char * operator=(const char * other){
-            if (other != NULL && other[0] != 0 && m_data.get()->data() == other) { 
-                return other;
-            }
-            m_data.get()->setLength(0);
-            return append(other);
+            // there are problems if the current value overlaps with the other value;
+            // make a copy of other and use the copy as this value
+            DRString copy(other);
+            m_data = copy.m_data;
+            return text();
         }
 
         void clear() {

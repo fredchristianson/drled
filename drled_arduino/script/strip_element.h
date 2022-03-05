@@ -33,11 +33,22 @@ namespace DevRelief
     class MirrorStrip : public ScriptHSLStrip {
         public:
             MirrorStrip() : ScriptHSLStrip() {
-
+                m_lastLed = 0;
             }
 
             virtual ~MirrorStrip() {
 
+            }
+
+            void updatePosition() { 
+                int len = m_parentLength;
+                if (m_position->hasLength()){
+                    len = unitToPixel(m_position->getLength());
+                    m_logger->never("defined len %d",len);
+                }
+                m_lastLed = len-1;
+                m_length = len/2;
+                m_logger->never("mirror len %d",m_length);
             }
 
             void setHue(int16_t hue,int index, HSLOperation op) override {
@@ -47,54 +58,112 @@ namespace DevRelief
                 int tidx = translateIndex(index);
                 HSLOperation top = translateOp(op);
                 m_parent->setHue(hue,tidx,op);
-                m_parent->setHue(hue,m_parent->getLength()-tidx,top);
+                m_parent->setHue(hue,m_lastLed-tidx,top);
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}            
                 m_logger->never("ScriptHSLStrip.setSaturation op=%d",translateOp(op)); 
-                m_parent->setSaturation(saturation,translateIndex(index),translateOp(op));
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                m_parent->setSaturation(saturation,tidx,op);
+                m_parent->setSaturation(saturation,m_lastLed-tidx,top);
             }
 
             void setLightness(int16_t lightness,int index, HSLOperation op) override {
                 if (!isPositionValid(index)) { return;}             
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                m_parent->setLightness(lightness,tidx,op);
+                m_parent->setLightness(lightness,m_lastLed-tidx,top);
                 
-                m_parent->setLightness(lightness,translateIndex(index),translateOp(op));
             }
 
             void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                m_parent->setRGB(rgb,tidx,op);
+                m_parent->setRGB(rgb,m_lastLed-tidx,top);
                 
-                m_parent->setRGB(rgb,translateIndex(index),translateOp(op));
             }   
 
 
         protected:
             friend class MirrorElement;
+            int m_lastLed;
 
     };
 
     class CopyStrip : public ScriptHSLStrip {
         public:
             CopyStrip() : ScriptHSLStrip() {
-                m_offset = 0;
+                m_count = 0;
+                m_repeatOffset = 0;
             }
 
             virtual ~CopyStrip() {
 
             }
 
-            void setCopyOffset(int offset) { m_offset = offset;}
+            void setCount(int count) { 
+                m_count = count;
+                if (m_count == 0) {
+                    m_length = 0;
+                    m_repeatOffset = 0;
+                } else {
+                    m_length = m_parentLength/m_count;
+                    m_repeatOffset = m_count==0 ? 0  : m_length;
+                    m_overflow = OVERFLOW_ALLOW;
+                    m_logger->never("copy: %d %d %d %d",m_count,m_length,m_parentLength,m_repeatOffset);
+                }
+            }
+
+
+            void setHue(int16_t hue,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { 
+                    return;
+                }
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<m_count;i++) {
+                    m_parent->setHue(hue,tidx+i*m_repeatOffset,top);
+                }
+            }
+
+            void setSaturation(int16_t saturation,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}            
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<m_count;i++) {
+                    m_parent->setSaturation(saturation,tidx+i*m_repeatOffset,top);
+                }
+            }
+
+            void setLightness(int16_t lightness,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}             
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<m_count;i++) {
+                    m_parent->setLightness(lightness,tidx+i*m_repeatOffset,top);
+                }
+            }
+
+            void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
+                if (!isPositionValid(index)) { return;}            
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<m_count;i++) {
+                    m_parent->setRGB(rgb,tidx+i*m_repeatOffset,top);
+                }                
+            }              
 
         protected:
             friend class CopyElement;
-            bool isPositionValid(int index) override { return true;}
-            int translateIndex(int index) override {
-                int translated = ScriptHSLStrip::translateIndex(index);
-                m_logger->never("copy %d -> %d + %d",index,translated,m_offset);
-                return translated + m_offset;
-            }
-        
-            int m_offset;
+
+            int m_count;
+            int m_repeatOffset;
+
     };
 
     class MultiStrip : public ScriptHSLStrip {
@@ -161,6 +230,9 @@ namespace DevRelief
             ChildContext m_context;
     };
 
+    /* every LED operation is drawn "normal" and mirrored around the center of the parent strip.
+     * the length of the strip is 1/2 the parent length so %-based values only cover the original, not mirrored leds
+     */
     class MirrorElement : public StripElement {
         public:
             MirrorElement(ScriptContainer*parent) : StripElement("mirror",&m_mirrorStrip,parent){
@@ -174,60 +246,39 @@ namespace DevRelief
             void valuesFromJson(JsonObject* json) override {
                 StripElement::valuesFromJson(json);
 
-            }                    
+            }    
+
+            virtual bool beforeDrawChildren() { 
+                m_mirrorStrip.updatePosition();
+                return true;
+            }                
         private:
             MirrorStrip  m_mirrorStrip;
-            MultiStrip m_multiStrip;
     };
 
+    /* the parent strip is divided into "m_count" sections that are copies the original.
+        the length of this strip is (1/m_count X parent_length) calculated at the start of each step.  
+        so percent-based values work on one section.
+     */
     class CopyElement : public StripElement {
         public:
-            CopyElement(ScriptContainer*parent) : StripElement("Copy",&m_multiStrip,parent){
+            CopyElement(ScriptContainer*parent) : StripElement("Copy",&m_copyStrip,parent){
                 m_countValue = NULL;
-                m_count = 0;
+                m_count = 1;
                 m_logger->never("create CopyElement");
             }
 
             virtual ~CopyElement() { 
                 if (m_countValue) { m_countValue->destroy();}
-                m_multiStrip.destroyAndClear();
             }
 
-            virtual void draw(IScriptContext*context) override {
-                m_count = m_countValue ? m_countValue->getIntValue(context,2) : 2;
-                m_logger->never("CopyElement.draw");
-                
-                IScriptHSLStrip* parentStrip = context->getStrip();
-
-                m_elementPosition.evaluateValues(context);
-                
-                if (m_count != m_multiStrip.getSize()-1) {
-                    m_multiStrip.destroyAndClear();
+            virtual bool beforeDrawChildren() { 
+                if (m_countValue) {
+                    m_count = m_countValue->getIntValue(getContext(),1);
                 }
-                int copyOffset = parentStrip->getLength()/m_count;
-                m_logger->never("create %d copies offset %d",m_count,copyOffset);
-                if (m_count <2) { return;}
-                int nextOffset = 0;
-                for(int i=0;i<m_count;i++) {
-                    CopyStrip* strip = (CopyStrip*)m_multiStrip.getStrip(i);
-                    if (strip == NULL) {
-                        strip = new CopyStrip();
-                        m_multiStrip.add(strip);
-                    }
-                    strip->setParent(parentStrip);
-                    strip->updatePosition(m_position,context);
-                    strip->setCopyOffset(nextOffset);
-                    strip->setParent(parentStrip);
-                    nextOffset += copyOffset;
-                }
-                m_multiStrip.setParent(parentStrip);
-                m_multiStrip.updatePosition(m_position,context);
-                context->setStrip(&m_multiStrip);
-                m_logger->never("\tdone copyElement.draw()");
-                m_logger->showMemory();
-
+                m_copyStrip.setCount(m_count);
+                return true;
             }
-
 
             void valuesToJson(JsonObject* json) const override {
                 StripElement::valuesToJson(json);
@@ -242,7 +293,7 @@ namespace DevRelief
 
             }            
         private:
-            MultiStrip m_multiStrip;
+            CopyStrip m_copyStrip;
             int m_count;
             IScriptValue* m_countValue;
     };
