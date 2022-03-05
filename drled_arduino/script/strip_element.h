@@ -168,48 +168,74 @@ namespace DevRelief
 
     };
 
-    class MultiStrip : public ScriptHSLStrip {
+      class RepeatStrip : public ScriptHSLStrip {
         public:
-            MultiStrip() : ScriptHSLStrip() {
+            RepeatStrip() : ScriptHSLStrip() {
+                m_repeatLength = 0;
+                m_repeatCount = 0;
+            }
+
+            virtual ~RepeatStrip() {
 
             }
 
-            virtual ~MultiStrip() {
-
+            void setRepeatLength(int length) { 
+                m_repeatLength = length;
+                if (m_parentLength >0) {
+                    m_repeatCount = m_parentLength/m_repeatLength;
+                }
             }
 
-            void clear() { m_strips.clear();}
-            void destroyAndClear() {
-                m_strips.each([](IScriptHSLStrip* strip) { strip->destroy();});
-                 m_strips.clear();
-            }
 
-            void add(IScriptHSLStrip*strip) { m_strips.add(strip);}
-            int getSize() const { return m_strips.size();}
-            IScriptHSLStrip* getStrip(int index) { return m_strips.get(index);}
             void setHue(int16_t hue,int index, HSLOperation op) override {
-                m_logger->never("MultStrip.setHue %d %d",index,op);
-                m_strips.each([&](IScriptHSLStrip*strip) { strip->setHue(hue,index,op);});
+                if (!isPositionValid(index)) { 
+                    return;
+                }
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<=m_repeatCount;i++) {
+                    if (tidx+i*m_repeatLength >= m_length) break;
+                    m_parent->setHue(hue,tidx+i*m_repeatLength,top);
+                }
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
-                m_strips.each([&](IScriptHSLStrip*strip) { strip->setSaturation(saturation,index,op);});
+                if (!isPositionValid(index)) { return;}            
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<=m_repeatCount;i++) {
+                    if (tidx+i*m_repeatLength >= m_length) break;
+                    m_parent->setSaturation(saturation,tidx+i*m_repeatLength,top);
+                }
             }
 
             void setLightness(int16_t lightness,int index, HSLOperation op) override {
-                m_strips.each([&](IScriptHSLStrip*strip) { strip->setLightness(lightness,index,op);});
+                if (!isPositionValid(index)) { return;}             
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<=m_repeatCount;i++) {
+                    if (tidx+i*m_repeatLength >= m_length) break;
+                    m_parent->setLightness(lightness,tidx+i*m_repeatLength,top);
+                }
             }
 
             void setRGB(const CRGB& rgb,int index, HSLOperation op) override {
-                m_strips.each([&](IScriptHSLStrip*strip) { strip->setRGB(rgb,index,op);});
-            }  
+                if (!isPositionValid(index)) { return;}            
+                int tidx = translateIndex(index);
+                HSLOperation top = translateOp(op);
+                for(int i=0;i<=m_repeatCount;i++) {
+                    if (tidx+i*m_repeatLength >= m_length) break;
+                    m_parent->setRGB(rgb,tidx+i*m_repeatLength,top);
+                }                
+            }              
 
         protected:
-            friend class MirrorElement;
             friend class CopyElement;
-           LinkedList<IScriptHSLStrip*> m_strips;
-    };
 
+            int m_repeatCount;
+            int m_repeatLength;
+
+    };
     
     class StripElement : public ScriptContainer {
         public:
@@ -298,6 +324,40 @@ namespace DevRelief
             CopyStrip m_copyStrip;
             int m_count;
             IScriptValue* m_countValue;
+    };
+
+    /* this is like a position-repeating pattern, except elements (including containers) are
+     * repeated to fill the parent.  
+     * repeated containers need to specify a length.  
+     * only children with "flow"==true are counted
+     * todo: is it worth calculating the container length based on it's children.  
+     *          or use the length calculated in the previous draw which may change from time-based ranges.
+     */
+    class RepeatElement : public StripElement {
+        public:
+            RepeatElement(ScriptContainer*parent) : StripElement("Repeat",&m_repeatStrip,parent){
+                m_logger->never("create RepeatElement");
+            }
+
+            virtual ~RepeatElement() { 
+            }
+
+            virtual bool beforeDrawChildren() { 
+                int childrenLength = 0;
+                m_children.each([&](IScriptElement* child) {
+                    IElementPosition* cpos = child->getPosition();
+                    if (cpos->hasLength() && cpos->isFlow()) {
+                        UnitValue uv = cpos->getLength();
+                        int len = m_repeatStrip.unitToPixel(uv);
+                        childrenLength+=len;
+                    }
+                });
+                m_repeatStrip.setRepeatLength(childrenLength);
+                return true;
+            }
+           
+        private:
+            RepeatStrip m_repeatStrip;
     };
 
 }

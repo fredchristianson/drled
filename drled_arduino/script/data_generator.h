@@ -90,6 +90,8 @@ namespace DevRelief {
             element = new MirrorElement(container);
         } else if (Util::equalAny(type,S_COPY)) {
             element = new CopyElement(container);
+        } else if (Util::equalAny(type,S_REPEAT)) {
+            element = new RepeatElement(container);
         }
         if (element) {
             element->fromJson(obj);

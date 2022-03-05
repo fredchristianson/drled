@@ -26,12 +26,12 @@ namespace DevRelief {
 
             void logPosition() {
                 LogIndent li(m_logger,"Element Position",ALWAYS_LEVEL);
-                m_logger->always("%x   type: %s", this,getType());
+                m_logger->never("%x   type: %s", this,getType());
                 auto pos = getPosition();
                 if (pos) {
-                    m_logger->always("%x %x unit %d",pos,pos->getParent(),pos->getUnit());
+                    m_logger->never("%x %x unit %d",pos,pos->getParent(),pos->getUnit());
                 } else {
-                    m_logger->always("not positionable");
+                    m_logger->never("not positionable");
                 }
             }
 
@@ -74,11 +74,11 @@ namespace DevRelief {
             virtual void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext) {
                 IElementPosition* pos = getPosition();
                 if (pos) {
-                    m_logger->always("updatePosition %x->%x, parent %x",this,pos,parentPosition);
+                    m_logger->never("updatePosition %x->%x, parent %x",this,pos,parentPosition);
                     pos->setParent(parentPosition);
                     pos->evaluateValues(parentContext);
                 } else {
-                    m_logger->always("no position");
+                    m_logger->never("no position");
                 }
             }
         protected:
