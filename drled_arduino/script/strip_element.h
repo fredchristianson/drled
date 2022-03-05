@@ -43,12 +43,14 @@ namespace DevRelief
             void updatePosition() { 
                 int len = m_parentLength;
                 if (m_position->hasLength()){
-                    len = unitToPixel(m_position->getLength());
-                    m_logger->never("defined len %d",len);
+                    UnitValue uv = m_position->getLength();
+                    LogIndent li(m_logger,"MirrorStrip.updatePosition",NEVER_LEVEL);
+                    len = unitToPixel(uv);
+                    m_logger->never("defined len %d  %d %3.3f",len,(int)uv.getUnit(),uv.getValue());
                 }
                 m_lastLed = len-1;
                 m_length = len/2;
-                m_logger->never("mirror len %d",m_length);
+                m_logger->never("mirror last=%d len=%d",m_lastLed,m_length);
             }
 
             void setHue(int16_t hue,int index, HSLOperation op) override {

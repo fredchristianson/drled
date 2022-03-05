@@ -16,7 +16,7 @@ namespace DevRelief{
                 m_overflow = OVERFLOW_CLIP;
                 m_parent = NULL;
                 m_parentLength = 0;
-                m_unit = POS_PERCENT;
+                m_unit = POS_INHERIT;
                 m_flowIndex = 0;
                 m_position = NULL;
                 m_reverse = false;
@@ -89,8 +89,13 @@ namespace DevRelief{
             int unitToPixel(const UnitValue& uv) {
                 double val = uv.getValue();
                 PositionUnit unit = uv.getUnit();
+                m_logger->never("unitToPixel %d %d    %f",unit,m_unit,val);
                 if (unit == POS_INHERIT) {
-                    unit = m_unit == POS_INHERIT ? POS_PERCENT : m_unit;
+                    if (m_unit == POS_INHERIT) {
+                        unit = m_position->getUnit();
+                    } else {
+                        unit = m_unit;
+                    }
                 }
                 int pixels = val;
                 double meterMultiplier = 0;
@@ -118,6 +123,7 @@ namespace DevRelief{
                     double pixelsPerMeter = m_parent->getPixelsPerMeter();
                     val = val * meterMultiplier * pixelsPerMeter;
                 }
+                m_logger->never("\tpixels=%f",val);
                 return val;
 
             }
@@ -128,7 +134,10 @@ namespace DevRelief{
                 
                 m_position = pos;
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
+                LogIndent li(m_logger,"HSLStrip.updatePosition",NEVER_LEVEL);
+                m_logger->never("m_unit before update %d",m_unit);
                 m_unit = pos->getUnit();
+                m_logger->never("after update unit=%d",m_unit);
                 if (pos->isPositionAbsolute()) {
                     m_parent = context->getRootStrip();
                 }
@@ -228,9 +237,11 @@ namespace DevRelief{
                 m_flowIndex = 0; // update() called start start of draw().  begin re-flowing children at 0
                 m_parentLength = m_base->getCount();
 
-                m_logger->never("RootHSLStrip.update %x %x op=%d %x",pos,context,pos->getHSLOperation(),m_position);
-                m_logger->debug("\tplen %d",m_parentLength);
+                LogIndent id(m_logger,"RootHSLStrip.update ",NEVER_LEVEL);
+                m_logger->never("\tplen %d",m_parentLength);
+                m_logger->never("\tunit %d %d",m_unit, pos->getUnit());
                 m_unit = pos->getUnit();
+                m_logger->never("\tupdated unit %d %d",m_unit, pos->getUnit());
                 if (pos->hasLength()) {
                     m_length = unitToPixel(pos->getLength());
                 } else {

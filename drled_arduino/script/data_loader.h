@@ -78,9 +78,7 @@ namespace DevRelief {
                 ScriptRootContainer * container = script->getRootContainer();
                 container->fromJson(scriptJson);
                 m_logger->debug("parse elements in container %x",container);
-                //container->elementsFromJson(elements);
                 m_logger->debug("parse done");
-                //parseElements(elements,container);
 
 #ifdef OFF
                 m_logger->debug("script toJson");

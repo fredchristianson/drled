@@ -24,6 +24,17 @@ namespace DevRelief {
 
             }
 
+            void logPosition() {
+                LogIndent li(m_logger,"Element Position",ALWAYS_LEVEL);
+                m_logger->always("%x   type: %s", this,getType());
+                auto pos = getPosition();
+                if (pos) {
+                    m_logger->always("%x %x unit %d",pos,pos->getParent(),pos->getUnit());
+                } else {
+                    m_logger->always("not positionable");
+                }
+            }
+
             void toJson(JsonObject* json) const override {
                 m_logger->debug("ScriptElement.toJson %s",getType());
                 json->setString("type",m_type);
@@ -63,8 +74,11 @@ namespace DevRelief {
             virtual void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext) {
                 IElementPosition* pos = getPosition();
                 if (pos) {
+                    m_logger->always("updatePosition %x->%x, parent %x",this,pos,parentPosition);
                     pos->setParent(parentPosition);
                     pos->evaluateValues(parentContext);
+                } else {
+                    m_logger->always("no position");
                 }
             }
         protected:
@@ -120,9 +134,9 @@ namespace DevRelief {
 
             void fromJson(JsonObject* json) override {
                 ScriptElement::fromJson(json);
-                m_logger->debug("PositionableElement.fromJson");
+                m_logger->never("PositionableElement.fromJson %s",getType());
                 positionFromJson(json);
-                m_logger->debug("\tPositionableElement.fromJson done");
+                m_logger->never("\tPositionableElement.fromJson done");
             }            
 
             bool isPositionable() const override { return true; }
@@ -142,7 +156,7 @@ namespace DevRelief {
                 }
             }
             virtual void positionFromJson(JsonObject* json){
-                m_logger->debug("positionFromJson %s",getType());
+                m_logger->never("positionFromJson %s",getType());
                 if (isPositionable()) {
                     IElementPosition*pos = getPosition();
                     if (pos == NULL) {
@@ -151,9 +165,10 @@ namespace DevRelief {
                         pos->fromJson(json);
                     }
                 } else {
-                    m_logger->debug("\tnot positionable");
+                    m_logger->never("\tnot positionable");
                 }
-                m_logger->debug("\treverse %d",m_position->isReverse());
+                m_logger->never("\treverse %d",m_position->isReverse());
+                m_logger->never("\tunit %d",m_position->getUnit());
             }
             IElementPosition* m_position;
     };

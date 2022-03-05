@@ -170,7 +170,10 @@ namespace DevRelief {
             void setClip(bool clip) { m_clip = clip;}
             void setReverse(bool reverse) { m_reverse = reverse;}
             void setCover(bool cover) { m_cover = cover;}
-            void setUnit(PositionUnit unit) { m_unit = unit;}
+            void setUnit(PositionUnit unit) { 
+                m_logger->never("set unit %d",unit);
+                m_unit = unit;
+            }
             void setOffset(int val) { m_offset = val;}
             void setLength(int val) { m_length = val;}
             void setGap(int val) { m_gap = val;}
@@ -206,9 +209,9 @@ namespace DevRelief {
                 auto unitVal = json ? json->asValue() : NULL;
                 if (unitVal) {
                     unit = stringToUnit(unitVal->getString());
-                    m_logger->debug("JSON unit %s ==> %d",unitVal->getString(),unit);
+                    m_logger->never("JSON unit %s ==> %d",unitVal->getString(),unit);
                 } 
-                m_logger->debug("\tunit=%d",unit);
+                m_logger->never("\tunit=%d",unit);
                 return unit;
             }
 
@@ -375,10 +378,10 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const override {
-                m_logger->never("RootElementPosition.getUnit() %x",m_properties );
+                m_logger->never("RootElementPosition.getUnit()" );
                 PositionUnit unit = m_properties->getUnit();
                 m_logger->never("\tunit=%d",unit);
-                if (unit == POS_INHERIT) { return POS_PERCENT;}
+                m_logger->never("\treturn unit=%d",unit);
                 return unit;
             }
 
@@ -405,11 +408,12 @@ namespace DevRelief {
             }
 
             PositionUnit getUnit() const override {
-                m_logger->never("ScriptElementPosition.getUnit() %x",m_properties);
+                m_logger->never("ScriptElementPosition.getUnit()");
                 PositionUnit unit = m_properties ? m_properties->getUnit() : POS_INHERIT;
                 if (unit == POS_INHERIT) { 
-                    m_logger->never("\tget parent unit %x",m_parent);
-                    return m_parent ? m_parent->getUnit() : POS_PERCENT;
+                    m_logger->never("\tget parent unit %s", (m_parent ? "" : "no parent"));
+                    unit = m_parent ? m_parent->getUnit() : POS_INHERIT;
+                    m_logger->never("\tgot parent unit %d",unit);
                 }
                 return unit;
             }

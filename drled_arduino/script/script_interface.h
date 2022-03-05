@@ -6,9 +6,9 @@
 namespace DevRelief{
     typedef enum PositionUnit
     {
-        POS_PERCENT = 0,
+        POS_INHERIT = 0,
         POS_PIXEL = 1,
-        POS_INHERIT = 2,
+        POS_PERCENT = 2,
         POS_INCH = 3,
         POS_METER = 4,
         POS_CENTIMETER = 5,

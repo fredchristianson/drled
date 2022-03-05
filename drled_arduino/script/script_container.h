@@ -47,24 +47,33 @@ namespace DevRelief
             // update position based on current parentContext values
             IElementPosition*pos = getPosition();
             m_context->setPosition(pos);
-            updatePosition(parentContext->getPosition(),parentContext);
 
             auto parentStrip = parentContext->getStrip();
             m_logger->debug("parent %x len=%d",parentStrip,parentStrip->getLength());
             m_strip->setParent(parentContext->getStrip());
             m_strip->updatePosition(pos,m_context);
-            if (beforeDrawChildren()) {
-                drawChildren();
-                afterDrawChildren();
-            }
+
+            m_children.each([&](IScriptElement* child) {
+                child->updatePosition(pos,getContext());
+            });
+
+            drawChildren();
         }
 
         void drawChildren() override {
             m_logger->debug("draw children %x %s context %x strip: %x",this,getType(),m_context, m_context->getStrip());
+            IElementPosition*pos = getPosition();
+            
             m_children.each([&](IScriptElement* child) {
-                m_logger->debug("\tchild %s",child->getType());
-                drawChild(m_context,child);
+                child->updatePosition(pos,getContext());
             });
+            if (beforeDrawChildren()) {
+                m_children.each([&](IScriptElement* child) {
+                    m_logger->debug("\tchild %s",child->getType());
+                    drawChild(m_context,child);
+                });
+                afterDrawChildren();
+            }
         }
 
         void drawChild(IScriptContext* context, IScriptElement * child) {
@@ -72,12 +81,7 @@ namespace DevRelief
             LogIndent indent;
             context->setCurrentElement(child);
             m_logger->never("drawChild  %s",child->getType());
-            auto pos = child->getPosition();
-            if (pos) {
-                m_logger->never("update position");
-                pos->setParent(getPosition());
-                pos->evaluateValues(context);
-            }
+            ((ScriptElement*)child)->logPosition();
             /* use the passed context, not this element's context */
             child->draw(context);
             
@@ -163,6 +167,7 @@ namespace DevRelief
                 m_rootPosition.evaluateValues(&m_rootContext);
                 m_rootStrip.updatePosition(&m_rootPosition,&m_rootContext);
                 m_rootContext.beginStep();
+                logPosition();
                 drawChildren();
                 m_rootContext.endStep();
             }
