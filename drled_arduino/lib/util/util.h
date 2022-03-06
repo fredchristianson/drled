@@ -46,10 +46,14 @@ class Util {
             if (s == NULL || !isdigit(*s)){
                 return val;
             }
-            if (Util::endsWith(s,"ms")){
+            if (Util::endsWith(s,"ms") || Util::endsWith(s,"msec")){
                 val = atoi(s);
-            } else if (Util::endsWith(s,"s")){
+            } else if (Util::endsWith(s,"s") || Util::endsWith(s,"sec")){
                 val = atoi(s)*1000;
+            }  else if (Util::endsWith(s,"m") || Util::endsWith(s,"min")){
+                val = atoi(s)*1000*60;
+            }   else if (Util::endsWith(s,"h") || Util::endsWith(s,"hr") || Util::endsWith(s,"hour")){
+                val = atoi(s)*1000*60*60;
             } else {
                 val = atoi(s);
             }
