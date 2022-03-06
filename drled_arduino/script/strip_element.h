@@ -48,7 +48,7 @@ namespace DevRelief
                     len = unitToPixel(uv);
                     m_logger->never("defined len %d  %d %3.3f",len,(int)uv.getUnit(),uv.getValue());
                 }
-                m_lastLed = len-1;
+                m_lastLed = m_offset+len-1;
                 m_length = len/2;
                 m_logger->never("mirror last=%d len=%d",m_lastLed,m_length);
             }
@@ -60,7 +60,7 @@ namespace DevRelief
                 int tidx = translateIndex(index);
                 HSLOperation top = translateOp(op);
                 m_parent->setHue(hue,tidx,op);
-                m_parent->setHue(hue,m_lastLed-tidx,top);
+                m_parent->setHue(hue,mirrorIndex(tidx),top);
             }
 
             void setSaturation(int16_t saturation,int index, HSLOperation op) override {
@@ -69,7 +69,7 @@ namespace DevRelief
                 int tidx = translateIndex(index);
                 HSLOperation top = translateOp(op);
                 m_parent->setSaturation(saturation,tidx,op);
-                m_parent->setSaturation(saturation,m_lastLed-tidx,top);
+                m_parent->setSaturation(saturation,mirrorIndex(tidx),top);
             }
 
             void setLightness(int16_t lightness,int index, HSLOperation op) override {
@@ -77,7 +77,7 @@ namespace DevRelief
                 int tidx = translateIndex(index);
                 HSLOperation top = translateOp(op);
                 m_parent->setLightness(lightness,tidx,op);
-                m_parent->setLightness(lightness,m_lastLed-tidx,top);
+                m_parent->setLightness(lightness,mirrorIndex(tidx),top);
                 
             }
 
@@ -86,12 +86,15 @@ namespace DevRelief
                 int tidx = translateIndex(index);
                 HSLOperation top = translateOp(op);
                 m_parent->setRGB(rgb,tidx,op);
-                m_parent->setRGB(rgb,m_lastLed-tidx,top);
+                m_parent->setRGB(rgb,mirrorIndex(tidx),top);
                 
             }   
 
 
         protected:
+            int mirrorIndex(int idx) {
+                return m_lastLed - (idx-m_offset);
+            }
             friend class MirrorElement;
             int m_lastLed;
 
