@@ -9,6 +9,7 @@
 #include "../lib/led/led_strip.h"
 #include "../lib/led/color.h"
 #include "./script_interface.h"
+#include "./script_value.h"
 #include "./animation.h"
 
 
@@ -36,14 +37,17 @@ namespace DevRelief
             double getFloatValue(IScriptContext* ctx,  double defaultValue)  { return m_reference->getFloatValue(ctx,defaultValue);} 
             bool getBoolValue(IScriptContext* ctx,  bool defaultValue)  { return m_reference->getBoolValue(ctx,defaultValue); }
             int getMsecValue(IScriptContext* ctx,  int defaultValue)  { return m_reference->getMsecValue(ctx,defaultValue);}
+            ScriptStatus getStatus(IScriptContext* ctx,ScriptStatus defaultValue)const { return m_reference->getStatus(ctx,defaultValue);};
             UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) { return m_reference->getUnitValue(ctx,defaultValue,defaultUnit);}
-            bool isString(IScriptContext* ctx) { return m_reference->isString(ctx);}
-            bool isNumber(IScriptContext* ctx) { return m_reference->isNumber(ctx);}
-            bool isBool(IScriptContext* ctx) { return m_reference->isBool(ctx);}
-            bool isNull(IScriptContext* ctx) { return m_reference->isNull(ctx);}
-            bool isUnitValue(IScriptContext* ctx) { return m_reference->isUnitValue(ctx);}
 
-            bool equals(IScriptContext*ctx, const char * match) { return m_reference->equals(ctx,match);}
+            bool isString(IScriptContext* ctx) const { return m_reference->isString(ctx);}
+            bool isNumber(IScriptContext* ctx) const { return m_reference->isNumber(ctx);}
+            bool isBool(IScriptContext* ctx) const { return m_reference->isBool(ctx);}
+            bool isNull(IScriptContext* ctx) const { return m_reference->isNull(ctx);}
+            bool isUnitValue(IScriptContext* ctx) const { return m_reference->isUnitValue(ctx);}
+            bool isTimer(IScriptContext* ctx) const { return m_reference->isTimer(ctx);}
+
+            bool equals(IScriptContext*ctx, const char * match) const override { return m_reference->equals(ctx,match);}
 
 
             // evaluate this IScriptValue with the given command and return a new
@@ -51,13 +55,15 @@ namespace DevRelief
             IScriptValue* eval(IScriptContext*ctx, double defaultValue) { m_reference->eval(ctx,defaultValue); }
 
 
-            bool isRecursing() { return m_reference->isRecursing();} 
+            bool isRecursing() const { return m_reference->isRecursing();} 
 
             IJsonElement* toJson(JsonRoot* jsonRoot) { m_reference-> toJson(jsonRoot);}
             // for debugging
             DRString toString() { return m_reference->toString();}           
 
             DRString stringify() { return m_reference->stringify();}
+
+            IScriptValue* clone()const override { return m_reference->clone();}
         private:
             IScriptValue* m_reference;
     };
@@ -72,7 +78,7 @@ namespace DevRelief
             static IAnimationEase* createEase(JsonObject* json);
             static IAnimationDomain* createDomain(JsonObject* json, IAnimationRange* range);
             static IScriptValue* createPattern(JsonArray* pattern, bool smooth, bool repeat, bool unfold, JsonObject* json=NULL);
-
+            static IScriptTimer* createTimer(IJsonElement*json);
             ScriptValue() {
                 SET_LOGGER(ScriptValueLogger);
             }
@@ -82,29 +88,33 @@ namespace DevRelief
 
             void destroy() override { delete this;}
 
-            bool isRecursing() override { return false;}
+            bool isRecursing() const override { return false;}
 
-            bool isString(IScriptContext* ctx)  override{
+            bool isString(IScriptContext* ctx)  const override{
               return false;  
             } 
-            bool isNumber(IScriptContext* ctx)  override{
+            bool isNumber(IScriptContext* ctx)  const override{
               return false;  
             } 
-            bool isBool(IScriptContext* ctx)  override{
-              return false;  
-            } 
-
-            bool isNull(IScriptContext* ctx)  override{
+            bool isBool(IScriptContext* ctx)  const override{
               return false;  
             } 
 
-            bool isUnitValue(IScriptContext* ctx) override { return false;}
+            bool isNull(IScriptContext* ctx)  const override{
+              return false;  
+            } 
+
+            bool isTimer(IScriptContext* ctx)  const override{
+              return false;  
+            } 
+
+            bool isUnitValue(IScriptContext* ctx) const override { return false;}
             UnitValue getUnitValue(IScriptContext* ctx,  double defaultValue, PositionUnit defaultUnit) override{
                 UnitValue uv(getFloatValue(ctx,defaultValue),defaultUnit);
                 return uv;
             }
 
-            bool equals(IScriptContext*ctx,const char * match) override { return false;}
+            bool equals(IScriptContext*ctx,const char * match) const override { return false;}
 
             //IScriptValue* eval(IScriptContext * ctx, double defaultValue=0) override;
             
@@ -117,8 +127,15 @@ namespace DevRelief
 
             IScriptValue* eval(IScriptContext * ctx, double defaultValue) override;
 
+            int getIntValue(IScriptContext* ctx,int defaultValue)  {
+                return getFloatValue(ctx,defaultValue);
+            }
+
+            bool getBoolValue(IScriptContext* ctx, bool defaultValue) override { return defaultValue;}
+            int getMsecValue(IScriptContext* ctx,  int defaultValue) override { return defaultValue;}
             DRString stringify() override { return "";}
 
+            ScriptStatus getStatus(IScriptContext* context, ScriptStatus defaultValue=SCRIPT_RUNNING) const override { return defaultValue;}
         protected:
 
       
@@ -148,6 +165,9 @@ namespace DevRelief
         IScriptValue *getValue() { return m_value; }
 
         void replaceValue(IScriptValue* newValue) {
+            if (m_value == newValue) {
+                return;
+            }
             if (m_value) { m_value->destroy();}
             m_value = newValue;
         }
@@ -160,6 +180,13 @@ namespace DevRelief
         public:
             FunctionArgs() {}
             virtual ~FunctionArgs() {}
+
+            FunctionArgs* clone()  {
+                FunctionArgs* other = new FunctionArgs();
+                args.each([&](IScriptValue* val) {
+                    add(val->clone());
+                });
+            }
 
             void add(IScriptValue* val) { args.add(val);}
             IScriptValue* get(int index) { return args.get(index);}
@@ -198,6 +225,9 @@ namespace DevRelief
             delete m_args;
         }
 
+        IScriptValue* clone()const override {
+            return new ScriptFunction(m_name,m_args?m_args->clone() : NULL);
+        }
         void addArg(IScriptValue*val) {
             m_args->add(val);
         }
@@ -226,7 +256,7 @@ namespace DevRelief
             }
             return defaultValue;
         }
-        bool isNumber(IScriptContext* ctx) override { return true;}
+        bool isNumber(IScriptContext* ctx) const override { return true;}
         
         IJsonElement* toJson(JsonRoot* root) override {
             JsonArray* json = root->createArray();
@@ -236,6 +266,8 @@ namespace DevRelief
             });
             return json;
         }
+
+        
     protected:
         double invoke(IScriptContext * ctx,double defaultValue) {
             double result = 0;
@@ -371,7 +403,7 @@ namespace DevRelief
     class ScriptNumberValue : public ScriptValue
     {
     public:
-        ScriptNumberValue(double value) : m_value(value)
+        ScriptNumberValue(double value=0) : m_value(value)
         {
 
         }
@@ -407,11 +439,14 @@ namespace DevRelief
         int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
             return m_value;
         }
-        bool isNumber(IScriptContext* ctx) override { return true;}
+        bool isNumber(IScriptContext* ctx) const override { return true;}
 
         virtual DRString toString() { return DRString::fromFloat(m_value); }
         IJsonElement* toJson(JsonRoot*root) override { return new JsonFloat(root,m_value);}
         DRString stringify() override { return DRString::fromFloat(m_value);}
+        IScriptValue* clone() const override{ return new ScriptNumberValue(m_value);}
+
+        void setNumberValue(double val) { m_value = val;}
     protected:
         double m_value;
     };
@@ -446,7 +481,7 @@ namespace DevRelief
         int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
             return defaultValue;
         }
-        bool isBool(IScriptContext* ctx) override { return true;}
+        bool isBool(IScriptContext* ctx) const override { return true;}
         IJsonElement* toJson(JsonRoot*root) override { return new JsonBool(root,m_value);}
 
         DRString toString() override { 
@@ -456,6 +491,8 @@ namespace DevRelief
         }
 
         DRString stringify() override { return m_value ? "true":"false";}
+        IScriptValue* clone() const override{ return new ScriptBoolValue(m_value);}
+
     protected:
         bool m_value;
     };
@@ -492,8 +529,8 @@ namespace DevRelief
             return defaultValue;
         }
 
-        bool isBool(IScriptContext* ctx) override { return false;}
-        bool isNull(IScriptContext* ctx)  override{
+        bool isBool(IScriptContext* ctx) const override { return false;}
+        bool isNull(IScriptContext* ctx) const  override{
             return true;  
         } 
 
@@ -507,7 +544,7 @@ namespace DevRelief
         }
 
         DRString stringify() override { return "null";}
-
+        IScriptValue* clone() const override { return new ScriptNullValue();}
     protected:
 
     };
@@ -555,7 +592,7 @@ namespace DevRelief
             return defaultValue;
         }
 
-        bool equals(IScriptContext*ctx, const char * match) override { 
+        bool equals(IScriptContext*ctx, const char * match) const override { 
             m_logger->never("ScriptStringValue.equals %s==%s",m_value.get(),match);
             return Util::equal(m_value.text(),match);
         }
@@ -569,7 +606,7 @@ namespace DevRelief
             return uv;
         }
 
-        bool isString(IScriptContext* ctx) override { return true;}
+        bool isString(IScriptContext* ctx) const override { return true;}
         IJsonElement* toJson(JsonRoot*root) override { return new JsonString(root,m_value);}
 
         const char * getValue() { return m_value.text();}
@@ -577,7 +614,9 @@ namespace DevRelief
 
         DRString toString() override { return m_value; }
         DRString stringify() override { return m_value;}
-
+        IScriptValue* clone()const override {
+            return new ScriptStringValue(m_value);
+        }
     protected:
         DRString m_value;
     };
@@ -601,7 +640,7 @@ namespace DevRelief
             int getMsecValue(IScriptContext* ctx,  int defaultValue) override { 
                 return getIntValue(ctx,defaultValue);
             }
-            bool isNumber(IScriptContext* ctx) override { return false;}
+            bool isNumber(IScriptContext* ctx) const override { return false;}
 
             virtual int getIntValue(IScriptContext* ctx,  int defaultValue)
             {
@@ -618,6 +657,11 @@ namespace DevRelief
             virtual bool getBoolValue(IScriptContext* ctx,  bool defaultValue)
             {
                 return getFloatValue(ctx,defaultValue?1:0) != 0;
+            }
+
+            IScriptValue* clone()const override {
+                m_logger->error(LM("AnimatedValue.clone() not implemented"));
+                return NULL;
             }
         protected:
             IValueAnimator* m_animator;
@@ -659,7 +703,10 @@ namespace DevRelief
            if (m_interpolation) { m_interpolation->destroy();}
         }
 
-
+        IScriptValue* clone()const override {
+            m_logger->error(LM("PatternValue.clone() not implemented"));
+            return NULL;
+        }
 
         void addElement(ScriptPatternElement* element) {
             if (element == NULL) {
@@ -1105,6 +1152,13 @@ namespace DevRelief
             m_recurse = false;
         }
 
+        ScriptVariableValue(const ScriptVariableValue* other){
+            m_name = Util::allocText(other->m_name);
+            m_defaultValue = other->m_defaultValue ? other->m_defaultValue->clone() : NULL;
+            m_isSysValue = other->m_isSysValue;
+            m_recurse = false;
+        }
+
         virtual ~ScriptVariableValue()
         {
             Util::freeText(m_name);
@@ -1114,12 +1168,12 @@ namespace DevRelief
 
         void destroy() override { delete this;}
 
-        virtual int getIntValue(IScriptContext*ctx,  int defaultValue) override
+        virtual int getIntValue(IScriptContext*ctx,  int defaultValue)  override
         {
             return getFloatValue(ctx,defaultValue);
         }
 
-        virtual double getFloatValue(IScriptContext*ctx,  double defaultValue) override
+        virtual double getFloatValue(IScriptContext*ctx,  double defaultValue)  override
         {
             if (m_recurse) {
                 m_logger->never("variable getFloatValue() recurse");
@@ -1171,7 +1225,12 @@ namespace DevRelief
             return result;
         }
 
-        bool equals(IScriptContext*ctx, const char * match) override {
+
+        ScriptStatus getStatus(IScriptContext*ctx,  ScriptStatus defaultValue) const override {
+            return defaultValue;
+        }
+
+        bool equals(IScriptContext*ctx, const char * match) const override {
             IScriptValue * val = getScriptValue(ctx);
             return val ? val->equals(ctx,match) : false;
         }
@@ -1188,29 +1247,36 @@ namespace DevRelief
             return val ? val->getUnitValue(ctx,defaultValue,defaultUnit) : UnitValue(defaultValue,defaultUnit);
         }
 
-        bool isNumber(IScriptContext* ctx) { 
+        bool isNumber(IScriptContext* ctx) const { 
             IScriptValue * val = getScriptValue(ctx);
             return val ? val->isNumber(ctx) : false;
 
          }
-        bool isString(IScriptContext* ctx) { 
+        bool isString(IScriptContext* ctx) const { 
             IScriptValue * val = getScriptValue(ctx);
             return val->isString(ctx);
 
          }
-        bool isBool(IScriptContext* ctx) { 
+        bool isBool(IScriptContext* ctx) const { 
             IScriptValue * val = getScriptValue(ctx);
             return val->isBool(ctx);
          }
-         bool isNull(IScriptContext* ctx) { 
+         bool isNull(IScriptContext* ctx) const { 
             IScriptValue * val = getScriptValue(ctx);
             return val->isNull(ctx);
          }
 
-        bool isUnitValue(IScriptContext* ctx) override { 
+        bool isUnitValue(IScriptContext* ctx) const override { 
             IScriptValue * val = getScriptValue(ctx);
             return val->isUnitValue(ctx);
          }
+
+         bool isTimer(IScriptContext* ctx) const override { 
+            IScriptValue * val = getScriptValue(ctx);
+            return val->isTimer(ctx);
+         }
+
+         
 
         IScriptValue* eval(IScriptContext * ctx, double defaultValue) override{
             return new ScriptNumberValue(getFloatValue(ctx,defaultValue));
@@ -1232,11 +1298,15 @@ namespace DevRelief
         
         virtual DRString toString() { return DRString("Variable: ").append(m_name); }
 
-        bool isRecursing() { return m_recurse;}
+        bool isRecursing() const { return m_recurse;}
 
         DRString stringify() { return "";} // cannot stringify vars
+        IScriptValue* clone()const override {
+            m_logger->error(LM("AnimatedValue.clone() not implemented"));
+            return new ScriptVariableValue(this);
+        }
     protected:
-        IScriptValue* getScriptValue(IScriptContext*context) {
+        IScriptValue* getScriptValue(IScriptContext*context) const {
             IScriptValue* val = m_isSysValue ? context->getSysValue(m_name) : context->getValue(m_name);
             if (val == NULL)  {
                 val = m_defaultValue;
@@ -1576,6 +1646,8 @@ namespace DevRelief
         element = new ScriptPatternElement(count,unit, val);
         return element;
    }
+
+
 
 }
 #endif

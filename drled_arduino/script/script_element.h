@@ -3,7 +3,6 @@
 
 #include "../lib/util/util.h"
 #include "./script_interface.h"
-#include "./script_value.h"
 #include "./json_names.h"
 #include "./element_position.h"
 #include "./script_hsl_strip.h"
@@ -18,19 +17,18 @@ namespace DevRelief {
                 m_type = type;
                 m_container = NULL;
                 m_logger->debug("Create ScriptElement type=%s",m_type);
-                m_runMsecs = 0; // msecs before deleting this element.  0 means forever
-                m_startMsecs = millis(); // time this element started
+                m_timer = NULL;
+                m_status = SCRIPT_RUNNING;
             }
 
             virtual ~ScriptElement(){
-
+                delete m_timer;
             }
 
             
             void toJson(JsonObject* json) const override {
                 m_logger->debug("ScriptElement.toJson %s",getType());
                 json->setString("type",m_type);
-                json->setInt("run-duration",m_runMsecs);
                 valuesToJson(json);
                 m_logger->debug("\tdone %s",getType());
             }
@@ -38,8 +36,11 @@ namespace DevRelief {
             void fromJson(JsonObject* json) override {
                 m_logger->debug("ScriptElement fromJson %s",json==NULL?"<no json>":json->toString().text());
                 m_logger->debug("\tvalues");
-                m_runMsecs = json->getInt("run-duration",0);
                 valuesFromJson(json);
+                if (json->getPropertyValue("timer")){
+                    IJsonElement* timerJson = json->getPropertyValue("timer"); 
+                    m_timer = ScriptValue::createTimer(timerJson);
+                }
                 m_logger->debug("\tdone");
             }
 
@@ -77,12 +78,14 @@ namespace DevRelief {
             }
 
             ScriptStatus updateStatus(IScriptContext* context) override {
-                if (m_runMsecs > 0 && m_runMsecs < (millis()-m_startMsecs)) {
-                    m_logger->always("ScriptElement complete");
-                    return SCRIPT_COMPLETE;
+                if (m_timer) {
+                    m_status = m_timer->updateStatus(context);
                 }
-                return SCRIPT_RUNNING;
+                
+                return m_status;
             }
+
+            ScriptStatus getStatus() const override { return m_status;}
         protected:
             virtual void valuesToJson(JsonObject* json) const{
                 m_logger->never("ScriptElement type %s does not implement valuesToJson",getType());
@@ -112,10 +115,11 @@ namespace DevRelief {
                 if (val) { val->destroy();}
             }
 
-            int m_runMsecs;
-            int m_startMsecs;
+
             const char * m_type;
             IScriptElement* m_container;
+            IScriptTimer* m_timer;
+            ScriptStatus m_status;
             DECLARE_LOGGER();
     };
 

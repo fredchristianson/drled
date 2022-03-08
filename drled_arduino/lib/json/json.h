@@ -546,6 +546,7 @@ class JsonObject : public JsonElement {
         }
         JsonProperty* getFirstProperty() { return m_firstProperty;}
 
+        bool hasProperty(const char * name) { return getProperty(name);}
         IJsonElement * getPropertyValue(const char * name) {
             JsonProperty*e = m_firstProperty;
             while(e != NULL && strcmp(e->getName(),name) != 0) {

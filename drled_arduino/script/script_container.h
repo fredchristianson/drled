@@ -6,6 +6,7 @@
 #include "../lib/util/list.h"
 #include "../lib/json/json.h"
 #include "./script_interface.h"
+#include "./script_timer.h"
 #include "./script_element.h"
 #include "./script_context.h"
 #include "../loggers.h"
@@ -69,12 +70,16 @@ namespace DevRelief
                 return child->updateStatus(context) == SCRIPT_COMPLETE;
             });
             m_children.each([&](IScriptElement* child) {
-                child->updatePosition(pos,getContext());
+                if (child->getStatus() == SCRIPT_RUNNING){
+                    child->updatePosition(pos,getContext());
+                }
             });
             if (beforeDrawChildren()) {
                 m_children.each([&](IScriptElement* child) {
                     m_logger->debug("\tchild %s",child->getType());
-                    drawChild(m_context,child);
+                    if (child->getStatus() == SCRIPT_RUNNING){
+                        drawChild(m_context,child);
+                    }
                 });
                 afterDrawChildren();
             }

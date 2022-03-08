@@ -26,8 +26,7 @@ namespace DevRelief{
         SCRIPT_RUNNING,
         SCRIPT_COMPLETE,
         SCRIPT_ERROR,
-        SCRIPT_PAUSED,
-        SCRIPT_HIDDEN
+        SCRIPT_PAUSED
     };
 
     typedef enum RunState {
@@ -43,6 +42,7 @@ namespace DevRelief{
     class PositionDomain;
     class ScriptValueList;
     class ScriptContainer;
+    class ScriptTimerValue;
 
     class UnitValue {
         public:
@@ -196,6 +196,7 @@ namespace DevRelief{
             virtual PositionDomain* getAnimationPositionDomain()=0;
 
             virtual void setValue(const char* name, IScriptValue* value)=0;
+            virtual void setSysValue(const char * name, IScriptValue* value)=0;
             virtual IScriptValue* getValue(const char * name)=0;
             virtual IScriptValue* getSysValue(const char * name)=0;
 
@@ -224,16 +225,17 @@ namespace DevRelief{
         virtual bool getBoolValue(IScriptContext* cmd,  bool defaultValue) = 0; 
         virtual int getMsecValue(IScriptContext* cmd,  int defaultValue) = 0; 
         virtual UnitValue getUnitValue(IScriptContext* cmd,  double defaultValue, PositionUnit defaultUnit)=0;
-
+        virtual ScriptStatus getStatus(IScriptContext* ctx,ScriptStatus defaultValue)const=0;
         // is...() methods return true if they are able to return that type of value
-        virtual bool isString(IScriptContext* cmd)=0;
-        virtual bool isNumber(IScriptContext* cmd)=0;
-        virtual bool isBool(IScriptContext* cmd)=0;
-        virtual bool isNull(IScriptContext* cmd)=0;
-        virtual bool isUnitValue(IScriptContext* cmd)=0;
+        virtual bool isString(IScriptContext* cmd)const =0;
+        virtual bool isNumber(IScriptContext* cmd)const =0;
+        virtual bool isBool(IScriptContext* cmd)const =0;
+        virtual bool isNull(IScriptContext* cmd)const =0;
+        virtual bool isUnitValue(IScriptContext* cmd)const =0;
+        virtual bool isTimer(IScriptContext* cmd)const =0;
 
         // allow testing for value matches without evaluating nested string values
-        virtual bool equals(IScriptContext*cmd, const char * match)=0;
+        virtual bool equals(IScriptContext*cmd, const char * match)const=0;
 
 
         // evaluate this IScriptValue with the given command and return a new
@@ -243,7 +245,7 @@ namespace DevRelief{
         virtual IScriptValue* eval(IScriptContext*cmd, double defaultValue=0)=0; 
 
 
-        virtual bool isRecursing() = 0; // mainly for evaluating variable values
+        virtual bool isRecursing()const = 0; // mainly for evaluating variable values
 
         // used to generate JSON text to save or return to value
         virtual IJsonElement* toJson(JsonRoot* jsonRoot)=0;
@@ -254,6 +256,12 @@ namespace DevRelief{
         // for debugging
         virtual DRString toString() = 0;
 
+        virtual IScriptValue* clone() const = 0;
+    };
+
+    class IScriptTimer : public IScriptValue {
+        public:
+            virtual ScriptStatus updateStatus(IScriptContext* context)=0;
     };
 
     class IScriptValueProvider
@@ -283,6 +291,7 @@ namespace DevRelief{
             virtual IElementPosition* getPosition() const =0;
             virtual void updatePosition(IElementPosition* parentPosition, IScriptContext* parentContext)=0;
             virtual ScriptStatus updateStatus(IScriptContext* context)=0;
+            virtual ScriptStatus getStatus() const =0;
     };
 
     class IScriptContainer {
