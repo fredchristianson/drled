@@ -22,7 +22,7 @@ namespace DevRelief {
         public:
             PositionProperties() {
                 SET_LOGGER(ScriptPositionLogger);
-
+                m_logger->debug("PositionProperties %x",this);
                 m_offsetValue = NULL;
                 m_lengthValue = NULL;
                 m_stripNumberValue = NULL;
@@ -56,7 +56,7 @@ namespace DevRelief {
             }
 
             bool toJson(JsonObject* json) {
-                m_logger->debug("PositionProperties.toJson %x %x",this,m_lengthValue);
+                m_logger->debug("PositionProperties.toJson %x %x",this);
                 if (m_lengthValue) { 
                     m_logger->debug("\tlength");
                     json->set("length",m_lengthValue->toJson(json->getRoot()));
@@ -78,7 +78,7 @@ namespace DevRelief {
                 json->setString("unit", unitToString(m_unit));
                 m_logger->debug("\twrap %d",m_wrap);
                 json->setBool("wrap", isWrap());
-                m_logger->debug("\tclip %d",m_clip);
+                m_logger->debug("ElementPostion.toJson clip %x %d",this,m_clip);
                 json->setBool("clip", isClip());
                 m_logger->debug("\tcenter %d",m_center);
                 json->setBool("center", isCenter());
@@ -89,7 +89,7 @@ namespace DevRelief {
                 json->setBool("absoute", m_absolute);
                 json->setBool("reverse", m_reverse);
                 
-                m_logger->debug("\ttoJson done");
+                m_logger->debug("toJson done: %s",json->toString().text());
                 return true;                
             }
 
@@ -138,7 +138,13 @@ namespace DevRelief {
             bool hasStrip()const  { return m_stripNumberValue != NULL;}
             int getStrip()const { return m_stripNumber;}
 
-            void setClip(IJsonElement* json)  { if (json) {m_clip = getBool(json,false);}}
+            void setClip(IJsonElement* json)  { 
+                if (json) {
+                    m_logger->debug("setClip %x %s",this, JsonElement::toJsonString(json).text());
+                    m_clip = getBool(json,false);
+                    m_logger->debug("\tjson %d",m_clip);
+                }
+            }
             void setWrap(IJsonElement* json)  { if (json) { m_wrap = getBool(json,false);}}
             void setCenter(IJsonElement* json)  { if (json) { m_center = getBool(json,false);}}
             void setCover(IJsonElement* json)  { if (json) { m_cover = getBool(json,false);}}
@@ -167,7 +173,10 @@ namespace DevRelief {
             }
             void setHSLOperation(HSLOperation op) { m_hslOperation = op;}
             void setWrap(bool wrap) { m_wrap = wrap;}
-            void setClip(bool clip) { m_clip = clip;}
+            void setClip(bool clip) { 
+                m_logger->debug("setClip(bool) %x %d",this,clip);
+                m_clip = clip;
+            }
             void setReverse(bool reverse) { m_reverse = reverse;}
             void setCover(bool cover) { m_cover = cover;}
             void setUnit(PositionUnit unit) { 
@@ -181,10 +190,19 @@ namespace DevRelief {
 
         protected:
             bool getBool(IJsonElement* json, bool defaultValue) { 
-                if (json==NULL) {return defaultValue;}
+                if (json==NULL) {
+                    m_logger->debug("json is NULL");
+                    return defaultValue;
+                }
                 IJsonValueElement* val = json->asValue();
-                if (val == NULL) { return defaultValue;}
-                return val->getBool(defaultValue);
+                if (val == NULL) { 
+                    m_logger->debug("json is not a value");
+
+                    return defaultValue;
+                }
+                bool b = val->getBool(defaultValue);
+                m_logger->debug("\tvalue=%d",(int)b);
+                return b;
             }
 
             HSLOperation parseJsonOperation(IJsonElement*json) {
@@ -264,6 +282,9 @@ namespace DevRelief {
 
             
             bool fromJson(JsonObject*json) override {
+                m_logger->debug("ElementPositionBase.fromJson %x %x",this,m_properties);
+                LogIndent li;
+
                 IJsonElement * offsetValue = json->getPropertyValue("offset");
                 IJsonElement * lengthValue = json->getPropertyValue("length");
                 IJsonElement * stripNumberValue = json->getPropertyValue("strip");
@@ -304,7 +325,10 @@ namespace DevRelief {
 
  
             bool toJson(JsonObject* json) const override  {
+                m_logger->debug("ElementPositionBase.toJson %x %x",this,m_properties);
+                LogIndent li;
                 if (m_properties == &DEFAULT_PROPERTIES){
+                    m_logger->info("DEFAULT_PROPERTIES");
                     return true;
                 }
                 return m_properties->toJson(json);
@@ -322,7 +346,7 @@ namespace DevRelief {
             bool isClip() const { return m_properties->isClip();}
             bool isWrap() const { return m_properties->isWrap();}
             bool isCenter() const { return m_properties->isCenter();}
-            bool isFlow() const { return m_properties->isFlow() && !m_properties->useRootStrip() && (hasOffset() || hasLength());}
+            bool isFlow() const { return m_properties->isFlow() && !m_properties->hasStrip() && !m_properties->useRootStrip() && (hasOffset() || hasLength());}
             bool isCover() const { return m_properties->isCover();}
             bool isReverse() const { return m_properties->isReverse();}
             bool isPositionAbsolute() const { return m_properties->useRootStrip();}

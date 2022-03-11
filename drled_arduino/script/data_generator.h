@@ -26,7 +26,8 @@ namespace DevRelief {
                 obj->setString(S_SCRIPT_NAME,script->getName());
                 obj->setInt(S_DURATION,script->getDuration());
                 obj->setInt(S_FREQUENCY,script->getFrequency());
-                addContainerElements(obj,script->getRootContainer());
+                //addContainerElements(obj,script->getRootContainer());
+                script->getRootContainer()->toJson(obj);
                 return root;
             }
 

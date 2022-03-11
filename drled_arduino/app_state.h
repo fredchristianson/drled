@@ -79,6 +79,9 @@ namespace DevRelief {
 
             void copyParameters(JsonObject*  toObj,JsonObject*params=NULL) {
                 m_logger->debug(LM("copyParameters %x"),toObj);
+                if (toObj == params) {
+                    return; // no change
+                }
                 if (toObj == NULL) {
                     m_logger->info(LM("\tno toObj"));
                      return;

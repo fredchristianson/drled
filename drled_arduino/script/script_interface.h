@@ -65,6 +65,8 @@ namespace DevRelief{
             virtual UnitValue getOffset() const=0;
             virtual bool hasLength() const=0;
             virtual UnitValue getLength() const=0;
+            virtual bool hasStrip() const=0;
+            virtual int getStrip() const=0;
     
             virtual UnitValue getGap() const=0;
 
@@ -182,7 +184,7 @@ namespace DevRelief{
             virtual int getFlowIndex() const=0;
             virtual void setFlowIndex(int index)=0;
 
-            virtual int getPixelsPerMeter();
+            virtual int getPixelsPerMeter(int strip=-1);
 
     };
 

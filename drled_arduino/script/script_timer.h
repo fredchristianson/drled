@@ -249,7 +249,7 @@ namespace DevRelief
             bool getBoolValue(IScriptContext* cmd,  bool defaultValue) { return defaultValue;} 
             int getMsecValue(IScriptContext* cmd,  int defaultValue) { return defaultValue;} 
             UnitValue getUnitValue(IScriptContext* cmd,  double defaultValue, PositionUnit defaultUnit) { return UnitValue(defaultValue,defaultUnit);};
-            ScriptStatus getStatus(IScriptContext* ctx,ScriptStatus defaultValue) { return defaultValue;};
+            ScriptStatus getStatus(IScriptContext* ctx,ScriptStatus defaultValue) { return m_currentStatus;};
 
             DRString stringify() override { return DRFormattedString("timer %s",m_name);}
             DRString toString() override { return DRFormattedString("timer %s",m_name);}
@@ -261,7 +261,9 @@ namespace DevRelief
             ScriptStatus enterRunState(IScriptContext* context) {
                 if (m_runState == NULL) { return SCRIPT_COMPLETE;}
                 m_runState->enter(context);
-                m_currentStatus = m_runState->updateStatus(context);
+                // don't call update since it does a step();
+                //m_currentStatus = m_runState->updateStatus(context);
+                m_currentStatus = SCRIPT_RUNNING;
                 return m_currentStatus;
             }
 

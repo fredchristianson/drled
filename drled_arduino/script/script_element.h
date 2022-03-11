@@ -22,12 +22,12 @@ namespace DevRelief {
             }
 
             virtual ~ScriptElement(){
-                delete m_timer;
+                if (m_timer) {m_timer->destroy();}
             }
 
             
             void toJson(JsonObject* json) const override {
-                m_logger->debug("ScriptElement.toJson %s",getType());
+                m_logger->never("ScriptElement.toJson %s",getType());
                 json->setString("type",m_type);
                 valuesToJson(json);
                 m_logger->debug("\tdone %s",getType());
@@ -126,6 +126,8 @@ namespace DevRelief {
     class PositionableElement : public ScriptElement {
         public:
             PositionableElement(const char * type, IElementPosition*position) : ScriptElement(type){
+                m_logger->never("PositionableElement::PositionableElement() %x %x",this,position);
+
                 m_position = position;
             }
 
@@ -135,15 +137,20 @@ namespace DevRelief {
 
             void toJson(JsonObject* json) const override {
                 ScriptElement::toJson(json);
-                m_logger->debug("PositionableElement.toJson %s",getType());                
+                m_logger->never("PositionableElement.toJson %s %x %x ",this,getType(), m_position);    
+                LogIndent li;            
                 positionToJson(json);
-                m_logger->debug("\tdone PositionableElement.toJson %s",getType());                
+                m_logger->never("\tdone PositionableElement.toJson %s",getType());                
+                m_logger->never("\tclip  %d",m_position->isClip());                
+                valuesToJson(json);
             }
 
             void fromJson(JsonObject* json) override {
                 ScriptElement::fromJson(json);
-                m_logger->never("PositionableElement.fromJson %s",getType());
+                m_logger->never("PositionableElement.fromJson %s %x %x",getType(),this,m_position);
+                LogIndent li;
                 positionFromJson(json);
+                valuesFromJson(json);
                 m_logger->never("\tPositionableElement.fromJson done");
             }            
 
@@ -154,23 +161,29 @@ namespace DevRelief {
 
         protected:
             virtual void positionToJson(JsonObject* json) const{
+                m_logger->never("PositionableElement.positionToJson() %x %x",this,m_position);
                 if (isPositionable()) {
                     IElementPosition* pos = getPosition();
                     if (pos == NULL) {
                         m_logger->error("IPositionable does not have a getPosition() %s",getType());
                     } else {
+                        m_logger->never("\t clip %x %d",this,pos->isClip());
                         pos->toJson(json);
                     }
                 }
             }
             virtual void positionFromJson(JsonObject* json){
+                m_logger->never("PositionableElement.positionFromJson() %x %x",this,m_position);
+
                 m_logger->never("positionFromJson %s",getType());
                 if (isPositionable()) {
                     IElementPosition*pos = getPosition();
                     if (pos == NULL) {
                         m_logger->error("IPositionable does not have a getPosition() %s",getType());
                     } else {
+                        m_logger->never("\t clip %x %d",this,pos->isClip());
                         pos->fromJson(json);
+                        m_logger->never("\t clip %x %d",this,pos->isClip());
                     }
                 } else {
                     m_logger->never("\tnot positionable");
@@ -178,6 +191,7 @@ namespace DevRelief {
                 m_logger->never("\treverse %d",m_position->isReverse());
                 m_logger->never("\tunit %d",m_position->getUnit());
             }
+        private:
             IElementPosition* m_position;
     };
 
@@ -251,10 +265,11 @@ namespace DevRelief {
 
 
             void valuesToJson(JsonObject* json) const override {
+                PositionableElement::valuesToJson(json);
             }
 
             void valuesFromJson(JsonObject* json) override {
-
+                PositionableElement::valuesFromJson(json);
             }
 
         protected:

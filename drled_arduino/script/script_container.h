@@ -101,7 +101,7 @@ namespace DevRelief
         void valuesFromJson(JsonObject* json) override {
             PositionableElement::valuesFromJson(json);
             m_logger->never("Load container json %s %s",getType(),json->toString().text());
-            m_logger->never("Containter %s reverse %d",getType(),m_position->isReverse());
+            m_logger->never("Containter %s reverse %d",getType(),getPosition()->isReverse());
             JsonArray* elements = json->getArray("elements");
             elementsFromJson(elements);    
         }    

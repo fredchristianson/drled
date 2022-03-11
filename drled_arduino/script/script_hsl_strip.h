@@ -3,6 +3,7 @@
 
 #include "../lib/led/led_strip.h"
 #include "./script_interface.h"
+#include "../config.h"
 
 namespace DevRelief{
 
@@ -29,9 +30,9 @@ namespace DevRelief{
 
             void destroy() { delete this;}
 
-            int getPixelsPerMeter() override { 
+            int getPixelsPerMeter(int strip=-1) override { 
                 if (m_parent) {
-                    return m_parent->getPixelsPerMeter();
+                    return m_parent->getPixelsPerMeter(strip);
                 }
                 return DEFAULT_PIXELS_PER_METER;
             }
@@ -86,7 +87,7 @@ namespace DevRelief{
                 }
             }
        
-            int unitToPixel(const UnitValue& uv) {
+            int unitToPixel(const UnitValue& uv, int strip=-1) {
                 double val = uv.getValue();
                 PositionUnit unit = uv.getUnit();
                 m_logger->never("unitToPixel %d %d    %f",unit,m_unit,val);
@@ -120,7 +121,7 @@ namespace DevRelief{
                 }
                 if (meterMultiplier != 0 && m_parent) {
                     // this may get the wrong value if there are multiple strips with different pixels per meter
-                    double pixelsPerMeter = m_parent->getPixelsPerMeter();
+                    double pixelsPerMeter = m_parent->getPixelsPerMeter(strip);
                     val = val * meterMultiplier * pixelsPerMeter;
                 }
                 m_logger->never("\tpixels=%f",val);
@@ -142,12 +143,30 @@ namespace DevRelief{
                     m_parent = context->getRootStrip();
                 }
                 m_parentLength = m_parent->getLength();
+                int parentOffset = 0;
+                int strip = -1;
+                // todo: combining strip and offset or flow has invalid results
+                if (pos->hasStrip()) {
+                    strip = pos->getStrip();
+                    auto config = Config::getInstance();
+                    auto pin = config->getPin(strip);
+                    if (pin == 0) {
+                        m_length = 0;
+                        m_logger->error(LM("pin not found %d"),strip);
+                        return;
+                    }
+                    m_parentLength = pin->ledCount;
+                    for(int i=0;i<strip;i++) {
+                        auto p = config->getPin(i);
+                        parentOffset += p->ledCount;
+                    }
+                }
                 if (pos->isCover()) {
                     m_offset = 0;
                     m_length = m_parentLength;
                 } else {
-                    m_length = pos->hasLength() ? unitToPixel(pos->getLength()) : m_parentLength;
-                    m_offset = pos->hasOffset() ? unitToPixel(pos->getOffset()) : 0;
+                    m_length = pos->hasLength() ? unitToPixel(pos->getLength(),strip) : m_parentLength;
+                    m_offset = pos->hasOffset() ? unitToPixel(pos->getOffset(),strip) : 0;
                     if (pos->isCenter()) {
                         int margin = (m_parentLength - m_length)/2;
                         m_offset += margin;
@@ -158,6 +177,7 @@ namespace DevRelief{
                         }
                     }
                 }
+                m_offset += parentOffset;
                 m_overflow = pos->getOverflow();
                 if (pos->isFlow()) {
 
@@ -173,20 +193,35 @@ namespace DevRelief{
                 return index >= 0 || index < m_length;
             }
 
-            virtual int translateIndex(int index){
-               
+            virtual int translateIndex(int origIndex){
+               int index = m_reverse ? (m_length-origIndex-1) : origIndex;
+                if (m_overflow == OVERFLOW_WRAP) {
+                    if (index<0) { index = m_length- (index%m_length)-1;}
+                    else { index = (index %m_length);}
+                } else if (m_overflow == OVERFLOW_CLIP) {
+                    // shouldn't happen since isPositionValid() was false if tidx out of range
+                    if (index < 0) { index = 0;}
+                    if (index >= m_length) {index = m_length-1;}
+                }
+                int tidx = m_offset + index;
+                m_logger->debug("translated index  %d (%d)  offset=%d length=%d ==>%d",origIndex,index,m_offset, m_length,tidx);
+                return tidx;
+            }
+
+            virtual int oldtranslateIndex(int origIndex){
+               int index = reverse ? (m_length-origIndex-1) : origIndex;
                 int tidx = index+m_offset;
                 if (m_overflow == OVERFLOW_WRAP) {
-                    if (index<0) { tidx = m_length- (index%m_length);}
+                    if (index<m_offset) { tidx = m_length- (index%m_length);}
                     else { tidx = m_offset + (index %m_length);}
                 } else if (m_overflow == OVERFLOW_CLIP) {
                     // shouldn't happen since isPositionValid() was false if tidx out of range
                     if (tidx < m_offset) { tidx = m_offset;}
                     if (tidx >= m_offset+m_length) {tidx = m_offset+m_length-1;}
                 }
-                m_logger->never("translated index  %d %d %d %d==>%d",m_offset, m_length, m_overflow, index,tidx);
+                m_logger->never("translated index  %d (%d)  offset=%d length=%d %d==>%d",origIndex,index,m_offset, m_length);
                 if (m_reverse) {
-                    tidx = m_length - tidx -1;
+                   // tidx = m_length - tidx -1 + m_offset;
                 } 
                 return tidx;
             }
@@ -223,10 +258,18 @@ namespace DevRelief{
 
             }
 
-            int getPixelsPerMeter() override {
+            int getPixelsPerMeter(int strip=-1) override {
                 int ppm = 0;
                 if (m_base) {
+                    if (strip >=0){
+                        auto config = Config::getInstance();
+                        auto pin = config->getPin(strip);
+                        if (pin) {
+                            return pin->pixelsPerMeter;
+                        }
+                    }
                     ppm = m_base->getPixelsPerMeter();
+                    
                 }
                 return ppm > 0 ? ppm : DEFAULT_PIXELS_PER_METER;
             }

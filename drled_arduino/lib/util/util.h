@@ -6,6 +6,8 @@
 
 namespace DevRelief {
 
+/* chars that can be in names in addition to alpha-numerics*/
+const char * NAME_CHARS="-_.#$%";
 
 class Util {
     public:
@@ -60,6 +62,8 @@ class Util {
             return val;
         }
 
+
+
         // text in format "text1:int1,text2:int2,..."
         // for example "repeat:1,stretch:2,"clip:3" with text "repeat" returns 1
         static int mapText2Int(const char * text, const char * val, int defaultValue){
@@ -77,6 +81,10 @@ class Util {
                 return defaultValue;
             }
 
+        }
+
+        static bool isNameChar(char c) {
+            return isalnum(c) || strchr(NAME_CHARS,c) != NULL;
         }
 
         static int split(const char * text, char sep,LinkedList<DRString>& vals) {

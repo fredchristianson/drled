@@ -121,6 +121,7 @@ namespace DevRelief {
             void setScripts(LinkedList<DRString>& list) {
                 scripts.clear();
                 list.each([&](DRString&name) {
+                    m_logger->debug("addScript %s",name.text());
                     addScript(name.get());
                 });
             }

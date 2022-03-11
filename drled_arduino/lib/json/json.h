@@ -419,7 +419,7 @@ class JsonObject : public JsonElement {
                 if (prop->getRoot() == m_root) {
                     prop->destroy();
                 } else {
-                    m_logger->always("property has different root");
+                    m_logger->error("property has different root");
                 }
                 prop = next;
             }

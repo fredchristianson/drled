@@ -40,9 +40,22 @@ class ConfigDataLoader : public DataLoader {
         bool addScripts(Config&config) {
             LinkedList<DRString> files;
             m_logger->debug(LM("adding scripts"));
+
             if (m_fileSystem.listFiles("/script",files)){
                 m_logger->debug(LM("\tcall config.setScripts"));
-                config.setScripts(files);
+                config.clearScripts();
+                files.each([&](DRString& file) {
+                    const char * fname = file.text();
+
+                    int len = strlen(fname);
+                    if (len > 5 && strcmp(fname+len-5,".json")==0) {
+                        DRString name(fname,len-5);
+                        config.addScript(name.text());
+                    } else {
+                        m_logger->error("unknown file in script dir %s",fname);
+                    }
+                });
+                
             }
             return true;
         }
@@ -173,8 +186,9 @@ class ConfigDataLoader : public DataLoader {
 
             JsonArray* scripts = root->createArray();
             json->set("scripts",scripts);
+            addScripts(config);
             config.getScripts().each( [&](DRString &script) {
-                m_logger->debug(LM("handle script %s"),script.get()); 
+                m_logger->debug(LM("add script %s"),script.get()); 
                 
                 scripts->addString(script.get());
             });

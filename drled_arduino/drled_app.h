@@ -204,8 +204,11 @@ namespace DevRelief {
 
 
             m_httpServer->routeBracesGet( "/api/script/{}",[this](Request* req, Response* resp){
+                // todo: stop execution to free up memory.
+                //      or stream file to response without parsing
                 ScriptDataLoader loader;
-                Script* script = loader.parse( req->pathArg(0).c_str());
+                
+                Script* script = loader.load(req->pathArg(0).c_str());
                 if (script){
                     JsonRoot* json = loader.toJson(*script);
                     ApiResult result(json->getTopObject());
@@ -347,7 +350,7 @@ namespace DevRelief {
         bool runScript(const char * name, JsonObject* params, ApiResult& result) {
 
             ScriptDataLoader loader;
-            m_logger->debug("load script %s",name);
+            m_logger->debug("run script %s  params=%s",name,params->toString().text());
             m_executor.turnOff();
             Script* script  = loader.load(name);
             m_logger->debug("loaded script %s",name);

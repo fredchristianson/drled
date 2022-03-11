@@ -18,8 +18,14 @@ namespace DevRelief {
             }
 
             DRString getPath(const char * name) {
-                DRFormattedString path("%s.json",name);
-                return path;
+                int len = 0;
+                while(Util::isNameChar(name[len])) {
+                    len++;
+                }
+                DRString pname("/script/");
+                pname.append(DRString(name,len));
+                pname.append(".json");
+                return pname;
             }
 
             Script* load(const char * name) {

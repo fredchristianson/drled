@@ -11,6 +11,7 @@
 #include "./script_loader_suite.h"
 #include "./script_suite.h"
 #include "./app_state_suite.h"
+#include "./timer_suite.h"
 #endif 
 
 namespace DevRelief {
@@ -70,6 +71,10 @@ namespace DevRelief {
             #endif
             #if RUN_APP_STATE_TESTS==1
             success = AppStateTestSuite::Run(m_logger) && success;
+            #endif
+
+            #if RUN_TIMER_TESTS==1
+            success = TimerTestSuite::Run(m_logger) && success;
             #endif
             //success = runTest("testSharedPtr",&Tests::testSharedPtr) && success;
             //success = runTest("testStringBuffer",&Tests::testStringBuffer) && success;
