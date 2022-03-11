@@ -93,7 +93,19 @@ class Strip {
         return script;
     }
 
+    async deleteScript(name){
+        var host = this.host;
+        var url = `://${host}/api/script/${name}`;
+        var script = await this.apiDelete(url);
+        return script;
+    }
+
     async run(script){
+        // deprecated.  use runScript()
+        return this.runScript(script);
+    }
+
+    async runScript(script){
         var host = this.host;
         var url = `://${host}/api/run/${script}`;
         log.debug("url: "+url);
@@ -122,39 +134,50 @@ class Strip {
     }
 
     async apiGet(api,params=null) {
-        try {
-            log.debug("GET  ",api);
-            var note = notice.notify("GET: "+api);
-            var response = await httpRequest.get(api,params,"json");
-            if (response && response.success && response.data) {
-                note.innerText = note.innerText + " - success";
-                return response.data;
-            }
-            notice.notify("GET: "+failed,15);
-            log.error("failed to GET ",api,JSON.stringify(response));
-            return null;
-        } catch(ex){
-            notice.notify("GET: "+failed,15);
-            log.error("failed to GET ",api,ex);
-            return null;
-        }
+        var note = notice.notify("GET: "+api);
+        var response = await this.sendApi(httpRequest.get,api,params,"json");
+        note.innerText = note.innerText + " - " +(response ? "success":"failed");
+        return response;
+    };
+    
+    
+    async apiDelete(api,params=null) {
+        var note = notice.notify("DELETE: "+api);
+        var response = await this.sendApi(httpRequest.delete,api,params,"json");
+        note.innerText = note.innerText + " - " +(response ? "success":"failed");
+        return response;
     };
     
     
     async apiPost(api,body) {
         try {
             log.debug("POST ",api);
-            response = await httpRequest.post(api,body);
-            if (response && response.success && response.data) {
-                return response.data;
+            var note = notice.notify("POST: "+api);
+
+            var response = await httpRequest.post(api,body,"json");
+            if (response && response.success) {
+                return response.data || {};
             }
-            log.error("failed to GET ",api,JSON.stringify(response));
+            log.error("failed to POST ",api,JSON.stringify(response));
             return null;            
         } catch(ex){
             log.error("failed to POST ",api,ex);
             return null;
         }
     };
+
+    async sendApi(method,api,params,type){
+        try {
+            var response = await method.call(httpRequest,api,params,type);
+            if (response && response.success) {
+                return response.data || {};
+            }
+            return null;
+        } catch(ex){
+            log.error("API failed ",api,ex);
+            return null;
+        }
+    }
 }
 
 export class LedApp extends Application {
@@ -197,6 +220,8 @@ export class LedApp extends Application {
 
     }
 
+    getStrips() { return this.strips;}
+    getStripById(id) { return this.strips.find(s=>s.id==id);}
     clearLog() {
         DOM.removeChildren("#log-container .messages");
     }

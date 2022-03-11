@@ -30,10 +30,21 @@ class HttpServer {
             m_logger->debug(LM("HttpServer created"));
 
             m_server = new ESP8266WebServer(80);
+            // cors added to each response in this->cors();
+            //m_server->enableCORS(true);
 
             m_logger->info(LM("Listening to port 80 on IP %s"),WiFi.localIP().toString().c_str());
 
-           
+           m_server->onNotFound([&](){
+               m_logger->debug("handle unknown URI %s",m_server->uri().c_str());
+               cors(m_server);
+               if (m_server->method() == HTTP_OPTIONS) {
+                    m_server->send(200);
+               } else {
+                   m_server->send(404);
+               }
+
+           });
         }
 
 
@@ -49,40 +60,24 @@ class HttpServer {
             m_server->handleClient();
         }
 
-        void routeNotFound(HttpHandler httpHandler){
-            m_logger->debug(LM("routing Not Found handler"));
-            auto server = m_server;
-            auto handler = httpHandler;
-            m_server->onNotFound([this,handler,server](){
-                if (m_server->method() == HTTP_OPTIONS){
-                    m_logger->debug(LM("send CORS for HTTP_OPTIONS"));
-                    this->cors(m_server);
-                    m_server->send(204);
-                    return;
-                }
-                this->cors(server);
-                handler(server,server);
-            });
-        }
-
+       
         void routeBraces(const char * uri, HttpHandler httpHandler){
             m_logger->debug(LM("routing to Uri %s"),uri);
             auto server = m_server;
             auto handler = httpHandler;
             m_server->on(UriBraces(uri),[this,handler,server](){
                 this->cors(server);
-                m_logger->debug("returning uri found");
                 handler(server,server);
             });
         }
 
         void routeBracesGet(const char * uri, HttpHandler httpHandler){
-            m_logger->debug(LM("routing GET to Uri %s"),uri);
+            m_logger->always(LM("routing GET to Uri %s"),uri);
             auto server = m_server;
             auto handler = httpHandler;
             m_server->on(UriBraces(uri),HTTP_GET,[this,handler,server](){
                 this->cors(server);
-                //m_logger->debug("uri found");
+                m_logger->debug("GET %s",server->uri().c_str());
                 handler(server,server);
             });
         }
@@ -92,19 +87,19 @@ class HttpServer {
             auto server = m_server;
             auto handler = httpHandler;
             m_server->on(UriBraces(uri),HTTP_POST,[this,handler,server](){
+                m_logger->debug("POST %s",server->uri().c_str());
                 this->cors(server);
-                m_logger->debug(LM("uri found"));
                 handler(server,server);
             });
         }
 
         void routeBracesDelete(const char * uri, HttpHandler httpHandler){
-            m_logger->debug(LM("routing DELETE to Uri %s"),uri);
+            m_logger->always(LM("routing DELETE to Uri %s"),uri);
             auto server = m_server;
             auto handler = httpHandler;
             m_server->on(UriBraces(uri),HTTP_DELETE,[this,handler,server](){
+                m_logger->debug("DELETE %s",server->uri().c_str());
                 this->cors(server);
-                m_logger->debug("uri found");
                 handler(server,server);
             });
         }
@@ -136,8 +131,9 @@ class HttpServer {
         }
 
         void cors(ESP8266WebServer * server) {
-            server->sendHeader("Access-Control-Allow-Origin","*");
-            server->sendHeader("Access-Control-Allow-Headers","Content-Type");
+            server->sendHeader(F("Access-Control-Allow-Origin"), F("*"));
+            server->sendHeader(F("Access-Control-Allow-Methods"), F("PUT,POST,GET,OPTIONS,DELETE,PATCH"));
+            server->sendHeader(F("Access-Control-Allow-Headers"), F("*"));
         }
 
     private:

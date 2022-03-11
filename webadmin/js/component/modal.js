@@ -4,7 +4,7 @@ import DOM from '../../drjs/browser/dom.js'
 import HTMLTemplate from '../../drjs/browser/html-template.js'
 
 const modalHTML= `
-<div class="modal">
+<div class="modal _drjsmodal">
     <div class="background">
     </div>
     <div class="content">
@@ -19,11 +19,15 @@ export class Modal {
         } else {
             this.contentTemplate = new HTMLTemplate(DOM.first(selector));
         }
-        this.modalTemplate = new HTMLTemplate(modalHTML);
-        this.modal = this.modalTemplate.getNodes()[0];
+        this.modal = DOM.first('_drjsmodal');
+        if (this.modal == null) {
+            this.modalTemplate = new HTMLTemplate(modalHTML);
+            this.modal = this.modalTemplate.getNodes()[0];
+            document.body.appendChild(this.modal);
+        }
         this.content = DOM.first(this.modal,'.content');
+        this.content.innerHTML = '';
         this.contentTemplate.getNodes().forEach((node)=>{ this.content.appendChild(node);});
-        document.body.appendChild(this.modal);
 
 
         // this.modal = DOM.createElement('div',{"@class":"modal"});
@@ -33,6 +37,8 @@ export class Modal {
         // this.modal.appendChild(this.background);
         // document.body.appendChild(this.modal);
     }
+
+    getDOM() { return this.content;}
 
     async show() {
         DOM.display(this.modal,"block");
@@ -52,7 +58,7 @@ export class Modal {
                 var cancel = DOM.getData(button,"cancel");
                 DOMEvent.removeListener(clickListener);
                 DOMEvent.removeListener(keyListener);
-                DOM.remove(modal);
+                DOM.hide(modal);
                 resolve(response); // always resolve to make it easier for caller (no try/catch)
                 // if (response && !cancel) {
                 //     resolve(response);

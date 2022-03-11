@@ -204,20 +204,23 @@ namespace DevRelief {
 
 
             m_httpServer->routeBracesGet( "/api/script/{}",[this](Request* req, Response* resp){
-                // todo: stop execution to free up memory.
-                //      or stream file to response without parsing
+                m_executor.endScript();
                 ScriptDataLoader loader;
                 
-                Script* script = loader.load(req->pathArg(0).c_str());
-                if (script){
-                    JsonRoot* json = loader.toJson(*script);
-                    ApiResult result(json->getTopObject());
-                    result.send(req);
-                    script->destroy();
-                    json->destroy();
-                    return;
+                DRString path = loader.getPath(req->pathArg(0).c_str());
+
+                m_logger->debug("GET /api/script/%s",path.text());
+                bool sent = loader.loadJsonFile(path,[&](IJsonElement* json) {
+                    m_logger->debug("JSON loaded %x",json);
+                    ApiResult result(json);
+                    result.send(resp);
+                    return true;
+                });
+                
+                if (!sent) {
+                    resp->send(404,"text/json","script not loaded");
                 }
-                resp->send(404,"text/json","script not loaded");
+                resume(true,true);
             });
 
             m_httpServer->routeBracesGet( "/api/run/{}",[this](Request* req, Response* resp){
@@ -258,8 +261,15 @@ namespace DevRelief {
 
 
             m_httpServer->routeBracesDelete( "/api/script/{}",[this](Request* req, Response* resp){
-                m_logger->debug("delete script");
-                resp->send(200,"text/json","DELETE not implemented");
+                m_logger->always("delete script");
+                ScriptDataLoader loader;
+                auto name =req->pathArg(0).c_str();
+                m_logger->debug("delete script %s",name);
+                ApiResult result;
+                if (!loader.deleteScript(name)) {
+                    result.setSuccess(false);
+                } 
+                result.send(resp);
             });
 
 

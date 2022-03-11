@@ -33,8 +33,9 @@ class DataLoader {
 
         bool loadJsonFile(const char * path,auto reader) {
             DRFileBuffer buffer;
+            m_logger->always("loadJsonFile %s",path);
             if (m_fileSystem.read(path,buffer)){
-                m_logger->never("file: %s",buffer.text());
+                m_logger->always("file: %s",buffer.text());
                 JsonParser parser;
                 JsonRoot* root = parser.read(buffer.text());
                 if (root) {
@@ -43,6 +44,14 @@ class DataLoader {
                     root->destroy();
                     return result;
                 }
+            }
+            return false;
+        }
+
+        bool deleteFile(const char * path){
+            if (m_fileSystem.exists(path)){
+                m_fileSystem.deleteFile(path); 
+                return true;
             }
             return false;
         }

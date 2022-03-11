@@ -11,7 +11,7 @@
 
 namespace DevRelief {
 
-    class ScriptDataLoader : DataLoader {
+    class ScriptDataLoader : public DataLoader {
         public:
             ScriptDataLoader(){
                 SET_LOGGER(ScriptLoaderLogger);
@@ -28,6 +28,7 @@ namespace DevRelief {
                 return pname;
             }
 
+
             Script* load(const char * name) {
                 m_logger->debug("load script file: %s",name);
                 Script* script = NULL;
@@ -37,6 +38,15 @@ namespace DevRelief {
                 });
                 return script;
             }
+
+
+            bool deleteScript(const char * name) {
+                Script* script = NULL;
+                DRString path =getPath(name);
+                m_logger->debug("delete script file: %s (%s)",name,path.text());
+                return deleteFile(path);
+            }
+
 
             bool save(const char * name, Script& script) {
                 m_logger->debug("save script file: %s",name);

@@ -51,6 +51,10 @@ public:
             writeNewline();
             return;
         }
+        if (EspBoard.getFreeHeap() < 2000) {
+            m_logger->error("out of memory generating JSON");
+            return;
+        }
         int type = element->getType();
         m_logger->debug("write element type %d",type);
         switch(type) {

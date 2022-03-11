@@ -742,7 +742,8 @@
   .notifications {
     position: fixed;
     max-width: 75%;
-    top: 0;
+    min-width: 15em;
+    bottom: 0;
     right: 0;
     background-color: #aaffaa;
     color: #444444;

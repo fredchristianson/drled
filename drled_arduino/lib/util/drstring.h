@@ -44,7 +44,12 @@ class DRStringData {
 
             size_t newLength = minLength+1;
             
-
+            if (newLength > EspBoard.getMaxFreeBlockSize()) {
+                // cannot use DRLogger because of circular dependencies for now.
+                #ifdef LOGGING_ON
+                    Serial.printf("out of memory %d > %d\n\n",newLength, EspBoard.getMaxFreeBlockSize());
+                #endif
+            }
             char * newData = (char*) malloc(sizeof(char)*newLength);
             
 

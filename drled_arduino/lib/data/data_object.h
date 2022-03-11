@@ -22,8 +22,9 @@ class DataObject {
 
         void addProperty(const char* name, IJsonElement * val){
             m_logger->debug("addProperty %x->%x",val,val->getRoot());
-            m_logger->debug("\tadded property %x->%x",val,val->getRoot());
             m_json->set(name,val);
+            m_logger->debug("\tadded property %x->%x",val,val->getRoot());
+            m_logger->debug("\t property %s",JsonElement::toJsonString(val).text());
         }
         void addProperty(const char* name, int val){
             m_json->setInt(name,val);
