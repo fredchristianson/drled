@@ -1,6 +1,6 @@
 import {ComponentBase} from '../../drjs/browser/component.js';
 import assert from '../../drjs/assert.js';
-import util from '../../drjs/util.js';
+import ENV from '../../drjs/env.js';
 import DOM from '../../drjs/browser/dom.js';
 import  DOMEvent from '../../drjs/browser/dom-event.js';
 import Pager from './pager.js';
@@ -14,15 +14,35 @@ export class StripComponent extends ComponentBase{
         this.stripSelectionType = null;
         this.selectedValue = null;
         this.select = null;
-        DOMEvent.listen('componentLoaded',this.onComponentLoaded.bind(this));
-        DOMEvent.listen('input','#select-strip',this.changeSelection.bind(this));
+        this.isSingleSelect = false;
+        this.listeners = [
+            DOMEvent.listen('componentLoaded',this.onComponentLoaded.bind(this)),
+            DOMEvent.listen('input','#select-strip',this.singleSelect.bind(this)),
+            DOMEvent.listen('input','.strip-list .items input[type="checkbox"]',this.multiSelect.bind(this))
+        ];
     }
 
-    changeSelection(element,event){
-        var val = DOM.getValue(element);
-        this.selectedValue = val;
-        DOMEvent.trigger('singleStripSelection',val,this);
+    detach() {
+        //DOMEvent.removeListener(this.listeners);
     }
+
+    singleSelect(element,event){
+        var strip = DOM.getValue(element);
+        this.strips.forEach(s=>{s.setSelected(false);})
+        if (strip) {
+            strip.setSelected(true);
+        }
+        this.selectedValue = strip;
+        DOMEvent.trigger('singleStripSelection',strip,this);
+    }
+
+    multiSelect(element,event){
+        var strip = ENV.THEAPP.getStripById(DOM.getData(element,'id'));
+        var checked = DOM.getProperty(element,"checked");
+        strip.setSelected(checked);
+        DOMEvent.trigger('stripSelection',strip,this);
+    }
+
     isSelected(strip){
         if (!this.isLoaded() || strip == null) {
             return false;
@@ -42,7 +62,8 @@ export class StripComponent extends ComponentBase{
         return null;
     }
 
-    onComponentLoaded(component) {
+    async onComponentLoaded(component) {
+        /* triggered when a new component is loaded.  trigger strip select events in case that components needs to know*/
         if (!this.isLoaded()) {
             return false;
         }
@@ -50,7 +71,21 @@ export class StripComponent extends ComponentBase{
         var single = DOM.hasClass(elements,"single-strip");
         DOM.toggleClass(this.stripSelectionType,'single',single);
         DOM.toggleClass(this.stripSelectionType,'multiple',!single);
-        DOMEvent.trigger('singleStripSelection',this.selectedValue,this);
+        if (single) {
+            DOMEvent.trigger('singleStripSelection',this.selectedValue,this);
+        } else {
+            this.strips.forEach(strip=>{
+                var check = DOM.first('.strip-list .items input[data-id="'+strip.getId()+'"]');
+                if (check) {
+                    strip.setSelected(DOM.getProperty(check,'checked'));
+                }
+            });
+
+            DOMEvent.trigger('stripSelection',null,this);
+
+        }
+        this.isSingleSelect = single;
+        return DOMEvent.HANDLED;
     }
 
     async onAttached(elements,parent){
@@ -72,7 +107,8 @@ export class StripComponent extends ComponentBase{
         this.strips.forEach(item=>{
             const values = {
                 '.name': item.name,
-                '.item': new AttributeValue('data-host',item.host)
+                '.item': new AttributeValue('data-host',item.host),
+                'input[type="checkbox"]': new DataValue('id',item.id)
             };
             var row = this.rowTemplate.fill(values);
             DOM.setData(row,"id",item.getId());

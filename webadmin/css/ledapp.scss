@@ -564,9 +564,12 @@
   .strip-list .items .item {
       margin-right: 2rem;
       white-space: nowrap;
+      input+span {
+        margin-left: 4px;
+      }
   }
 
-  .strip-list a {
+  .strip-list a, .script-select a {
       color: #000000;
       border: 1px solid #444444;
       padding: 4px;
@@ -575,6 +578,7 @@
       display: inline-block;
       min-width: 8ch;
       text-align: center;
+      border-radius: 4px;
   }
 
   .slider {

@@ -53,14 +53,28 @@ class Strip {
         this.host = host;
         this.id = NEXT_STRIP_ID++;
         this.config = null;
+        this.selected = false;
     }
 
     getId() { return this.id;}
     getName() { return this.name;}
     getHost() { return this.host;}
 
-    async getConfig(){
+    setSelected(sel) {this.selected=sel;}
+    isSelected() { return this.selected;}
 
+    async getScripts() {
+        var cfg = await this.getConfig();
+        var scripts = [];
+        if (cfg&&cfg.scripts){
+            scripts = scripts.concat(cfg.scripts);
+        }
+        return scripts;
+    }
+    async getConfig(refresh=false){
+        if (this.config && !refresh) {
+            return this.config;
+        }
         var host = this.host;
         var url = `://${host}/api/config`;
         var configJson = await this.apiGet(url);
@@ -222,6 +236,9 @@ export class LedApp extends Application {
 
     getStrips() { return this.strips;}
     getStripById(id) { return this.strips.find(s=>s.id==id);}
+    getSelectedStrips() { return this.strips.filter(s=>s.isSelected())}
+
+
     clearLog() {
         DOM.removeChildren("#log-container .messages");
     }
@@ -237,7 +254,7 @@ export class LedApp extends Application {
         
     selectScene(element) {
         var sel = DOM.find('#strips input:checked');
-        var script = DOM.getData(element,"script");
+        var script = DOM.getData(element,"name");
         log.debug("scene",script);
         this.strips.filter(strip=> this.stripComponent.isSelected(strip)).forEach(strip=>{
             log.debug("select scene ",strip.getName());

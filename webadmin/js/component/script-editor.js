@@ -91,6 +91,7 @@ export class ScriptEditorComponent extends ComponentBase{
     }
 
     async onRefreshScripts() {
+        await this.strip.getConfig(true);
         return await this.onStripSelected(this.strip);
     }
     async onStripSelected(strip){
