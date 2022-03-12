@@ -17,13 +17,27 @@ const char * CONFIG_PATH_BASE="/";
 class ConfigDataLoader : public DataLoader {
     public:
         ConfigDataLoader() {
-            SET_LOGGER(ConfigLogger);
+            SET_LOGGER(ConfigLoaderLogger);
         }
 
+        DRString getScriptPath(const char * name) {
+            DRString path = "/script/";
+            m_logger->debug("getScriptPath %s",path.text());
+            path += name;
+            if (!Util::endsWith(name,".json")){
+                path += ".json";
+            }
+            m_logger->debug(LM("ConfigDataLoader getScriptPath(%s)==>%s"),name,path.text());
+            
+            return path;
+
+        }
         DRString getPath(const char * name) {
             DRString path= CONFIG_PATH_BASE;
             path += name;
-            path += ".json";
+            if (!Util::endsWith(name,".json")){
+                path += ".json";
+            }
             m_logger->debug(LM("ConfigDataLoader getPath(%s)==>%s"),name,path.text());
             return path;
         }
@@ -49,8 +63,9 @@ class ConfigDataLoader : public DataLoader {
 
                     int len = strlen(fname);
                     if (len > 5 && strcmp(fname+len-5,".json")==0) {
-                        DRString name(fname,len-5);
-                        config.addScript(name.text());
+                        DRString fileName(fname,len-5);
+                        DRString name = getScriptName(fname,fileName);
+                        config.addScript(fileName, name);
                     } else {
                         m_logger->error("unknown file in script dir %s",fname);
                     }
@@ -58,6 +73,47 @@ class ConfigDataLoader : public DataLoader {
                 
             }
             return true;
+        }
+
+        DRString getScriptName(const char * filename, const char * defaultName) {
+            m_logger->always("getScriptName %s",filename);
+            DRString path = getScriptPath(filename);
+            DRBuffer buf(200);
+            int len = m_fileSystem.readBinary(path,buf.reserve(199),199);
+            if (len>0){
+                buf.setLength(len);
+                char* text = (char*)buf.data();
+                text[len-1] = 0;
+                m_logger->always("find name in %s",text);
+                JsonParser parser;
+                DRString name = findName(text);
+                m_logger->always("found name %s",name.text());
+                if (name.getLength()>0) {
+                    return name;
+                }
+            }
+            m_logger->always("use default name %s",defaultName);
+
+            return defaultName;
+            
+        }
+
+        DRString findName(char * name) {
+            const char *pos = Util::next(name,"\"name\"");
+            if (pos) {
+                m_logger->debug("found name property: %s",pos);
+                const char * start = Util::next(pos+8,"\"");
+                if (start) {
+                    start += 1;
+                    m_logger->debug("found name value: %s",start);
+                    const char* end = Util::next(start,"\"");
+                    if (end) {
+                        m_logger->debug("found end value: %s",start);
+                        return DRString(start,end-start);
+                    }
+                }
+            }
+            return "";
         }
 
 
@@ -187,10 +243,10 @@ class ConfigDataLoader : public DataLoader {
             JsonArray* scripts = root->createArray();
             json->set("scripts",scripts);
             addScripts(config);
-            config.getScripts().each( [&](DRString &script) {
-                m_logger->debug(LM("add script %s"),script.get()); 
-                
-                scripts->addString(script.get());
+            config.getScripts().each( [&](ScriptDetails*script) {
+                m_logger->debug(LM("add script %s %s"),script->getFilename(), script->getName()); 
+                JsonObject* obj = scripts->addNewObject();
+                script->toJson(obj);
             });
             m_logger->debug(LM("scripts done"));
             m_logger->debug(LM("load config done %x"),root);

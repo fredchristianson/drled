@@ -17,6 +17,37 @@ export class ScriptEditorComponent extends ComponentBase{
     constructor(selector, htmlName='script') {
         super(selector,htmlName);
         this.strip = null;
+
+
+        this.debouncedUpdateUI = util.debounce(this.updateUI.bind(this),200);
+        this.selectedScripts = [];
+        this.updateUI();
+        this.changed = false;
+        this.jsonError = false;
+    }
+
+    async onScriptSelect(element) {
+        this.selectedScripts = DOM.find('.script-list input:checked').map(i=>{
+            return DOM.getValue(i);
+        });
+        if (this.selectedScripts.length==1) {
+            this.loadScript(this.selectedScripts[0]);
+        }
+        this.debouncedUpdateUI();
+    }
+
+    async onAttached(elements,parent) {
+        DOMEvent.removeListener(this.listeners);
+        this.elements = elements;
+        this.text = DOM.first(parent,'#script-text');
+        this.name = DOM.first(parent,'.script [name="name"]');
+        this.select = DOM.first(parent,'.select-script');
+        this.scriptList = DOM.first(parent,'.script-list');
+        this.errorMessage = null;
+        this.jsonError = false;
+        this.loaded = true;
+        this.onStripSelected(this.strip);
+
         this.listeners = [
             DOMEvent.listen('singleStripSelection',this.onStripSelected.bind(this)),
             DOMEvent.listen('click','.script .save-script',this.onSave.bind(this)),
@@ -28,25 +59,10 @@ export class ScriptEditorComponent extends ComponentBase{
             DOMEvent.listen('change','.script .script-list input',this.onScriptSelect.bind(this)),
             DOMEvent.listen('click','.script .refresh-scripts',this.onRefreshScripts.bind(this)),
             DOMEvent.listen('input','.script input[name="name"]',this.onChange.bind(this)),
-            DOMEvent.listen('input','.script textarea',this.onChange.bind(this))
-        ]
-
-        this.debouncedUpdateUI = util.debounce(this.updateUI.bind(this),200);
-        this.selectedScripts = [];
-        this.updateUI();
-        this.changed = false;
+            DOMEvent.listen('input','.script textarea',this.onChange.bind(this)),
+            DOMEvent.listen('blur','.script textarea',this.checkJson.bind(this))
+        ];        
     }
-
-    async onScriptSelect(element) {
-        this.selectedScripts = DOM.find('.script-list input:checked').map(i=>{
-            return i.parentNode.innerText;
-        });
-        if (this.selectedScripts.length==1) {
-            this.loadScript(this.selectedScripts[0]);
-        }
-        this.debouncedUpdateUI();
-    }
-
     onDetach() {
         DOMEvent.removeListener(this.listeners);
     }
@@ -55,9 +71,37 @@ export class ScriptEditorComponent extends ComponentBase{
         this.changed = true;
         DOM.setProperty('.script .save-script','disabled',false);
         DOM.setProperty('.script .load-script','disabled',false);
-
-  
+        if (this.jsonError) {
+            this.checkJson();
+        }
+        
     }
+
+    checkJson() {
+        var hadError = this.jsonError;
+        this.jsonError = false;
+        var text = DOM.getValue(".script textarea").trim();
+        var json = null;
+        if (text.length == 0) {
+            this.jsonError = false;
+        } else {
+            try {
+                json = JSON.parse(text);
+                text = JSON.stringify(json,null,4);
+                DOM.setValue(".script textarea",text);
+            } catch(err) {
+                this.jsonError = true;
+                this.errorMessage = err.message;
+            }
+        }
+        if (hadError != this.jsonError) {
+            DOM.toggleClass('.script.edit','error',this.jsonError);
+            if (this.jsonError) {
+                var note = notice.error(this.errorMessage || "error in JSON");
+            }
+        }
+    }
+
 
     updateUI() {
         log.debug("updatestate "+this.selectedScripts.length);
@@ -114,12 +158,21 @@ export class ScriptEditorComponent extends ComponentBase{
         var scriptTemplate = new HtmlTemplate(DOM.first("#script-item"));
         this.scriptList.innerHTML = '';
         if (this.config && this.config.scripts) {
-            this.config.scripts.forEach(item=>{
+            this.config.scripts.forEach(details=>{
+                var filename;
+                var name;
+                if (typeof details == 'object') {
+                    filename = details.fileName;
+                    name = details.name || filename;
+                } else {
+                    filename = details;
+                    name = filename;
+                }
                 const values = {
-                    '.name': item,
-                    '.item': new AttributeValue('data-name',item),
-                    '.check': [new AttributeValue('value',item),
-                                new PropertyValue('checked',selected != null && item == selected)]
+                    '.name': name,
+                    '.item': new AttributeValue('data-name',filename),
+                    '.check': [new AttributeValue('value',filename),
+                                new PropertyValue('checked',selected != null && filename == selected)]
                 };
                 var row = scriptTemplate.fill(values);
                 DOM.append(this.scriptList,row);
@@ -179,6 +232,7 @@ export class ScriptEditorComponent extends ComponentBase{
 
             this.onStripSelected(this.strip);
         }
+        this.onRefreshScripts();
         return DOMEvent.HANDLED;
     }
 
@@ -217,17 +271,6 @@ export class ScriptEditorComponent extends ComponentBase{
         return DOMEvent.HANDLED;
     }
 
-    async onAttached(elements,parent){
-        this.elements = elements;
-        this.text = DOM.first(parent,'#script-text');
-        this.name = DOM.first(parent,'.script [name="name"]');
-        this.select = DOM.first(parent,'.select-script');
-        this.scriptList = DOM.first(parent,'.script-list');
-        
-        this.loaded = true;
-        this.onStripSelected(this.strip);
-
-    }
 
     getStripById(id){
         return ENV.THEAPP.getStripById(id);

@@ -21,32 +21,63 @@ export class SceneComponent extends ComponentBase{
         this.listeners = [
             DOMEvent.listen('stripSelection',this.onScriptSelect.bind(this)),
             DOMEvent.listen('change','.script .script-list input',this.onScriptSelect.bind(this))
-        ]
+        ];
+        this.onScriptSelect();
             
     }
 
-    detach() {
+    async onDetach() {
         DOMEvent.removeListener(this.listeners);
         this.listeners= [];
+        var buttons = DOM.first('.scene-controls .buttons');
+        if (buttons) {
+            buttons.innerHTML = '';
+        }
     }
 
-    async onScriptSelect(changed, component) {
+    scriptsEqual(script1,script2) {
+        if (script1 == null && script2 != null) { return false;}
+        if (script2 == null && script1 != null) { return false;}
+        var name1 = (typeof script1 == 'object') ? (script1.name) : script1;
+        var name2 = (typeof script2 == 'object') ? (script2.name) : script2;
+        return name1 == name2;
+    }
+
+    async onScriptSelect(changed=null, component=null) {
+        var buttons = DOM.first('.scene-controls .buttons');
+
+        
         var sel = ENV.THEAPP.getSelectedStrips();
-        if (sel == null || sel.length == 0) { return;}
+        if (sel == null || sel.length == 0) { 
+            if (buttons) {
+                buttons.innerHTML = '';
+            }
+            return;}
         var first = sel[0];
         var scripts = await first.getScripts();
         for(const strip of sel) {
             if (strip != first && scripts.length>0) {
-                scripts = util.intersect(scripts,await strip.getScripts());
+                scripts = util.intersect(scripts,await strip.getScripts(), this.scriptsEqual);
             }
         };
-        var buttons = DOM.first('.scene-controls .buttons');
-        buttons.innerHTML = '';
+        if (buttons) {
+            buttons.innerHTML = '';
+        }      
         scripts.forEach(script=>{
+            var name;
+            var filename;
+            if (typeof script == 'object') {
+                filename = script.fileName;
+                name = script.name || filename;
+            } else {
+                name = script;
+                filename = script;
+            }
             var button = new HtmlTemplate(DOM.first('#scene-button'));
             var values = {
-                '.scene-select': [script, new DataValue('name',script)]
+                '.scene-select': [name, new DataValue('name',filename)]
             };
+                 
             DOM.append(buttons,button.fill(values));
         });
     }

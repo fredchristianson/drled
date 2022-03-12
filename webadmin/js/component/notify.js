@@ -24,13 +24,18 @@ export class Notifications {
         this.hide();
     }
 
-    notify(text,seconds=5){
+    notify(text,seconds=5,type=""){
         var notice = new HTMLTemplate(noticeHTML);
         var note = notice.fill({'.text':text})[0];
+        DOM.addClass(note,type);
         this.notifications.appendChild(note);
         this.show();
         setTimeout(()=>this.removeNotice(note),5000);
         return note;
+    }
+
+    error(text,seconds=15){
+        this.notify(text,seconds,"error");
     }
 
     removeNotice(notice) {

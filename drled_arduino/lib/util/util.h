@@ -123,6 +123,17 @@ class Util {
                 free((void*)text);
             }
         }
+
+        static const char * next(const char * text, const char * substr) {
+            if (text == NULL || substr==NULL) { return NULL;}
+            const char * pos = text;
+            size_t len = strlen(substr);
+            while(pos[0] != NULL && strncmp(pos,substr,len) != 0) {
+                pos++;
+            }
+            if (pos[0] == NULL) { return NULL;}
+            return pos;
+        }
 };
 
 

@@ -54,6 +54,7 @@ class Strip {
         this.id = NEXT_STRIP_ID++;
         this.config = null;
         this.selected = false;
+        this.getConfig();
     }
 
     getId() { return this.id;}

@@ -702,6 +702,12 @@
             input { margin-right: 0.25rem;}
         } 
     }
+
+    &.error {
+      .if-no-error { visibility: hidden;}
+
+      textarea { color: #aa4444}
+    }
   }
 
   .modal .scripts.list {
@@ -754,5 +760,9 @@
     border: 4px solid #aaaaaa;
     box-shadow: #e50050;
     padding: 8px;
-    
+    .error {
+      background-color: #ffaaaa;
+      padding: 2px;
+      font-weight: bold;
+    }
   }

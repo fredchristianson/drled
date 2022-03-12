@@ -37,6 +37,28 @@ namespace DevRelief {
         uint16_t pixelsPerMeter;
     };
 
+    class ScriptDetails {
+        public:
+            ScriptDetails(const char * fileName, const char * name) {
+                m_fileName = fileName;
+                m_name = name;
+            }
+
+            virtual void destroy() { delete this;}
+            const char * getName() { return m_name.text();}
+            const char * getFilename() { return m_fileName.text();}
+
+            void setName(const char * name) { m_name = name;}
+            void getName(const char * fileName) { m_fileName = fileName;}
+
+            void toJson(JsonObject* obj) {
+                obj->setString("fileName",m_fileName.text());
+                obj->setString("name",m_name.text());
+            }
+        private:
+            DRString m_fileName;
+            DRString m_name;
+    };
 
     
 
@@ -106,26 +128,29 @@ namespace DevRelief {
 
             size_t getScriptCount()  const{ return scripts.size();}
             
-            bool addScript(const char * name) {
-                m_logger->debug("add script %s",name);
+            bool addScript(const char * filename, const char * name) {
+                if (name == NULL) { name = filename;}
                 if (name == NULL || strlen(name) == 0) {
                     m_logger->warn("addScript requires a name");
                     return false;
                 }
+                m_logger->debug("add script %s",name);
                 
-                scripts.add(DRString(name));
+                scripts.add(new ScriptDetails(filename, name));
                 m_logger->debug("\tadded");
                 return true;
             }
 
-            void setScripts(LinkedList<DRString>& list) {
+/*
+            void setScripts(PtrList<ScriptDetails>& list) {
                 scripts.clear();
                 list.each([&](DRString&name) {
                     m_logger->debug("addScript %s",name.text());
                     addScript(name.get());
                 });
             }
-            const LinkedList<DRString>& getScripts()  const{ return scripts;}
+            */
+            const PtrList<ScriptDetails*>& getScripts()  const{ return scripts;}
 
             const char * getHostname() const { return hostName.text();}
             void setHostname(const char * name) {
@@ -149,7 +174,7 @@ namespace DevRelief {
             DRString    buildDate;
             DRString    buildTime;
             PtrList<LedPin*>  pins;
-            LinkedList<DRString>   scripts;
+            PtrList<ScriptDetails*>   scripts;
             int  brightness;
             int  maxBrightness;
             DECLARE_LOGGER();

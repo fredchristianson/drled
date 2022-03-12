@@ -187,23 +187,20 @@ public:
         return true;
     }
     
-    bool readBinary(const char * path, byte * data,size_t length ) {
+    size_t readBinary(const char * path, byte * data,size_t maxLength ) {
         m_logger->debug("read from %s",path);
         auto fullPath = getFullPath(path);
         File file = open(fullPath);
         if (!file.isFile()) {
-            m_logger->warn("file not found %s",fullPath);
+            m_logger->debug("file not found %s",fullPath);
             return false;
         }
         size_t size = file.size();
-        if (size != length) {
-            m_logger->debug("invalid length %d %d",size,length);
-            return false;
-        }
-        size_t readBytes = file.read(data,size);
+        size_t readSize = min(size,maxLength);
+        size_t readBytes = file.read(data,readSize );
         file.close();
         m_logger->debug("read %d bytes.",readBytes);
-        return true;
+        return readBytes;
     }
 
     bool write(const char *  path, const char * data) {

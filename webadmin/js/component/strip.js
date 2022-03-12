@@ -15,15 +15,30 @@ export class StripComponent extends ComponentBase{
         this.selectedValue = null;
         this.select = null;
         this.isSingleSelect = false;
+        this.listeners=[];
+    }
+
+    
+    async onAttached(elements,parent){
         this.listeners = [
             DOMEvent.listen('componentLoaded',this.onComponentLoaded.bind(this)),
             DOMEvent.listen('input','#select-strip',this.singleSelect.bind(this)),
             DOMEvent.listen('input','.strip-list .items input[type="checkbox"]',this.multiSelect.bind(this))
-        ];
+        ];        
+        this.list = DOM.first(parent,'.strip-list');
+        this.rowTemplate = new HtmlTemplate(DOM.first('#strip-item'));
+        assert.notNull(this.list,'unable to find .strip-list element');
+        this.itemContainer = DOM.first(this.list,'.items');
+        assert.notNull(this.itemContainer,'unable to find .items element');
+        this.stripSelectionType = DOM.first(parent,'.strip-selection-type');
+        this.select = DOM.first(parent,'#select-strip');
+        this.loaded = true;
+        this.loadItems();
     }
 
-    detach() {
-        //DOMEvent.removeListener(this.listeners);
+
+    onDetach() {
+        DOMEvent.removeListener(this.listeners);
     }
 
     singleSelect(element,event){
@@ -88,17 +103,6 @@ export class StripComponent extends ComponentBase{
         return DOMEvent.HANDLED;
     }
 
-    async onAttached(elements,parent){
-        this.list = DOM.first(parent,'.strip-list');
-        this.rowTemplate = new HtmlTemplate(DOM.first('#strip-item'));
-        assert.notNull(this.list,'unable to find .strip-list element');
-        this.itemContainer = DOM.first(this.list,'.items');
-        assert.notNull(this.itemContainer,'unable to find .items element');
-        this.stripSelectionType = DOM.first(parent,'.strip-selection-type');
-        this.select = DOM.first(parent,'#select-strip');
-        this.loaded = true;
-        this.loadItems();
-    }
 
     async loadItems() {
         if (!this.isLoaded()) {

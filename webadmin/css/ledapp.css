@@ -681,6 +681,12 @@ button {
 .script.edit .script-list label input {
   margin-right: 0.25rem;
 }
+.script.edit.error .if-no-error {
+  visibility: hidden;
+}
+.script.edit.error textarea {
+  color: #aa4444;
+}
 
 .modal .scripts.list {
   max-height: calc(100% - 10rem);
@@ -732,4 +738,9 @@ button {
   border: 4px solid #aaaaaa;
   box-shadow: #e50050;
   padding: 8px;
+}
+.notifications .error {
+  background-color: #ffaaaa;
+  padding: 2px;
+  font-weight: bold;
 }/*# sourceMappingURL=ledapp.css.map */

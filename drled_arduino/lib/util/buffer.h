@@ -94,7 +94,9 @@ public:
     }
 
     void setLength(size_t length) {
+        reserve(length+1);
         m_length = length;
+        m_data[m_length]=0;
         m_logger->info("set length.  length=%d, maxLength=%d",m_length,m_maxLength);
     }
 
