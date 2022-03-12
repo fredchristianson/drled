@@ -5,7 +5,7 @@ import DOM from '../../drjs/browser/dom.js';
 import  DOMEvent from '../../drjs/browser/dom-event.js';
 import Pager from './pager.js';
 
-import {HtmlTemplate, HtmlValue,TextValue,AttributeValue,DataValue } from '../../drjs/browser/html-template.js';
+import {HtmlTemplate, ClassValue, HtmlValue,TextValue,AttributeValue,DataValue } from '../../drjs/browser/html-template.js';
 
 export class StripComponent extends ComponentBase{
     constructor(selector, strips, htmlName='strips') {
@@ -23,7 +23,8 @@ export class StripComponent extends ComponentBase{
         this.listeners = [
             DOMEvent.listen('componentLoaded',this.onComponentLoaded.bind(this)),
             DOMEvent.listen('input','#select-strip',this.singleSelect.bind(this)),
-            DOMEvent.listen('input','.strip-list .items input[type="checkbox"]',this.multiSelect.bind(this))
+            DOMEvent.listen('input','.strip-list .items input[type="checkbox"]',this.multiSelect.bind(this)),
+            DOMEvent.listen('stripStatusChange',this.stripStatusChange.bind(this))
         ];        
         this.list = DOM.first(parent,'.strip-list');
         this.rowTemplate = new HtmlTemplate(DOM.first('#strip-item'));
@@ -34,6 +35,7 @@ export class StripComponent extends ComponentBase{
         this.select = DOM.first(parent,'#select-strip');
         this.loaded = true;
         this.loadItems();
+        ENV.THEAPP.strips.forEach((s)=>{this.stripStatusChange(s);});
     }
 
 
@@ -56,6 +58,23 @@ export class StripComponent extends ComponentBase{
         var checked = DOM.getProperty(element,"checked");
         strip.setSelected(checked);
         DOMEvent.trigger('stripSelection',strip,this);
+    }
+
+    stripStatusChange(strip){
+        var item = DOM.first(`.strip-list .strip.item[data-id="${strip.getId()}"]`);
+        if (item) {
+            var online = strip.isOnline();
+            DOM.toggleClass(item,'offline',!online);
+            DOM.toggleClass(item,'online',online);
+            var checks = DOM.find(item,'input[type="checkbox"]');
+            DOM.setProperty(checks,'disabled',!online);
+            if (!strip.isOnline()) {
+                strip.setSelected(false);
+                DOM.setProperty(checks,'checked',false);
+                DOMEvent.trigger('stripSelection',strip,this);
+
+            }
+        }
     }
 
     isSelected(strip){
@@ -111,7 +130,8 @@ export class StripComponent extends ComponentBase{
         this.strips.forEach(item=>{
             const values = {
                 '.name': item.name,
-                '.item': new AttributeValue('data-host',item.host),
+                '.item': [new AttributeValue('data-host',item.host),
+                          new ClassValue(item.isOnline() ? "online": "offline")],
                 'input[type="checkbox"]': new DataValue('id',item.id)
             };
             var row = this.rowTemplate.fill(values);

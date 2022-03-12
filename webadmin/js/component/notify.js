@@ -30,7 +30,10 @@ export class Notifications {
         DOM.addClass(note,type);
         this.notifications.appendChild(note);
         this.show();
-        setTimeout(()=>this.removeNotice(note),5000);
+        setTimeout(()=>this.removeNotice(note),seconds*1000);
+        setTimeout(()=>{
+            DOM.addClass(note,'fade-out');
+        },(seconds-3)*1000);
         return note;
     }
 

@@ -45,6 +45,11 @@ class HttpServer {
                }
 
            });
+
+           m_server->on("/ping",HTTP_GET,[&](){
+               cors(m_server);
+               m_server->send(200,"ping");
+           });
         }
 
 

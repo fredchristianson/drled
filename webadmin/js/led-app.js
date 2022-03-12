@@ -10,7 +10,7 @@ import DOM from "../drjs/browser/dom.js";
 import { DomLogWriter } from '../drjs/browser/log-writer-dom.js';
 import notice from './component/notify.js';
 
-const log = Logger.create("LedApp");
+const log = Logger.create("LedApp",0);
 
 
 
@@ -54,12 +54,41 @@ class Strip {
         this.id = NEXT_STRIP_ID++;
         this.config = null;
         this.selected = false;
+        this.online = false;
+        this.firstCheck = true;
         this.getConfig();
+        this.checkOnline();
     }
 
     getId() { return this.id;}
     getName() { return this.name;}
     getHost() { return this.host;}
+    isOnline() { return this.online;}
+    async checkOnline() {
+        var url = `://${this.host}/ping`;
+        httpRequest.get(url,null,{timeout:5000})
+        .then((resp)=>{
+            log.debug(`host ${this.host} is online.`);
+            if (!this.online || this.firstCheck) {
+                this.online = true;
+                var not = notice.notify(`${this.host} is online`);
+                DOMEvent.trigger("stripOnline",this);
+                DOMEvent.trigger("stripStatusChange",this);
+            }
+            this.firstCheck = false;
+        }).catch((err)=> {
+            log.debug(`host ${this.host} is offline.`);
+            if (this.online || this.firstCheck) {
+                this.online = false;
+                var not = notice.error(`${this.host} is offline`);
+                DOMEvent.trigger("stripOffline",this);
+                DOMEvent.trigger("stripStatusChange",this);
+            }
+            this.firstCheck = false;
+        })
+
+        setTimeout(()=>{this.checkOnline()}, this.online ? 60000 : 5000);
+    }
 
     setSelected(sel) {this.selected=sel;}
     isSelected() { return this.selected;}
