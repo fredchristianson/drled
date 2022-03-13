@@ -212,13 +212,17 @@ class Strip {
 
     async sendApi(method,api,params,type){
         try {
-            var response = await method.call(httpRequest,api,params,type);
+            var response = await method.call(httpRequest,api,params,{responseType:'json',timeout: 3000});
             if (response && response.success) {
                 return response.data || {};
             }
             return null;
         } catch(ex){
             log.error("API failed ",api,ex);
+            this.online = false;
+            DOMEvent.trigger("stripOffline",this);
+            DOMEvent.trigger("stripStatusChange",this);
+
             return null;
         }
     }
@@ -338,7 +342,14 @@ export class LedApp extends Application {
     }
 
     selectAllStrips() {
-        DOM.check('.strip-list input',true);
+        DOM.find('.strip-list input').forEach(check=>{
+            var id = DOM.getData(check,'id');
+            var strip = this.getStripById(id);
+            if (strip && strip.isOnline()) {
+                DOM.check(check,true);
+            }
+        });
+        
     }
     
     selectNoStrips() {

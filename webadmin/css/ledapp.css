@@ -511,10 +511,12 @@ footer h1 {
   font-size: 4vw;
 }
 
-#main-nav a.active {
-  text-align: center;
+#main-nav {
+  background-color: #dddddd;
 }
-
+#main-nav a {
+  padding: 4px;
+}
 #main-nav a.active {
   background-color: #518f51;
   color: #ffffff;
@@ -756,4 +758,10 @@ button {
 .notifications .notice.fade-out {
   opacity: 0.3;
   transition: 3000ms opacity ease-in;
+}
+
+option:disabled {
+  color: red;
+  text-decoration: line-through;
+  font-size: smaller;
 }/*# sourceMappingURL=ledapp.css.map */

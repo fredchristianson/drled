@@ -60,7 +60,7 @@ export class StripComponent extends ComponentBase{
         DOMEvent.trigger('stripSelection',strip,this);
     }
 
-    stripStatusChange(strip){
+    async stripStatusChange(strip){
         var item = DOM.first(`.strip-list .strip.item[data-id="${strip.getId()}"]`);
         if (item) {
             var online = strip.isOnline();
@@ -70,11 +70,22 @@ export class StripComponent extends ComponentBase{
             DOM.setProperty(checks,'disabled',!online);
             if (!strip.isOnline()) {
                 strip.setSelected(false);
+                if (this.selectedValue == strip) {
+                    this.selectedValue = NULL;
+                    DOM.setValue('.strip-select.single select',null);
+                }
                 DOM.setProperty(checks,'checked',false);
                 DOMEvent.trigger('stripSelection',strip,this);
 
             }
         }
+        var options = DOM.find('.strip-select.single select option');
+        options.forEach(opt=>{
+            var strip = DOM.getValue(opt);
+            if (strip.isOnline != null) {
+                DOM.setProperty(opt,'disabled',!(strip.isOnline()));
+            }
+        });
     }
 
     isSelected(strip){
@@ -138,7 +149,7 @@ export class StripComponent extends ComponentBase{
             DOM.setData(row,"id",item.getId());
             DOM.append(this.itemContainer,row);
         });
-        var opts = this.strips.map(strip=>{return {name:strip.getName(),value:strip.getId(),dataValue:strip};});
+        var opts = this.strips.map(strip=>{return {name:strip.getName(),value:strip.getId(),dataValue:strip,disabled:(!strip.isOnline())};});
         DOM.setOptions(this.select,opts,"--strip--");
     }
 }
