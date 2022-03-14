@@ -30,13 +30,15 @@
 </body>
 <script type="module">
 import env from '../drjs/env.js';
-
+env.load(`env-${location.host}.js`);
 import {ConsoleLogWriter} from '../drjs/log-writer-console.js';
 import {Logger,LOG_LEVEL} from '../drjs/logger.js';
 const log = new Logger("LEDs");
 const console = new ConsoleLogWriter(LOG_LEVEL.DEBUG);
 log.debug("logger"); 
-import {LedApp} from '../js/led-app.js?v=13';
+//import {LedApp} from `../js/led-app.js?v=${Date.now()}`;
+const  {default:LedApp} = await import(`../js/led-app.js?v=${Date.now()}`);
+
 const app = new LedApp();
 app.start();
 </script>

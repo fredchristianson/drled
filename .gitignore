@@ -31,6 +31,8 @@
 *.out
 *.app
 
+*.min.*
+
 build/**
 
 wifi_credentials.h
